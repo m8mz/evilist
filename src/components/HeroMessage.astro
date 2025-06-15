@@ -1,0 +1,102 @@
+---
+import { Image } from "astro:assets";
+import profilePic from "../images/profile-pic.webp";
+---
+
+<style>
+  h2 {
+    font-size: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+    font-weight: 700;
+  }
+  @keyframes fade-slide {
+    0% {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    10% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    90% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-1rem);
+    }
+  }
+  #job-title {
+    animation: fade-slide 4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #job-title {
+      animation: none;
+    }
+  }
+
+  #sub {
+    font-style: italic;
+    width: 100%;
+  }
+
+  #avatar {
+    z-index: 1;
+    border: 0.5rem solid var(--color-brand-500);
+  }
+
+  @media (max-width: 800px) {
+    #avatar {
+      display: none;
+    }
+  }
+</style>
+
+<div class="flex flex-col items-start mt-10">
+  <div class="flex items-end gap-4 justify-center w-full">
+    <h2>
+      Hi, I’m <span class="font-bold text-brand-500"> Marcus </span>
+    </h2>
+    <Image
+      id="avatar"
+      class="rounded-full"
+      width={200}
+      src={profilePic}
+      alt="profile"
+    />
+  </div>
+  <h2 class="w-full text-nowrap">
+    <span id="job-title" class="job-title"></span>
+  </h2>
+  <p id="sub">Of course I'm not evil</p>
+</div>
+
+<script>
+  const titles = [
+    "Systems Architect",
+    "Systems Engineer",
+    "Linux Engineer",
+    "Automation Specialist",
+    "Site Reliability Engineer",
+    "Security Engineer",
+    "DevOps Engineer",
+    "Platform Engineer",
+    "Cloud Engineer",
+    "Infrastructure Engineer",
+    "Backend Developer",
+  ];
+
+  const el = document.getElementById("job-title");
+  let idx = 0;
+
+  el.textContent = titles[0];
+
+  // only if user hasn’t requested reduced motion
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    // fire once per CSS animation loop
+    el.addEventListener("animationiteration", () => {
+      idx = (idx + 1) % titles.length;
+      el.textContent = titles[idx];
+    });
+  }
+</script>

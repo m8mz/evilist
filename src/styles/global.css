@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  /* Light mode */
+  --color-brand-50: #eef0ff;
+  --color-brand-100: #dfe3ff;
+  --color-brand-500: #5c6ac4;
+  --color-brand-600: #4b57a8;
+  --color-brand-900: #252a54;
+
+  --fs-base: 1rem; /* 16 px default */
+  --fs-scale: clamp(1rem, 0.9rem + 0.5vw, 1.3rem);
+  --radius: 0.5rem;
+  --gap: 1.25rem;
+}
+
+/* 2.  Dark‑mode overrides (class strategy shown here) */
+@theme .dark {
+  --color-brand-50: #252a54;
+  --color-brand-100: #2d3370;
+  --color-brand-500: #7d89ff;
+  --color-brand-900: #eef0ff;
+}
+
+/* ------------------------------------------------------------------
+   reset.css — minimal, modern CSS reset   (last updated: 2025‑05‑16)
+   • Zeroes out margin/padding
+   • Border‑box sizing everywhere
+   • Safe, legible defaults for text & media
+   • Plays nicely with dark‑mode and native focus styles
+------------------------------------------------------------------- */
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* 3 | Improve text rendering & provide a stable line‑height */
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  /* Respect user’s light/dark theme for form controls */
+  /* color-scheme: light dark; */
+}
+
+/* 4 | Make body fill the viewport */
+body {
+  margin: 0;
+  font-family: "Raleway", sans-serif;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+/* 5 | Ensure media elements never overflow their containers */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* 6 | Inherit fonts for form controls & keep text from spilling */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+/* 7 | Create a new stacking context for React / Vue portals, etc. */
+#root,
+#__next {
+  isolation: isolate;
+}
+
+/* -------- Your styles go below this line -------- */
+/* Example:
+   body { font-family: system-ui, sans-serif; background:#f9f9f9; }
+*/
+
+body {
+  display: flex;
+}
+
+main {
+  flex-grow: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+section {
+  margin: 4em 0;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75em 1.25em;
+  background: var(--color-brand-500);
+  color: #fff;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 200ms;
+}
+.btn:hover,
+.btn:focus {
+  background: #4754a8;
+}
+.btn.sm {
+  padding: 0.5em 1em;
+  font-size: 0.9em;
+}
+
+#back-to-top {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1.25rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: #333;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s ease,
+    visibility 0.3s ease;
+  z-index: 1000;
+}
+#back-to-top.show {
+  opacity: 0.75;
+  visibility: visible;
+}
+#back-to-top:hover {
+  opacity: 1;
+}

@@ -1,0 +1,132 @@
+---
+import "../styles/header.css";
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/resume", label: "Resume" },
+  { href: "/contact", label: "Contact" },
+  { href: "/blog", label: "Work Blog" },
+];
+const { pathname } = Astro.url; // e.g. "/blog/my-post"
+const isActive = (href: string) => pathname === href;
+---
+
+<style>
+  #desktopMenu {
+    display: none;
+    gap: 1.5em;
+    font-size: 1.25em;
+    color: var(--color-brand-100);
+  }
+
+  .activeDesktopOption {
+    color: var(--color-brand-500);
+  }
+
+  @media (min-width: 800px) {
+    #mobileMenu,
+    #menuIcon {
+      display: none;
+    }
+    #desktopMenu {
+      display: flex;
+    }
+  }
+</style>
+<header class="site-header">
+  <h1
+    class="site-title font-semibold underline underline-offset-4 decoration-brand-500 decoration-4"
+  >
+    Marcus&nbsp;Hancock-Gaillard
+  </h1>
+  <nav id="desktopMenu">
+    {
+      navItems.map((item) => {
+        return (
+          <a
+            href={item.href}
+            aria-current={isActive(item.href) ? "page" : undefined}
+            class="font-bold aria-[current=page]:text-brand-500"
+          >
+            {item.label}
+          </a>
+        );
+      })
+    }
+  </nav>
+  <div class="menu-icon" id="menuIcon">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </div>
+  <nav style="transform: scale(0);" id="mobileMenu" class="mobile-menu">
+    <div class="close-btn bg-brand-500">
+      <button id="closeButton" aria-label="Close Menu">&times;</button>
+    </div>
+    <ul>
+      {
+        navItems.map((item) => {
+          return (
+            <li>
+              <a
+                href={item.href}
+                aria-current={isActive(item.href) ? "page" : undefined}
+                class="font-bold aria-[current=page]:text-brand-500"
+              >
+                {item.label}
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </nav>
+</header>
+<script>
+  (function () {
+    const menuIcon = document.getElementById("menuIcon");
+    const mobileMenu = document.getElementById("mobileMenu");
+    const closeButton = document.getElementById("closeButton");
+    let showIconTimeout = null;
+
+    function openMenu() {
+      if (showIconTimeout) {
+        clearTimeout(showIconTimeout);
+        showIconTimeout = null;
+      }
+      mobileMenu.classList.add("open");
+      menuIcon.classList.add("hidden");
+    }
+
+    function closeMenu() {
+      mobileMenu.classList.remove("open");
+      showIconTimeout = setTimeout(() => {
+        menuIcon.classList.remove("hidden");
+        showIconTimeout = null;
+      }, 300);
+    }
+
+    // Toggle menu open/closed when hamburger icon is clicked
+    menuIcon.addEventListener("click", openMenu);
+
+    // Also allow closing by clicking the “×” inside the menu
+    closeButton.addEventListener("click", closeMenu);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeMenu();
+      }
+    });
+
+    // (Optional) Close menu if user clicks outside of it
+    document.addEventListener("click", (e) => {
+      // If menu is open, and the click target is neither the menu nor the icon, close it
+      if (
+        mobileMenu.classList.contains("open") &&
+        !mobileMenu.contains(e.target) &&
+        !menuIcon.contains(e.target)
+      ) {
+        closeMenu();
+      }
+    });
+  })();
+</script>

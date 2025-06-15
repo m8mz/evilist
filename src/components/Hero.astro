@@ -1,0 +1,81 @@
+---
+import { Image } from "astro:assets";
+import profilePic from "../images/profile-pic.webp";
+import HeroMessage from "./HeroMessage.astro";
+---
+
+<style>
+  .hero-grid {
+    display: grid;
+    gap: var(--gap);
+    place-items: center;
+    justify-content: center;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 450px);
+  }
+
+  @media (max-width: 1024px) {
+    .hero-grid {
+      text-align: center;
+      grid-template-columns: repeat(1, 1fr);
+      grid-template-rows: repeat(4, minmax(250px, auto));
+      margin-top: 4rem;
+    }
+  }
+
+  #avatar {
+    border: 0.5rem solid var(--color-brand-500);
+    margin-bottom: 1em;
+  }
+
+  #currentRole {
+    padding: 2rem 1em;
+  }
+
+  /* Respect prefers‑reduced‑motion */
+  @media (min-width: 800px) {
+    #avatar {
+      display: none;
+    }
+  }
+</style>
+
+<section class="hero-grid">
+  <HeroMessage />
+  <div>
+    <!-- add icons -->
+    <Image
+      id="avatar"
+      class="rounded-full"
+      width={250}
+      src={profilePic}
+      alt="profile"
+    />
+  </div>
+  <div id="currentRole" class="bg-brand-500 text-white lg:rounded-sm">
+    <h4 class="font-bold italic text-2xl">Current Role:</h4>
+    <p class="text-lg">
+      <strong>Systems Architect & SRE</strong> overseeing infrastructure, operations,
+      security, and automation across two datacenters, multiple Proxmox clusters,
+      ~150 VMs, 220+ Docker app containers, multi-primary Galera database clusters,
+      HAProxy Enterprise load balancers, Fortigate NGFWs, and a comprehensive telemetry/SIEM
+      stack. I design, automate, harden, monitor, and document the full technology
+      stack—from 10 GbE network switching and robust backup strategies to CI/CD pipelines
+      and customer-facing SaaS—achieving 99.99% uptime for hundreds of regulated
+      banking websites. I leverage Ansible, Jenkins, GitHub Actions, and custom in-house
+      Bash/Python/Go tooling to streamline operations and ensure continuous security
+      and compliance.
+    </p>
+  </div>
+  <div class="flex flex-col gap-y-10 items-center">
+    <h3 class="text-2xl text-brand-50 uppercase">
+      Nearly a <div
+        class="bg-brand-500 text-white inline-block w-[110px] text-center font-semibold rounded-md"
+      >
+        decade
+      </div> of professional experience in the tech industry.
+    </h3>
+    <a href="/resume" class="btn w-[185px] text-center text-lg">See my resume</a
+    >
+  </div>
+</section>

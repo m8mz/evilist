@@ -1,16 +1,91 @@
 ---
-
+import { Image } from "astro:assets";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Projects from "../components/Projects.astro";
+import Hero from "../components/Hero.astro";
+const pageTitle = "Home Page";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<style>
+  h2 {
+    color: var(--color-brand-50);
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 1.5rem 0;
+  }
+  h3 {
+    font-size: 1.5rem;
+    color: var(--color-brand-50);
+    font-weight: 600;
+  }
+</style>
+
+<BaseLayout pageTitle={pageTitle}>
+  <div class="flex flex-col absolute left-2 top-20 text-brand-500 leading-8">
+    <a href="#work">#&nbsp;repos</a>
+    <a href="#about">#&nbsp;about</a>
+  </div>
+  <Hero />
+  <Projects />
+  <!-- === About === -->
+  <section id="about" class="about section-pad">
+    <h2 class="text-2xl text-center">about&nbsp;me</h2>
+    <h3>Hello, I'm Marcus! 👋</h3>
+    <p>
+      Welcome to my world where technology meets passion and curiosity fuels
+      innovation. My journey into the tech realm is a testament to the power of
+      self-learning and determination. With just a high school diploma in hand,
+      I embarked on a path that led me to become a seasoned Systems Architect,
+      and here's how my adventure unfolded.
+    </p>
+    <h3>The Unconventional Start</h3>
+    <p>
+      Diving into the tech industry with no formal background, my career began
+      at Endurance International Group, a conglomerate of renowned web hosting
+      companies. As a Tier 1 Tech Support agent, I was the first line of contact
+      for customers, and it was here, amidst daily challenges, that my
+      fascination with technology blossomed. Despite my initial unfamiliarity
+      with the domain, including the intricacies of DNS, my eagerness to learn
+      quickly set me apart.
+    </p>
+    <h3>The Self-Taught Journey</h3>
+    <p>
+      My thirst for knowledge led me to Lynda.com (now LinkedIn Learning), where
+      I delved into the realms of web development. Starting with HTML, CSS, and
+      Javascript, I ventured into learning various programming languages such as
+      Bash, Perl, Python, and Javascript. This exploration wasn't just
+      theoretical; it translated into practical solutions at work. I mastered
+      the art of automation, often through unconventional means like web
+      scraping and session keys, out of necessity due to my limited access as a
+      Tier 1 tech.
+    </p>
+    <h3>The Rapid Ascent</h3>
+    <p>
+      My unique approach to problem-solving didn't go unnoticed. Within months,
+      I was promoted to Web Concierge, then to the WP Live team, where I
+      co-founded a service focused on WordPress development. My journey didn't
+      stop there. I advanced to the Professional Services department, enjoying
+      roles that involved custom coding and complex project management.
+      Eventually, I ascended to a Linux Admin role, fine-tuning my skills in
+      server management and networking.
+    </p>
+    <h3>Expanding Horizons</h3>
+    <p>
+      Seeking new challenges, I joined Caris Life Sciences as a Linux Engineer,
+      further honing my expertise in biotechnology contexts. My current role as
+      a Systems Architect at BankSITE Services epitomizes my growth. Here, I
+      single-handedly manage the infrastructure, encompassing two data centers,
+      monitoring, security, and virtualization. My mantra is automation, the
+      cornerstone of efficiency in my work.
+    </p>
+    <h3>Looking Ahead</h3>
+    <p>
+      As someone who never stops learning, I'm now exploring the fascinating
+      worlds of Machine Learning, AI, and Algorithmic Trading. These fields
+      represent the cutting edge of technology, aligning perfectly with my
+      passion for coding and data. Thank you for joining me on this incredible
+      journey. I am a living example that with passion and perseverance, the
+      sky's the limit in the tech world!
+    </p>
+  </section>
+</BaseLayout>

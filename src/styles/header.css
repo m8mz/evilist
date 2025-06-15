@@ -1,0 +1,132 @@
+/* ====== Header & nav ====== */
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+
+.site-title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.site-footer {
+  text-align: center;
+  margin-top: auto;
+  font-size: 0.9rem;
+  background: var(--color-brand-500);
+}
+
+@media (min-width: 40em) {
+  /* ≈640 px */
+  .projects-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .site-header {
+    padding-inline: 2rem;
+  }
+}
+
+.menu-icon {
+  width: 30px;
+  height: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  z-index: 1001; /* sit above the menu */
+  /* allow the squishy transform origin to be center */
+  transform-origin: center;
+  transition: transform 0.1s ease-out;
+  /* position it somewhere in the top-right corner */
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+
+.menu-icon.hidden {
+  display: none;
+}
+
+.menu-icon .bar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background-color: #333;
+  border-radius: 2px;
+  transition: background-color 0.2s;
+}
+
+/* Squishy effect when pressing down */
+.menu-icon:active {
+  /* compress horizontally and stretch vertically */
+  transform: scale(0.8, 1.2);
+}
+
+.mobile-menu {
+  position: fixed;
+  margin-right: 0.5em;
+  margin-top: 0.5em;
+  top: 0;
+  right: 0;
+  width: 75vw;
+  max-width: 280px;
+  /* height: 40vh; */
+  background-color: #ffffff;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.25);
+  transform-origin: top right;
+  transform: scale(0);
+  transition: transform 0.3s ease-out;
+  overflow-y: auto;
+  z-index: 1000;
+  border-radius: 5%;
+}
+
+/* When “open” class is present, scale up to full size */
+.mobile-menu.open {
+  transform: scale(1) !important;
+}
+
+.mobile-menu ul li {
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-menu ul li:last-child {
+  border-bottom: none;
+}
+
+.mobile-menu ul li a {
+  display: block;
+  padding: 16px 24px;
+  font-size: 1rem;
+  color: #333;
+  transition: background-color 0.2s;
+}
+
+.mobile-menu ul li a:hover {
+  background-color: #f5f5f5;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   5. (Optional) Simple “close” indicator
+   ─────────────────────────────────────────────────────────────── */
+.mobile-menu .close-btn {
+  text-align: right;
+  padding: 0em 1em;
+}
+
+.mobile-menu .close-btn button {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 2rem;
+  color: var(--color-brand-50);
+}
+
+.mobile-menu .close-btn button:active {
+  transform: scale(0.8, 1.2);
+  transition: transform 0.1s ease-out;
+}
