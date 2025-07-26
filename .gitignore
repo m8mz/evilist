@@ -26,3 +26,4 @@ pnpm-debug.log*
 # prettier configuration
 .prettierrc.mjs
 
+sendgrid.env

@@ -1,8 +1,143 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 const pageTitle = "Contact Page";
+import { actions } from "astro:actions";
 ---
 
 <BaseLayout pageTitle={pageTitle}>
-  <h2>contact</h2>
+  <section class="contact-form">
+    <h2>Contact Me</h2>
+    <label for="contact-type">Select Inquiry Type</label>
+    <select id="contact-type">
+      <option value="">-- Please Choose --</option>
+      <option value="personal">Personal</option>
+      <option value="business">Business</option>
+      <option value="bug">Bug</option>
+    </select>
+
+    <form id="personal-form" class="form-section">
+      <input type="text" name="name" placeholder="Your Name" required />
+      <input type="email" name="email" placeholder="Your Email" required />
+      <textarea name="message" placeholder="Your Message" required></textarea>
+      <button type="submit">Send Personal Inquiry</button>
+    </form>
+
+    <form id="business-form" class="form-section">
+      <input type="text" name="name" placeholder="Your Name" required />
+      <input type="email" name="email" placeholder="Your Email" required />
+      <input type="text" name="company" placeholder="Company Name" required />
+      <input
+        type="number"
+        name="budget"
+        placeholder="Project Budget (USD)"
+        required
+      />
+      <textarea name="details" placeholder="Project Details" required
+      ></textarea>
+      <button type="submit">Send Business Inquiry</button>
+    </form>
+
+    <form id="bug-form" class="form-section">
+      <input type="text" name="name" placeholder="Your Name" required />
+      <input type="email" name="email" placeholder="Your Email" required />
+      <input type="url" name="url" placeholder="Page URL" required />
+      <textarea name="description" placeholder="Bug Description" required
+      ></textarea>
+      <textarea name="steps" placeholder="Steps to Reproduce" required
+      ></textarea>
+      <button type="submit">Submit Bug Report</button>
+    </form>
+  </section>
 </BaseLayout>
+
+<script>
+  const select = document.getElementById("contact-type");
+  const sections = document.querySelectorAll(".form-section");
+  select.addEventListener("change", () => {
+    sections.forEach((sec) => {
+      sec.classList.toggle("active", sec.id === select.value + "-form");
+    });
+  });
+</script>
+
+<style>
+  .contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+  .contact-form h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  .contact-form label,
+  .contact-form select {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  .contact-form select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    transition: border 0.3s;
+  }
+  .contact-form select:focus {
+    border-color: #007acc;
+    outline: none;
+  }
+  .form-section {
+    display: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+  .form-section.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeIn 0.5s ease-out;
+  }
+  .form-section input,
+  .form-section textarea {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition:
+      border 0.3s,
+      box-shadow 0.3s;
+  }
+  .form-section input:focus,
+  .form-section textarea:focus {
+    border-color: #007acc;
+    box-shadow: 0 0 5px rgba(0, 122, 204, 0.5);
+    outline: none;
+  }
+  .form-section button {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    background: #007acc;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .form-section button:hover {
+    background: #005fa3;
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+</style>
