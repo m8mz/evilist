@@ -1,42 +1,62 @@
 ---
+// Eight domains as a grid of panels: the domain as a tag, the tools as a plain list.
+import Panel from "../ui/Panel.astro";
+import Tag from "../ui/Tag.astro";
 import { skillDomains } from "../../data/skills";
 ---
 
-<dl class="skills">
+<ul class="skills">
   {skillDomains.map((domain) => (
-    <div class="skills__row">
-      <dt>{domain.name}</dt>
-      <dd>{domain.items.join(", ")}</dd>
-    </div>
+    <li>
+      <Panel class="skills__panel">
+        <h3 class="skills__name">
+          <Tag>{domain.name}</Tag>
+        </h3>
+        <ul class="skills__items">
+          {domain.items.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </Panel>
+    </li>
   ))}
-</dl>
+</ul>
 
 <style>
   .skills {
     display: grid;
+    gap: 1rem;
     margin-top: 2rem;
-    border-top: 1px solid var(--color-seam);
+    padding: 0;
+    list-style: none;
   }
 
-  .skills__row {
-    display: grid;
-    gap: 0.25rem 2rem;
-    padding-block: 1rem;
-    border-bottom: 1px solid var(--color-seam);
-  }
-
-  @media (min-width: 48rem) {
-    .skills__row {
-      grid-template-columns: 17rem minmax(0, 1fr);
+  @media (min-width: 40rem) {
+    .skills {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  .skills dt {
-    font-weight: 700;
+  @media (min-width: 64rem) {
+    .skills {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 
-  .skills dd {
-    margin: 0;
-    color: var(--color-ash);
+  .skills :global(.skills__panel) {
+    height: 100%;
+  }
+
+  .skills__name {
+    font-size: var(--text-caption);
+    line-height: 1.5;
+  }
+
+  .skills__items {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: 0.75rem;
+    padding: 0;
+    list-style: none;
   }
 </style>
