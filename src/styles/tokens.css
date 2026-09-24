@@ -41,4 +41,5 @@
   --measure: 68ch;
   --gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
   --section-y: clamp(4rem, 2.5rem + 4vw, 6rem);
+  --header-h: 4rem; /* the sticky header's height: 64px */
 }

@@ -5,13 +5,17 @@ import { render } from "../render";
 const at = (path: string) => ({ request: new Request(`https://evilist.io${path}`) });
 
 describe("Header", () => {
-  it("shows the ~evilist text wordmark instead of an image", async () => {
+  it("links home through the evil_logo image, named by the link", async () => {
     const html = await render(Header, at("/"));
-    // WCAG 2.5.3: the accessible name must contain the visible label ("evilist").
+    // WCAG 2.5.3: the accessible name contains the logo's visible word ("evilist").
     expect(html).toMatch(/class="brand"[^>]*aria-label="evilist, Marcus Hancock-Gaillard, home"/);
-    expect(html).toMatch(/class="brand__tilde" aria-hidden="true"[^>]*>~</);
-    expect(html).toMatch(/class="brand__name"[^>]*>evilist</);
-    expect(html).not.toContain("<img");
+    const img = html.match(/<img[^>]*brand__logo[^>]*>/)?.[0];
+    expect(img).toBeDefined();
+    // Astro serializes an empty-string attribute as bare `alt` (runtime/server/render/util.js),
+    // the HTML equivalent of alt="": no alt text, decorative image.
+    expect(img).toMatch(/\salt(?:=""|[\s>])/);
+    expect(img).toContain('height="36"');
+    expect(html).not.toContain("brand__tilde");
   });
 
   it("marks only the current page in the nav", async () => {

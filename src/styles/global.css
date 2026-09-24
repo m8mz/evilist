@@ -19,7 +19,7 @@
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 4.5rem; /* sticky header + breathing room */
+    scroll-padding-top: calc(var(--header-h) + 1rem); /* sticky header + breathing room */
   }
 
   body {

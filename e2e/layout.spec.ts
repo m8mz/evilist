@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { HEADER_PX } from "./constants";
 
 const routes = ["/", "/now", "/resume", "/notes", "/notes/ten-years-t1-to-architect", "/contact"];
 // Matches the 45rem breakpoint in Header.astro (below it, the nav collapses behind a toggle).
@@ -165,4 +166,17 @@ test("footer links are 44px tap targets", async ({ page }) => {
     .evaluateAll((links) => links.map((a) => a.getBoundingClientRect().height));
   expect(heights.length).toBeGreaterThan(0);
   for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
+});
+
+test("the header spans the full width, with the logo left and 18px links", async ({ page }) => {
+  await page.goto("/");
+  const width = page.viewportSize()!.width;
+  const inner = (await page.locator(".site-header__inner").boundingBox())!;
+  expect(inner.width).toBeGreaterThanOrEqual(width - 1);
+  const header = (await page.locator(".site-header").boundingBox())!;
+  expect(Math.round(header.height)).toBe(HEADER_PX + 1); // + the 1px bottom rule
+  const logo = (await page.locator(".brand__logo").boundingBox())!;
+  expect(Math.round(logo.height)).toBe(width >= 720 ? 36 : 28);
+  expect(logo.x).toBeLessThanOrEqual(41); // the gutter is at most 2.5rem
+  await expect(page.locator(".site-nav a").first()).toHaveCSS("font-size", "18px");
 });
