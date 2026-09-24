@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { htop } from "../src/data/htop";
-import { drift, meter, pct } from "../src/scripts/htop";
+import { drift, driftSorted, meter, pct } from "../src/scripts/htop";
 
 describe("meter", () => {
   it.each([0, 0.42, 1, -0.5, 1.5, Number.NaN])("is always exactly the width (%s)", (f) => {
@@ -47,5 +47,19 @@ describe("htop snapshot", () => {
     expect(text).not.toMatch(/\b\d{1,3}(\.\d{1,3}){3}\b/);
     expect(text).not.toMatch(/\.(com|net|org|io|co|local|internal)\b/);
     for (const p of htop.processes) expect(["web", "root", "chrony"]).toContain(p.user);
+  });
+});
+
+describe("driftSorted", () => {
+  it("drifts every row but keeps the CPU% column sorted, highest first", () => {
+    let seed = 7;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    let cpu = [4.2, 2.9, 1.1, 0.7, 0.3, 0.1, 0, 0];
+    for (let tick = 0; tick < 50; tick++) {
+      cpu = driftSorted(cpu, 0.8, 0, 12, rand);
+      expect(cpu).toHaveLength(8);
+      for (let i = 1; i < cpu.length; i++) expect(cpu[i]).toBeLessThanOrEqual(cpu[i - 1]!);
+      for (const v of cpu) expect(v >= 0 && v <= 12).toBe(true);
+    }
   });
 });

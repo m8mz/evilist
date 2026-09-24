@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import Htop from "../../src/components/home/Htop.astro";
 import { htop } from "../../src/data/htop";
+import { METER_WIDTH } from "../../src/scripts/htop";
 import { render } from "../render";
 
 describe("Htop", () => {
@@ -21,5 +22,14 @@ describe("Htop", () => {
     const html = await render(Htop);
     expect(html).toMatch(/class="htop__screen" aria-hidden="true"/);
     expect(html).toMatch(/<figcaption[^>]*>A simulated htop/);
+  });
+
+  it("marks cores at 75% or more hot, at the client's meter width", async () => {
+    const html = await render(Htop, {
+      props: { snapshot: { ...htop, cores: [80, 20, 74.9, 75] } },
+    });
+    expect(html.match(/class="htop__line is-hot"/g)).toHaveLength(2);
+    const bars = [...html.matchAll(/data-core="[^"]*"[\s\S]*?class="htop__bar"[^>]*>([^<]*)</g)];
+    expect(new Set(bars.map((m) => m[1]!.length))).toEqual(new Set([METER_WIDTH]));
   });
 });

@@ -1,6 +1,7 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { afterEach, describe, expect, it } from "vitest";
 import { importStill } from "../scripts/import-still.mjs";
@@ -32,5 +33,14 @@ describe("importStill", () => {
     await png(join(d, "in.png"), 2048, 1152);
     const meta = await importStill(join(d, "in.png"), join(d, "out.webp"));
     expect(meta.width).toBe(2048);
+  });
+
+  it("runs as a CLI through a symlinked path with a space in it", async () => {
+    const d = tmp();
+    await png(join(d, "in.png"), 800, 400);
+    const link = join(d, "import still.mjs");
+    symlinkSync(resolve("scripts/import-still.mjs"), link);
+    execFileSync(process.execPath, [link, join(d, "in.png"), join(d, "out.webp")]);
+    expect(existsSync(join(d, "out.webp"))).toBe(true);
   });
 });

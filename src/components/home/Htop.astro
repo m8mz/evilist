@@ -3,11 +3,15 @@
 // drawn in code with the site's own type and tokens so it reads as part of the page, never as a
 // picture. The terminal is aria-hidden; the caption says what it is. scripts/htop.ts animates it.
 import TerminalFrame from "../ui/TerminalFrame.astro";
-import { htop } from "../../data/htop";
-import { meter, pct } from "../../scripts/htop";
+import { htop as siteSnapshot, type HtopSnapshot } from "../../data/htop";
+import { HOT, METER_WIDTH, meter, pct } from "../../scripts/htop";
 
-const WIDTH = 30;
-const HOT = 75;
+interface Props {
+  /** Defaults to the site's snapshot; tests pass their own. */
+  snapshot?: HtopSnapshot;
+}
+
+const { snapshot: htop = siteSnapshot } = Astro.props;
 const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.total.toFixed(2)}G`;
 ---
 
@@ -19,7 +23,7 @@ const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.t
           {htop.cores.map((p, i) => (
             <p class:list={["htop__line", { "is-hot": p >= HOT }]} data-core={p}>
               <span class="htop__label">{i}</span>[
-              <span class="htop__bar">{meter(p / 100, pct(p), WIDTH)}</span>]
+              <span class="htop__bar">{meter(p / 100, pct(p), METER_WIDTH)}</span>]
             </p>
           ))}
         </div>
@@ -27,14 +31,14 @@ const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.t
           <p class="htop__line">
             <span class="htop__label">Mem</span>[
             <span class="htop__bar">
-              {meter(htop.memory.used / htop.memory.total, gib(htop.memory), WIDTH)}
+              {meter(htop.memory.used / htop.memory.total, gib(htop.memory), METER_WIDTH)}
             </span>
             ]
           </p>
           <p class="htop__line">
             <span class="htop__label">Swp</span>[
             <span class="htop__bar">
-              {meter(htop.swap.used / htop.swap.total, gib(htop.swap), WIDTH)}
+              {meter(htop.swap.used / htop.swap.total, gib(htop.swap), METER_WIDTH)}
             </span>
             ]
           </p>
