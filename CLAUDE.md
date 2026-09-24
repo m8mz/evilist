@@ -3,7 +3,7 @@
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
 Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–3 are done: tooling, Astro 7, the design system, and real content with the hardened contact form. Phase 4 (the animated journey) is next.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–4 are done, including the scroll-driven journey. Phase 5 (the Three.js hero) is next.
 
 ## Commands
 
@@ -60,6 +60,11 @@ Marcus prefers step-by-step delivery:
   - keep `build.inlineStylesheets: "never"`
   - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
+- Journey (`src/components/journey/`):
+  - `Journey.astro` holds the pinned stage, `JourneyScene.astro` the SVG, `scripts/journey.ts` the scroll mapping.
+  - On SVG elements a CSS `transform` animation replaces the element's `transform` attribute. Put positioning on an outer `<g>` and the animation on an inner one.
+  - Switch stages with visibility/opacity, never `display`, or the layout shifts.
+- Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels, arrows on buttons, card grids with soft shadows, fade-up on every section.
 
 - Dark only. Anime-inspired but professional: rank-up E→S, aura glow, diagonal section cuts, an SVG chibi avatar.
