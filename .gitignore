@@ -23,7 +23,15 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# prettier configuration
-.prettierrc.mjs
-
 sendgrid.env
+
+# test & tooling output
+test-results/
+playwright-report/
+.lighthouseci/
+.cache/
+.superpowers/
+
+# infra secrets (real values live only on the VPS / your machine)
+infra/ansible/inventory.ini
+infra/compose/.env
