@@ -26,4 +26,22 @@ describe("resume PDF", () => {
     expect(imported.length).toBeGreaterThan(0);
     for (const file of imported) expect(RESUME_SOURCES, file).toContain(file);
   });
+
+  it("stays two pages, the length a recruiter expects", () => {
+    // The page tree is the dictionary with /Type /Pages; outline entries carry their own /Count.
+    const pdf = readFileSync(PDF_PATH, "latin1");
+    const tree = pdf.match(/<<[^<>]*\/Type\s*\/Pages\b[^<>]*>>/)?.[0] ?? "";
+    expect(tree.match(/\/Count\s+(\d+)/)?.[1]).toBe("2");
+  });
+
+  it("fingerprints the stylesheets and layout the page renders with", () => {
+    for (const file of [
+      "src/styles/tokens.css",
+      "src/styles/global.css",
+      "src/layouts/BaseLayout.astro",
+      "src/components/seo/Head.astro",
+    ]) {
+      expect(RESUME_SOURCES, file).toContain(file);
+    }
+  });
 });

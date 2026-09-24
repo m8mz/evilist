@@ -12,6 +12,11 @@ export const RESUME_SOURCES = [
   "src/components/ui/Button.astro",
   "src/components/ui/RankChip.astro",
   "src/components/ui/KeyValue.astro",
+  // The layout and stylesheets it renders with: type, spacing and the font all shape the PDF.
+  "src/layouts/BaseLayout.astro",
+  "src/components/seo/Head.astro",
+  "src/styles/tokens.css",
+  "src/styles/global.css",
 ];
 export const PDF_PATH = "public/marcus-hancock-gaillard-resume.pdf";
 export const FINGERPRINT_PATH = "scripts/resume-pdf.source-sha256";

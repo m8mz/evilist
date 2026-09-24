@@ -265,6 +265,13 @@ const skills = skillDomains.map((d) => ({ key: d.name, value: d.items.join(", ")
       margin-top: 0.2rem;
     }
 
+    /* org and dates share one line on paper, so the resume stays two pages. */
+    .job :global(.job__facts) {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 1.5rem;
+    }
+
     .job__highlights li + li {
       margin-top: 0;
     }
