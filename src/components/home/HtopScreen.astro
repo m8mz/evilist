@@ -2,7 +2,8 @@
 // The htop screen (spec §4.2): per-core meters, memory and swap, tasks, load and uptime, the process
 // table and the F-key bar, drawn in the site's own type and tokens. The hero shows it bare behind
 // the copy; Htop.astro frames it for the social card. aria-hidden: callers describe it if needed.
-// No script here: the caller wires scripts/htop.ts, so the social card never drifts by accident.
+// No script here: each caller wires scripts/htop.ts. Htop.astro does too, but scripts/build-og.mjs
+// renders the social card under reduced motion, where the drift never starts, so the PNG is still.
 import { htop as siteSnapshot, type HtopSnapshot } from "../../data/htop";
 import { HOT, METER_WIDTH, meter, pct } from "../../scripts/htop";
 

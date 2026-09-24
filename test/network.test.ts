@@ -31,6 +31,38 @@ function reachable(network: Network, from: number): Set<number> {
   return seen;
 }
 
+describe("NETWORK", () => {
+  it("labels the 24 tools from the spec, in order", () => {
+    expect(NETWORK.labels).toEqual([
+      "Linux",
+      "HAProxy",
+      "Podman",
+      "Ansible",
+      "Go",
+      "Python",
+      "Proxmox",
+      "Ceph",
+      "BGP",
+      "WireGuard",
+      "Wazuh",
+      "PostgreSQL",
+      "MariaDB",
+      "Grafana",
+      "Prometheus",
+      "Kubernetes",
+      "Docker",
+      "Jenkins",
+      "Nginx",
+      "Bash",
+      "Django",
+      "Keepalived",
+      "FreeIPA",
+      "GitHub Actions",
+    ]);
+    expect(NETWORK.labels).toHaveLength(24);
+  });
+});
+
 describe("mulberry32", () => {
   it("repeats for a seed and differs across seeds", () => {
     const a = mulberry32(7),

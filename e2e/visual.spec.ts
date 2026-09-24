@@ -18,7 +18,8 @@ const pages = [
 test.describe("visual regression @visual", () => {
   test.beforeEach(async ({ page }, info) => {
     test.skip(!["desktop", "iphone-15"].includes(info.project.name), "two baselines per page");
-    // The htop band drifts at random (its only setInterval); freeze it at the static snapshot.
+    // The htop drift and the network's idle pulses run on setInterval: stubbing it freezes both
+    // at their static render.
     await page.addInitScript(() => {
       window.setInterval = (() => 0) as unknown as typeof window.setInterval;
     });

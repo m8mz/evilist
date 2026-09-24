@@ -1,6 +1,7 @@
-// The htop band: formatting shared by the server render and the client, plus a gentle live
-// update. Every 1.6 s while the band is on screen, core loads and CPU% drift a little. Only text
-// changes, at fixed widths, so nothing reflows. Reduced motion: no updates.
+// The htop screen behind the hero's copy (and on the social card): formatting shared by the
+// server render and the client, plus a gentle live update. Every 1.6 s while the screen is in
+// view, core loads and CPU% drift a little. Only text changes, at fixed widths, so nothing
+// reflows. Reduced motion: no updates.
 import { inView } from "motion";
 
 /** An htop meter body in exactly `width` columns: bars, padding, one space, then the label. */
