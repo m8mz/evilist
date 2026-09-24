@@ -2,22 +2,48 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
 import Button from "../components/ui/Button.astro";
+import TerminalFrame from "../components/ui/TerminalFrame.astro";
 ---
 
 <BaseLayout title="Page not found" index={false}>
   <Section>
     <h1 class="page-title">This page doesn't exist</h1>
-    <p>The link may be old, or the address has a typo.</p>
+    <TerminalFrame title="bash" class="nf__term">
+      <pre class="nf__log"><span class="nf__prompt">$</span> cd /the-page-you-wanted
+bash: cd: /the-page-you-wanted: No such file or directory
+<span class="nf__prompt">$</span> cd ~</pre>
+    </TerminalFrame>
     <p class="actions">
-      <Button href="/">Go to the home page</Button>
+      <Button href="/" variant="ghost">
+        home
+      </Button>
     </p>
   </Section>
 </BaseLayout>
 
 <style>
   .page-title {
-    font-size: var(--text-3xl);
-    margin-bottom: 1rem;
+    font-size: var(--text-display);
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.nf__term) {
+    max-width: 40rem;
+  }
+
+  .nf__log {
+    margin: 0;
+    padding: 1rem 1.25rem;
+    color: var(--color-fog);
+    font: inherit;
+    font-size: var(--text-caption);
+    line-height: 1.7;
+    white-space: pre-wrap; /* wrap on phones rather than scroll sideways */
+    overflow-wrap: anywhere;
+  }
+
+  .nf__prompt {
+    color: var(--color-ash);
   }
 
   .actions {

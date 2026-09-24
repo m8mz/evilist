@@ -42,6 +42,19 @@ test("notes list links to readable posts", async ({ page }) => {
   await expect(page.locator(".note__meta")).toContainText("min read");
 });
 
+test("404 shows a terminal session and a way home", async ({ page }) => {
+  const res = await page.goto("/definitely-missing");
+  expect(res?.status()).toBe(404);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("This page doesn't exist");
+  await expect(page.locator(".term__title")).toHaveText("bash");
+  await expect(page.locator(".term")).toContainText("No such file or directory");
+  // The session wraps instead of hiding the error behind a sideways scroll on phones.
+  const log = page.locator(".nf__log");
+  expect(await log.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+  await expect(page.getByRole("link", { name: "home", exact: true })).toHaveAttribute("href", "/");
+});
+
 test.describe("machine-readable files", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name !== "desktop", "one project is enough");
