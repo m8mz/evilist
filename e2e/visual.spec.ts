@@ -44,6 +44,16 @@ test.describe("visual regression @visual", () => {
     });
   }
 
+  test("hero copy (catches headline re-wraps)", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page.locator(".hero__copy")).toHaveScreenshot("hero-copy.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.02,
+    });
+  });
+
   test("journey mid-way (rank C)", async ({ page }) => {
     await page.goto("/");
     await page.evaluate((header) => {
