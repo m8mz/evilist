@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
 import Hero from "../components/home/Hero.astro";
-import JourneyTimeline from "../components/journey/JourneyTimeline.astro";
+import Journey from "../components/journey/Journey.astro";
 import Skills from "../components/home/Skills.astro";
 import Work from "../components/home/Work.astro";
 import About from "../components/home/About.astro";
@@ -20,7 +20,7 @@ const years = yearsOfExperience();
     <p class="lede">
       {years} years, seven ranks: from answering support calls to architecting two datacenters.
     </p>
-    <JourneyTimeline />
+    <Journey />
   </Section>
 
   <Section id="skills" aria-labelledby="skills-title">

@@ -10,6 +10,8 @@ export interface CareerStage {
   rank: number;
   rankLabel: RankLabel;
   title: string;
+  /** Shorter title for tight layouts (the journey card). Defaults to title. */
+  shortTitle?: string;
   org: string;
   location: string;
   /** yyyy-mm */
@@ -138,6 +140,7 @@ export const career: readonly CareerStage[] = [
     rank: 7,
     rankLabel: "S",
     title: "Sr. Systems Architect and Director of IT Operations",
+    shortTitle: "Sr. Systems Architect",
     org: "BankSITE® Services",
     location: "Scottsdale, Arizona",
     start: "2021-11",

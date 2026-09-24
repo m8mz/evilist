@@ -1,0 +1,259 @@
+---
+// Scroll-driven career journey. A tall track with a pinned stage: as the visitor scrolls, the stage
+// advances through the seven ranks. scripts/journey.ts maps scroll progress to the active stage;
+// CSS does all the animating (transform/opacity only).
+//
+// Accessibility and fallbacks: this animated version is decorative (aria-hidden). JourneyTimeline
+// carries the same content for screen readers, and is what everyone sees without scripting or
+// with reduced motion.
+import JourneyScene from "./JourneyScene.astro";
+import JourneyTimeline from "./JourneyTimeline.astro";
+import RankBadge from "../ui/RankBadge.astro";
+import { career, formatRange } from "../../data/career";
+---
+
+<a href="#skills" class="journey-skip">
+  Skip the career journey
+</a>
+
+<div class="journey" data-journey data-activity={career[0].activity} aria-hidden="true">
+  <div class="journey__stage">
+    <ol class="journey__rail">
+      {career.map((stage, i) => (
+        <li class:list={["journey__node", { "is-reached is-current": i === 0 }]} data-node>
+          <RankBadge rank={stage.rankLabel} size="sm" />
+        </li>
+      ))}
+      <li class="journey__track-line" role="presentation">
+        <span class="journey__fill"></span>
+      </li>
+    </ol>
+
+    <div class="journey__scene">
+      <JourneyScene />
+    </div>
+
+    <div class="journey__cards">
+      {career.map((stage, i) => (
+        <article
+          class:list={["journey__card", { "is-active": i === 0 }]}
+          data-card
+          data-activity={stage.activity}
+        >
+          <RankBadge rank={stage.rankLabel} size="md" />
+          <h3>{stage.shortTitle ?? stage.title}</h3>
+          <p class="journey__meta">
+            {stage.org}, {formatRange(stage.start, stage.end)}
+          </p>
+          <p>{stage.summary}</p>
+          <p class="journey__highlight">{stage.highlights[0]}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</div>
+
+<div class="journey-fallback">
+  <JourneyTimeline />
+</div>
+
+<script>
+  import { initJourney } from "../../scripts/journey";
+  initJourney();
+</script>
+
+<style>
+  /* ---------- Which version shows ---------- */
+  .journey,
+  .journey-skip {
+    display: none;
+  }
+
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .journey {
+      display: block;
+    }
+
+    .journey-skip {
+      display: inline-block;
+    }
+
+    /* Keep the timeline for screen readers and search, but not on screen. */
+    .journey-fallback {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  .journey-skip {
+    position: absolute;
+    transform: translateY(-200%);
+    padding: 0.5rem 1rem;
+    background: var(--color-hanko-ink);
+    color: var(--color-washi);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .journey-skip:focus-visible {
+    position: static;
+    transform: none;
+    margin-top: 1rem;
+  }
+
+  /* ---------- Track and pinned stage ---------- */
+  .journey {
+    --stages: 7;
+    --header: 4rem;
+    position: relative;
+    height: calc(var(--stages) * 62dvh + 100dvh - var(--header));
+    margin-top: 2rem;
+  }
+
+  .journey__stage {
+    position: sticky;
+    top: var(--header);
+    height: calc(100dvh - var(--header));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding-block: 1rem 1.5rem;
+  }
+
+  @media (min-width: 60rem) {
+    .journey {
+      height: calc(var(--stages) * 70dvh + 100dvh - var(--header));
+    }
+
+    .journey__stage {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      column-gap: 3rem;
+      align-items: center;
+    }
+
+    .journey__rail {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ---------- Progress rail ---------- */
+  .journey__rail {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    padding: 0;
+    list-style: none;
+  }
+
+  .journey__node {
+    position: relative;
+    z-index: 1;
+    transition: transform 240ms ease-out;
+  }
+
+  .journey__node :global(.seal) {
+    background: var(--color-slate);
+    transition: opacity 240ms ease-out;
+  }
+
+  .journey__node:not(.is-reached) :global(.seal) {
+    opacity: 0.2;
+  }
+
+  .journey__node.is-current {
+    transform: scale(1.18);
+  }
+
+  .journey__track-line {
+    position: absolute;
+    inset: 50% 1rem auto;
+    height: 2px;
+    background: var(--color-seam);
+  }
+
+  .journey__fill {
+    position: absolute;
+    inset: 0;
+    background: var(--color-hanko);
+    transform-origin: left;
+    transform: scaleX(var(--progress, 0));
+  }
+
+  /* ---------- Scene ---------- */
+  .journey__scene {
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  .journey__scene :global(.scene) {
+    max-height: 100%;
+  }
+
+  /* ---------- Cards ---------- */
+  .journey__cards {
+    display: grid;
+  }
+
+  /* All cards share one grid cell, so the area is always as tall as the tallest card and
+     switching stages never shifts the layout. Inactive cards are hidden with visibility. */
+  .journey__card {
+    grid-area: 1 / 1;
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .journey__card.is-active {
+    visibility: visible;
+    opacity: 1;
+    animation: card-in 320ms ease-out both;
+  }
+
+  /* Re-stamp the rank seal each time its card becomes active. */
+  .journey__card.is-active :global(.seal) {
+    animation: stamp 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 80ms both;
+  }
+
+  .journey__card h3 {
+    margin-top: 0.5rem;
+    font-size: var(--text-2xl);
+  }
+
+  .journey__meta {
+    color: var(--color-ash);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .journey__highlight {
+    padding-left: 0.9rem;
+    border-left: 3px solid var(--color-hanko);
+    color: var(--color-ash);
+  }
+
+  @media (max-width: 59.99rem) {
+    .journey__card p:not(.journey__meta) {
+      font-size: var(--text-sm);
+    }
+
+    .journey__highlight {
+      display: none;
+    }
+  }
+
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+</style>

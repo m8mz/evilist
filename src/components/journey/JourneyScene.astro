@@ -1,0 +1,624 @@
+---
+// The journey scene: a chibi Marcus plus one prop group per career stage. The root element's
+// data-activity attribute (set by scripts/journey.ts) decides which props are on stage.
+// Decorative: the accessible version of this content is JourneyTimeline.
+---
+
+<svg class="scene" viewBox="0 0 480 360" aria-hidden="true" focusable="false">
+  <!-- Floor -->
+  <ellipse cx="200" cy="336" rx="70" ry="9" class="c-shadow"></ellipse>
+  <line x1="20" y1="342" x2="460" y2="342" class="c-floor"></line>
+
+  <!-- ============ Props behind the character ============ -->
+
+  <!-- migration: two servers, a package travelling between them -->
+  <g data-activity="migration" class="act">
+    <g class="server" transform="translate(28 200)">
+      <rect width="70" height="120" rx="6" class="c-metal"></rect>
+      <rect x="10" y="14" width="50" height="10" rx="2" class="c-slot"></rect>
+      <rect x="10" y="32" width="50" height="10" rx="2" class="c-slot"></rect>
+      <rect x="10" y="50" width="50" height="10" rx="2" class="c-slot"></rect>
+      <circle cx="56" cy="104" r="4" class="c-led"></circle>
+    </g>
+    <g class="server" transform="translate(382 200)">
+      <rect width="70" height="120" rx="6" class="c-metal"></rect>
+      <rect x="10" y="14" width="50" height="10" rx="2" class="c-slot"></rect>
+      <rect x="10" y="32" width="50" height="10" rx="2" class="c-slot"></rect>
+      <rect x="10" y="50" width="50" height="10" rx="2" class="c-slot"></rect>
+      <circle cx="56" cy="104" r="4" class="c-led c-led--on"></circle>
+    </g>
+    <path d="M110 170 Q240 110 370 170" class="c-dash"></path>
+    <g class="parcel">
+      <rect x="-16" y="-14" width="32" height="28" rx="3" class="c-paper"></rect>
+      <path d="M-16 -4 H16 M0 -14 V14" class="c-tape"></path>
+    </g>
+  </g>
+
+  <!-- rack: a full server rack with blinking status lights -->
+  <g data-activity="rack" class="act">
+    <g transform="translate(318 96)">
+      <rect width="120" height="238" rx="6" class="c-metal"></rect>
+      <rect x="8" y="8" width="104" height="222" rx="3" class="c-night"></rect>
+      {[0, 1, 2, 3, 4, 5, 6].map((u) => (
+        <g transform={`translate(14 ${16 + u * 30})`}>
+          <rect width="92" height="22" rx="2" class="c-unit" />
+          <circle cx="80" cy="11" r="3.5" class:list={["c-led", "blink", `blink--${u % 4}`]} />
+          <rect x="8" y="8" width="40" height="6" rx="2" class="c-slot" />
+        </g>
+      ))}
+    </g>
+  </g>
+
+  <!-- datacenter: blueprint of two sites joined by a BGP link -->
+  <g data-activity="datacenter" class="act">
+    <g class="blueprint">
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <line x1={300 + i * 20} y1="60" x2={300 + i * 20} y2="250" class="c-grid" />
+      ))}
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+        <line x1="300" y1={60 + i * 20} x2="440" y2={60 + i * 20} class="c-grid" />
+      ))}
+    </g>
+    <g transform="translate(306 150)">
+      <rect width="48" height="70" rx="3" class="c-building"></rect>
+      <path d="M8 14 H40 M8 28 H40 M8 42 H40" class="c-window"></path>
+    </g>
+    <g transform="translate(386 130)">
+      <rect width="48" height="90" rx="3" class="c-building"></rect>
+      <path d="M8 14 H40 M8 28 H40 M8 42 H40 M8 56 H40" class="c-window"></path>
+    </g>
+    <path d="M330 150 Q370 90 410 130" class="c-link"></path>
+    <circle r="5" class="c-pulse">
+      <animateMotion
+        dur="2.4s"
+        repeatCount="indefinite"
+        path="M330 150 Q370 90 410 130"
+      ></animateMotion>
+    </circle>
+    <text x="370" y="252" text-anchor="middle" class="c-label">
+      99.99%
+    </text>
+  </g>
+
+  <!-- ============ The character ============ -->
+  <g class="hero-chibi">
+    <!-- legs -->
+    <rect x="178" y="272" width="18" height="56" rx="8" class="c-pants"></rect>
+    <rect x="204" y="272" width="18" height="56" rx="8" class="c-pants"></rect>
+    <rect x="170" y="320" width="30" height="12" rx="6" class="c-shoe"></rect>
+    <rect x="200" y="320" width="30" height="12" rx="6" class="c-shoe"></rect>
+    <!-- arms (behind body) -->
+    <rect x="140" y="212" width="20" height="62" rx="10" class="c-hoodie arm arm--l"></rect>
+    <rect x="240" y="212" width="20" height="62" rx="10" class="c-hoodie arm arm--r"></rect>
+    <circle cx="150" cy="276" r="11" class="c-skin"></circle>
+    <circle cx="250" cy="276" r="11" class="c-skin"></circle>
+    <!-- hoodie -->
+    <rect x="156" y="196" width="88" height="86" rx="24" class="c-hoodie"></rect>
+    <path d="M200 214 V270" class="c-zip"></path>
+    <!-- scarf -->
+    <path d="M166 200 Q200 222 234 200 L234 212 Q200 234 166 212 Z" class="c-scarf"></path>
+    <path d="M222 212 L236 252 L222 248 L214 214 Z" class="c-scarf"></path>
+    <!-- head -->
+    <circle cx="144" cy="152" r="11" class="c-skin"></circle>
+    <circle cx="256" cy="152" r="11" class="c-skin"></circle>
+    <circle cx="200" cy="148" r="58" class="c-skin"></circle>
+    <!-- curly hair -->
+    <g class="c-hair">
+      <circle cx="152" cy="118" r="18"></circle>
+      <circle cx="168" cy="98" r="19"></circle>
+      <circle cx="192" cy="88" r="20"></circle>
+      <circle cx="218" cy="90" r="19"></circle>
+      <circle cx="240" cy="102" r="18"></circle>
+      <circle cx="252" cy="122" r="16"></circle>
+      <circle cx="146" cy="138" r="12"></circle>
+      <circle cx="256" cy="140" r="11"></circle>
+      <circle cx="178" cy="112" r="14"></circle>
+      <circle cx="206" cy="108" r="14"></circle>
+      <circle cx="230" cy="114" r="13"></circle>
+    </g>
+    <!-- face -->
+    <path d="M172 140 Q180 135 188 139 M212 139 Q220 135 228 140" class="c-brow"></path>
+    <ellipse cx="180" cy="156" rx="5.5" ry="7.5" class="c-eye"></ellipse>
+    <ellipse cx="220" cy="156" rx="5.5" ry="7.5" class="c-eye"></ellipse>
+    <circle cx="182" cy="153" r="1.8" class="c-glint"></circle>
+    <circle cx="222" cy="153" r="1.8" class="c-glint"></circle>
+    <path d="M190 180 Q200 188 210 180" class="c-mouth"></path>
+    <path d="M152 164 Q200 222 248 164 Q200 206 152 164 Z" class="c-stubble"></path>
+  </g>
+
+  <!-- ============ Props in front of the character ============ -->
+
+  <!-- headset: T1 support, phone ringing, ticket queue -->
+  <g data-activity="headset" class="act">
+    <path d="M146 150 Q146 78 200 78 Q254 78 254 150" class="c-band"></path>
+    <rect x="134" y="138" width="18" height="30" rx="8" class="c-cup"></rect>
+    <rect x="248" y="138" width="18" height="30" rx="8" class="c-cup"></rect>
+    <path d="M144 166 Q150 196 184 190" class="c-boom"></path>
+    <circle cx="186" cy="190" r="5" class="c-mic"></circle>
+    <g transform="translate(330 250)">
+      <g class="phone">
+        <rect x="-34" y="0" width="68" height="40" rx="8" class="c-metal"></rect>
+        <path d="M-30 -6 Q0 -22 30 -6" class="c-handset"></path>
+        <path d="M-44 -18 l-10 -8 M44 -18 l10 -8 M0 -30 v-12" class="c-ring"></path>
+      </g>
+    </g>
+    <g transform="translate(40 250)">
+      <rect width="64" height="14" rx="2" class="c-paper"></rect>
+      <rect y="-18" width="64" height="14" rx="2" class="c-paper"></rect>
+      <rect y="-36" width="64" height="14" rx="2" class="c-paper ticket-new"></rect>
+    </g>
+  </g>
+
+  <!-- wordpress: teaching a customer to build a site -->
+  <g data-activity="wordpress" class="act">
+    <g transform="translate(300 214)">
+      <rect width="130" height="86" rx="6" class="c-metal"></rect>
+      <rect x="8" y="8" width="114" height="70" rx="3" class="c-night"></rect>
+      <rect x="16" y="16" width="98" height="12" rx="2" class="c-block block block--1"></rect>
+      <rect x="16" y="34" width="60" height="30" rx="2" class="c-block block block--2"></rect>
+      <rect x="82" y="34" width="32" height="12" rx="2" class="c-block block block--3"></rect>
+      <rect x="82" y="52" width="32" height="12" rx="2" class="c-block block block--3"></rect>
+      <path d="M-10 86 H140 L130 98 H0 Z" class="c-metal"></path>
+    </g>
+    <g transform="translate(46 150)">
+      <rect width="64" height="58" rx="4" class="c-paper"></rect>
+      <rect width="64" height="14" rx="4" class="c-accent-fill"></rect>
+      <path d="M12 28 H22 M30 28 H40 M48 28 H56 M12 42 H22 M30 42 H40" class="c-cal"></path>
+      <circle cx="35" cy="42" r="7" class="c-ringmark"></circle>
+    </g>
+  </g>
+
+  <!-- escalation: the shield, a priority ticket, an urgent bubble -->
+  <g data-activity="escalation" class="act">
+    <g transform="translate(252 236)">
+      <g class="shield">
+        <path d="M0 -40 L34 -28 V6 Q34 34 0 48 Q-34 34 -34 6 V-28 Z" class="c-shield"></path>
+        <path d="M-14 4 L-4 16 L16 -10" class="c-check"></path>
+      </g>
+    </g>
+    <g transform="translate(300 70)">
+      <g class="bubble">
+        <path
+          d="M0 0 H96 Q108 0 108 12 V44 Q108 56 96 56 H34 L18 72 L22 56 H12 Q0 56 0 44 V12 Q0 0 12 0 Z"
+          class="c-paper"
+        ></path>
+        <text x="54" y="37" text-anchor="middle" class="c-bang">
+          P1
+        </text>
+      </g>
+    </g>
+    <g transform="translate(40 230)">
+      <rect width="72" height="50" rx="3" class="c-paper"></rect>
+      <path d="M10 14 H62 M10 26 H48 M10 38 H56" class="c-cal"></path>
+      <rect x="44" y="-8" width="30" height="16" rx="3" class="c-accent-fill"></rect>
+    </g>
+  </g>
+
+  <!-- rack (front): the 1U server being slid into place -->
+  <g data-activity="rack" class="act">
+    <g class="carry">
+      <rect x="196" y="252" width="120" height="22" rx="3" class="c-unit"></rect>
+      <circle cx="302" cy="263" r="3.5" class="c-led c-led--on"></circle>
+    </g>
+  </g>
+
+  <!-- pipeline: Ansible/Jenkins gears and a conveyor of finished builds -->
+  <g data-activity="pipeline" class="act">
+    <g transform="translate(330 120)">
+      <g class="gear gear--cw">
+        <circle r="32" class="c-gear"></circle>
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+          <rect
+            x="-7"
+            y="-42"
+            width="14"
+            height="14"
+            rx="2"
+            class="c-gear"
+            transform={`rotate(${a})`}
+          />
+        ))}
+        <circle r="10" class="c-night"></circle>
+      </g>
+    </g>
+    <g transform="translate(398 168)">
+      <g class="gear gear--ccw">
+        <circle r="20" class="c-gear"></circle>
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <rect
+            x="-5"
+            y="-28"
+            width="10"
+            height="10"
+            rx="2"
+            class="c-gear"
+            transform={`rotate(${a})`}
+          />
+        ))}
+        <circle r="6" class="c-night"></circle>
+      </g>
+    </g>
+    <line x1="290" y1="300" x2="460" y2="300" class="c-belt"></line>
+    <g class="belt-items">
+      <rect x="296" y="278" width="22" height="22" rx="3" class="c-paper"></rect>
+      <rect x="346" y="278" width="22" height="22" rx="3" class="c-paper"></rect>
+      <rect x="396" y="278" width="22" height="22" rx="3" class="c-paper"></rect>
+    </g>
+    <path d="M436 262 l8 10 l16 -20" class="c-check"></path>
+  </g>
+
+  <!-- datacenter (front): blueprint roll in hand -->
+  <g data-activity="datacenter" class="act">
+    <g transform="rotate(-20 250 270)">
+      <rect x="236" y="236" width="18" height="70" rx="9" class="c-paper"></rect>
+      <path d="M240 250 H250 M240 262 H250" class="c-blueline"></path>
+    </g>
+  </g>
+</svg>
+
+<style>
+  .scene {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* Palette (from tokens) */
+  .c-shadow {
+    fill: var(--color-night-deep);
+    opacity: 0.6;
+  }
+  .c-floor {
+    stroke: var(--color-seam);
+    stroke-width: 2;
+  }
+  .c-skin {
+    fill: #8a5a3c;
+  }
+  .c-hair {
+    fill: #1b1512;
+  }
+  .c-hoodie {
+    fill: #2d3656;
+  }
+  .c-pants {
+    fill: #232a42;
+  }
+  .c-shoe {
+    fill: var(--color-night-deep);
+  }
+  .c-zip {
+    stroke: var(--color-seam);
+    stroke-width: 2;
+  }
+  .c-scarf {
+    fill: var(--color-hanko);
+  }
+  .c-brow {
+    fill: none;
+    stroke: #1b1512;
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  .c-eye {
+    fill: #1b1512;
+  }
+  .c-glint {
+    fill: var(--color-washi);
+  }
+  .c-mouth {
+    fill: none;
+    stroke: #3b2418;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .c-stubble {
+    fill: #1b1512;
+    opacity: 0.12;
+  }
+  .c-metal {
+    fill: #39425f;
+  }
+  .c-night {
+    fill: var(--color-night);
+  }
+  .c-slot,
+  .c-unit {
+    fill: #4a5478;
+  }
+  .c-led {
+    fill: #4a5478;
+  }
+  .c-led--on {
+    fill: var(--color-hanko-hot);
+  }
+  .c-paper {
+    fill: var(--color-washi);
+  }
+  .c-tape,
+  .c-cal {
+    fill: none;
+    stroke: #9aa0b4;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .c-dash {
+    fill: none;
+    stroke: var(--color-ash);
+    stroke-width: 2;
+    stroke-dasharray: 6 8;
+    opacity: 0.6;
+  }
+  .c-band,
+  .c-boom {
+    fill: none;
+    stroke: var(--color-washi);
+    stroke-width: 6;
+    stroke-linecap: round;
+  }
+  .c-boom {
+    stroke-width: 4;
+  }
+  .c-cup,
+  .c-mic {
+    fill: var(--color-washi);
+  }
+  .c-handset {
+    fill: none;
+    stroke: var(--color-washi);
+    stroke-width: 10;
+    stroke-linecap: round;
+  }
+  .c-ring {
+    fill: none;
+    stroke: var(--color-hanko-hot);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  .c-block {
+    fill: var(--color-ash);
+  }
+  .c-accent-fill {
+    fill: var(--color-hanko);
+  }
+  .c-ringmark {
+    fill: none;
+    stroke: var(--color-hanko);
+    stroke-width: 3;
+  }
+  .c-shield {
+    fill: #39425f;
+    stroke: var(--color-washi);
+    stroke-width: 4;
+  }
+  .c-check {
+    fill: none;
+    stroke: var(--color-hanko-hot);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .c-bang {
+    fill: var(--color-hanko);
+    font-family: var(--font-display);
+    font-size: 26px;
+  }
+  .c-gear {
+    fill: var(--color-ash);
+  }
+  .c-belt {
+    stroke: var(--color-ash);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  .c-grid {
+    stroke: var(--color-seam);
+    stroke-width: 1;
+  }
+  .c-building {
+    fill: #39425f;
+    stroke: var(--color-washi);
+    stroke-width: 2;
+  }
+  .c-window {
+    stroke: var(--color-ash);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .c-link {
+    fill: none;
+    stroke: var(--color-gold);
+    stroke-width: 3;
+    stroke-dasharray: 5 6;
+  }
+  .c-pulse {
+    fill: var(--color-gold);
+  }
+  .c-label {
+    fill: var(--color-washi);
+    font-family: var(--font-display);
+    font-size: 22px;
+  }
+  .c-blueline {
+    stroke: #5b8bd6;
+    stroke-width: 2;
+  }
+
+  /* Stage switching: only the active stage's props are shown. */
+  .act {
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+      opacity 280ms ease-out,
+      transform 280ms ease-out;
+  }
+
+  :global([data-activity="headset"]) .act[data-activity="headset"],
+  :global([data-activity="wordpress"]) .act[data-activity="wordpress"],
+  :global([data-activity="migration"]) .act[data-activity="migration"],
+  :global([data-activity="escalation"]) .act[data-activity="escalation"],
+  :global([data-activity="rack"]) .act[data-activity="rack"],
+  :global([data-activity="pipeline"]) .act[data-activity="pipeline"],
+  :global([data-activity="datacenter"]) .act[data-activity="datacenter"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Loops (transform/opacity only) run only for the active stage. */
+  .phone,
+  .parcel,
+  .blink,
+  .block,
+  .shield,
+  .gear,
+  .belt-items,
+  .ticket-new,
+  .bubble {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  :global([data-activity="headset"]) .phone {
+    animation: ring 1.2s ease-in-out infinite;
+  }
+  :global([data-activity="headset"]) .ticket-new {
+    animation: drop 2.4s ease-out infinite;
+  }
+  :global([data-activity="wordpress"]) .block {
+    animation: build 2.8s ease-out infinite;
+    transform-origin: left center;
+  }
+  :global([data-activity="wordpress"]) .block--2 {
+    animation-delay: 0.3s;
+  }
+  :global([data-activity="wordpress"]) .block--3 {
+    animation-delay: 0.6s;
+  }
+  :global([data-activity="migration"]) .parcel {
+    animation: carry 2.6s ease-in-out infinite;
+  }
+  :global([data-activity="escalation"]) .shield {
+    animation: brace 1.6s ease-in-out infinite;
+  }
+  :global([data-activity="escalation"]) .bubble {
+    animation: pop 1.6s ease-in-out infinite;
+  }
+  :global([data-activity="rack"]) .blink {
+    animation: blink 1.4s steps(1) infinite;
+  }
+  :global([data-activity="rack"]) .blink--1 {
+    animation-delay: 0.35s;
+  }
+  :global([data-activity="rack"]) .blink--2 {
+    animation-delay: 0.7s;
+  }
+  :global([data-activity="rack"]) .blink--3 {
+    animation-delay: 1.05s;
+  }
+  :global([data-activity="pipeline"]) .gear--cw {
+    animation: spin 4s linear infinite;
+  }
+  :global([data-activity="pipeline"]) .gear--ccw {
+    animation: spin 2.7s linear infinite reverse;
+  }
+  :global([data-activity="pipeline"]) .belt-items {
+    animation: belt 1.5s linear infinite;
+  }
+
+  @keyframes ring {
+    0%,
+    60%,
+    100% {
+      transform: rotate(0);
+    }
+    10%,
+    30%,
+    50% {
+      transform: rotate(-6deg);
+    }
+    20%,
+    40% {
+      transform: rotate(6deg);
+    }
+  }
+  @keyframes drop {
+    0% {
+      opacity: 0;
+      transform: translateY(-24px);
+    }
+    30%,
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes build {
+    0% {
+      transform: scaleX(0);
+    }
+    40%,
+    100% {
+      transform: scaleX(1);
+    }
+  }
+  @keyframes carry {
+    0% {
+      transform: translate(110px, 170px);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    50% {
+      transform: translate(240px, 125px);
+    }
+    85% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(370px, 170px);
+      opacity: 0;
+    }
+  }
+  @keyframes brace {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(6px);
+    }
+  }
+  @keyframes pop {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.06);
+    }
+  }
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+      fill: var(--color-hanko-hot);
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes belt {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(50px);
+    }
+  }
+</style>
