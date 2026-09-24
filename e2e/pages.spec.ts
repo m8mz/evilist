@@ -33,6 +33,32 @@ test("resume lists every role, newest first, and offers the PDF", async ({ page,
   expect(pdf.headers()["content-type"]).toContain("application/pdf");
 });
 
+test("each role shows its rank chip and org/dates rows; only the current role is S", async ({
+  page,
+}) => {
+  await page.goto("/resume");
+  const chips = page.locator(".job .rank-chip");
+  await expect(chips).toHaveCount(7);
+  await expect(chips.first()).toHaveAttribute("aria-label", "Rank S");
+  await expect(chips.last()).toHaveAttribute("aria-label", "Rank E");
+  await expect(page.locator(".job .rank-chip--s")).toHaveCount(1);
+  const newest = page.locator(".job").first();
+  await expect(newest.locator(".kv__key")).toHaveText(["org:", "dates:"]);
+  await expect(newest.locator(".kv__value").last()).toContainText("Present");
+});
+
+test("the resume prints on white with outlined, unfilled chips", async ({ page }) => {
+  await page.goto("/resume");
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  const s = page.locator(".job .rank-chip--s");
+  await expect(s).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(s).toHaveCSS("border-top-color", "rgb(17, 17, 17)");
+  await expect(s).toHaveCSS("color", "rgb(17, 17, 17)");
+  await expect(page.locator(".band__prompt")).toBeHidden();
+  await expect(page.locator(".resume__actions")).toBeHidden();
+});
+
 test("notes list links to readable posts", async ({ page }) => {
   await page.goto("/notes");
   const links = page.locator(".notes h2 a");

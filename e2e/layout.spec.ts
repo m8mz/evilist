@@ -87,6 +87,13 @@ test("production build sends a hashed Content-Security-Policy", async ({ request
   expect(csp).toMatch(/style-src 'self' 'sha256-/);
 });
 
+test("a page that opens with a band doesn't double the header's rule", async ({ page }) => {
+  for (const path of ["/resume", "/notes", "/contact"]) {
+    await page.goto(path);
+    await expect(page.locator("main > .band").first(), path).toHaveCSS("border-top-width", "0px");
+  }
+});
+
 test("every URL the sitemap lists is served as listed, with the CSP", async ({ request }) => {
   const sitemap = await (await request.get("/sitemap-0.xml")).text();
   const listed = [...sitemap.matchAll(/<loc>https:\/\/evilist\.io([^<]*)<\/loc>/g)].map(

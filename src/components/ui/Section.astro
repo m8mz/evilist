@@ -37,4 +37,9 @@ const { tone = "void", prompt, class: className, ...rest } = Astro.props;
   .band :global(.band__prompt) {
     margin-bottom: 1rem;
   }
+
+  /* The header already draws a rule; a band that opens the page doesn't draw a second one. */
+  :global(main) > .band:first-child {
+    border-top: 0;
+  }
 </style>

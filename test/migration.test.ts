@@ -40,6 +40,7 @@ const MIGRATED = [
   "src/components/home/Htop.astro",
   "src/pages/now.astro",
   "src/pages/og-card.astro",
+  "src/pages/resume.astro",
 ];
 
 describe("token migration", () => {

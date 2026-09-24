@@ -1,7 +1,12 @@
 ---
+// The resume (spec §7.2): the same data and sections, drawn with the terminal primitives. A rank
+// chip per role, org and dates as key: value rows, 1px iron dividers. The print styles also render
+// the PDF (`pnpm build:pdf`): white page, black text, chips outlined and never filled.
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
 import Button from "../components/ui/Button.astro";
+import RankChip from "../components/ui/RankChip.astro";
+import KeyValue from "../components/ui/KeyValue.astro";
 import { career, formatRange, yearsOfExperience } from "../data/career";
 import { skillDomains } from "../data/skills";
 import { site } from "../data/site";
@@ -9,13 +14,14 @@ import { site } from "../data/site";
 const years = yearsOfExperience();
 const newestFirst = [...career].reverse();
 const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
+const skills = skillDomains.map((d) => ({ key: d.name, value: d.items.join(", ") }));
 ---
 
 <BaseLayout
   title="Resume"
   description={`Resume of ${site.name}: ${years} years from T1 support to ${site.role}.`}
 >
-  <Section class="resume">
+  <Section prompt="resume" class="resume">
     <header class="resume__head">
       <div>
         <h1>{site.name}</h1>
@@ -23,7 +29,7 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
           {site.role}, {site.location}
         </p>
       </div>
-      <ul class="resume__links">
+      <ul class="resume__links" role="list">
         <li>
           <a href={site.url}>evilist.io</a>
         </li>
@@ -53,16 +59,20 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
 
     <section aria-labelledby="experience-title" class="resume__block">
       <h2 id="experience-title">Experience</h2>
-      <ol class="jobs">
+      <ol class="jobs" role="list">
         {newestFirst.map((stage) => (
           <li class="job">
             <div class="job__head">
+              <RankChip rank={stage.rankLabel} size="sm" />
               <h3>{stage.title}</h3>
-              <p class="job__when">{formatRange(stage.start, stage.end)}</p>
             </div>
-            <p class="job__org">
-              {stage.org}, {stage.location}
-            </p>
+            <KeyValue
+              class="job__facts"
+              rows={[
+                { key: "org", value: `${stage.org}, ${stage.location}` },
+                { key: "dates", value: formatRange(stage.start, stage.end) },
+              ]}
+            />
             <p class="job__summary">{stage.summary}</p>
             <ul class="job__highlights">
               {stage.highlights.map((h) => (
@@ -76,14 +86,7 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
 
     <section aria-labelledby="skills-title" class="resume__block">
       <h2 id="skills-title">Skills</h2>
-      <dl class="skill-list">
-        {skillDomains.map((d) => (
-          <div>
-            <dt>{d.name}</dt>
-            <dd>{d.items.join(", ")}</dd>
-          </div>
-        ))}
-      </dl>
+      <KeyValue rows={skills} class="skill-list" />
     </section>
 
     <section aria-labelledby="learning-title" class="resume__block">
@@ -109,13 +112,12 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
   }
 
   .resume__head h1 {
-    font-size: var(--text-3xl);
+    font-size: var(--text-display);
   }
 
   .resume__role {
     margin-top: 0.25rem;
-    color: var(--color-ash);
-    font-weight: 700;
+    color: var(--color-fog);
   }
 
   .resume__links {
@@ -123,7 +125,7 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
     gap: 0.15rem;
     padding: 0;
     list-style: none;
-    font-size: var(--text-sm);
+    font-size: var(--text-caption);
   }
 
   .resume__actions {
@@ -133,73 +135,64 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
   .resume__block {
     margin-top: 3rem;
     padding-top: 1.5rem;
-    border-top: 2px solid var(--color-seam);
+    border-top: 1px solid var(--color-iron);
   }
 
   .resume__block h2 {
-    font-size: var(--text-2xl);
     margin-bottom: 1rem;
   }
 
   .jobs {
     display: grid;
-    gap: 2rem;
     padding: 0;
     list-style: none;
+  }
+
+  .job + .job {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-iron);
   }
 
   .job__head {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 0.25rem 1rem;
-    align-items: baseline;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
   }
 
   .job__head h3 {
-    font-size: var(--text-lg);
+    font-size: var(--text-heading-sm);
   }
 
-  .job__when,
-  .job__org {
-    color: var(--color-ash);
-    font-size: var(--text-sm);
-    font-weight: 700;
+  .job :global(.job__facts) {
+    margin-top: 0.5rem;
+    font-size: var(--text-caption);
   }
 
   .job__summary {
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
   }
 
   .job__highlights {
     margin-top: 0.5rem;
     padding-left: 1.2rem;
-    list-style: disc;
+    list-style: "- ";
   }
 
   .job__highlights li::marker {
-    color: var(--color-hanko);
+    color: var(--color-ash);
   }
 
   .job__highlights li + li {
     margin-top: 0.25rem;
   }
 
-  .skill-list {
-    display: grid;
-    gap: 0.6rem;
+  .resume :global(.skill-list) {
+    gap: 0.5rem;
   }
 
-  .skill-list dt {
-    font-weight: 700;
-  }
-
-  .skill-list dd {
-    margin: 0;
-    color: var(--color-ash);
-  }
-
-  /* Print: paper-friendly, one column, no site chrome. Also used to render the PDF. */
+  /* Print: paper-friendly, one column, no site chrome, chips outlined. Also renders the PDF. */
   @media print {
     @page {
       margin: 14mm 16mm;
@@ -216,12 +209,14 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
     :global(.site-header),
     :global(.site-footer),
     :global(.skip-link),
+    :global(.band__prompt),
     .no-print {
       display: none !important;
     }
 
     :global(.band) {
       padding-block: 0 !important;
+      background: none !important;
     }
 
     .resume__head h1 {
@@ -229,10 +224,18 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
     }
 
     .resume__role,
-    .job__when,
-    .job__org,
-    .skill-list dd {
+    .resume :global(.kv__key) {
       color: #444 !important;
+    }
+
+    .resume :global(.kv__value) {
+      color: #111 !important;
+    }
+
+    .job :global(.rank-chip) {
+      background: none !important;
+      border-color: #111 !important;
+      color: #111 !important;
     }
 
     .resume__block {
@@ -246,8 +249,10 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
       margin-bottom: 0.5rem;
     }
 
-    .jobs {
-      gap: 0.9rem;
+    .job + .job {
+      margin-top: 0.9rem;
+      padding-top: 0;
+      border-top: 0;
     }
 
     .job {
@@ -255,7 +260,8 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
     }
 
     .job__summary,
-    .job__highlights {
+    .job__highlights,
+    .job :global(.job__facts) {
       margin-top: 0.2rem;
     }
 
@@ -267,21 +273,8 @@ const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
       color: #111;
     }
 
-    .skill-list {
+    .resume :global(.skill-list) {
       gap: 0.15rem;
-    }
-
-    .skill-list > div {
-      display: flex;
-      gap: 0.4rem;
-    }
-
-    .skill-list dt {
-      flex: none;
-    }
-
-    .skill-list dt::after {
-      content: ":";
     }
 
     a {
