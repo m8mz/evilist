@@ -1,60 +1,47 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Retired "manga" token names, read from the :root alias block in tokens.css. Phase 4 deletes
-// that block; every file a phase restyles must already be off these names.
-const tokensCss = readFileSync("src/styles/tokens.css", "utf8");
-const aliasBlock = tokensCss.slice(tokensCss.indexOf(":root {"));
-const RETIRED = new Set([...aliasBlock.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
-
-/** Files already on the Axiom tokens. Each Phase 2–4 task appends the files it restyles. */
-const MIGRATED = [
-  "src/components/layout/Header.astro",
-  "src/components/layout/Footer.astro",
-  "src/components/layout/SkipLink.astro",
-  "src/components/ui/ArrowField.astro",
-  "src/components/ui/Button.astro",
-  "src/components/ui/KeyValue.astro",
-  "src/components/ui/LogBars.astro",
-  "src/components/ui/Panel.astro",
-  "src/components/ui/Prompt.astro",
-  "src/components/ui/RankChip.astro",
-  "src/components/ui/Section.astro",
-  "src/components/ui/Tag.astro",
-  "src/components/ui/TerminalFrame.astro",
-  "src/components/home/Hero.astro",
-  "src/components/journey/Journey.astro",
-  "src/components/journey/JourneyTimeline.astro",
-  "src/components/journey/JourneyScene.astro",
-  "src/components/home/Skills.astro",
-  "src/components/home/Topology.astro",
-  "src/components/home/Work.astro",
-  "src/components/home/About.astro",
-  "src/components/home/CTA.astro",
-  "src/pages/index.astro",
-  "src/pages/404.astro",
-  "src/components/ui/Icon.astro",
-  "src/components/home/NowColumns.astro",
-  "src/components/home/OffTheClock.astro",
-  "src/components/ui/Still.astro",
-  "src/components/home/Htop.astro",
-  "src/pages/now.astro",
-  "src/pages/og-card.astro",
-  "src/pages/resume.astro",
-  "src/pages/notes/index.astro",
-  "src/layouts/NoteLayout.astro",
-  "src/pages/contact.astro",
-  "src/components/contact/ContactForm.astro",
+// The manga design's token names. The Axiom redesign retired them and Phase 4 deleted their
+// aliases; this keeps them from coming back.
+const RETIRED = [
+  "--color-night",
+  "--color-night-deep",
+  "--color-seam",
+  "--color-washi",
+  "--color-hanko",
+  "--color-hanko-hot",
+  "--color-gold",
+  "--font-display",
+  "--font-body",
+  "--text-sm",
+  "--text-base",
+  "--text-lg",
+  "--text-xl",
+  "--text-2xl",
+  "--text-3xl",
 ];
 
-describe("token migration", () => {
-  it("knows the retired names", () => {
-    expect(RETIRED.has("--color-washi")).toBe(true);
-    expect(RETIRED.has("--color-ember")).toBe(false);
+function sourceFiles(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) sourceFiles(p, out);
+    else if (/\.(astro|css|ts|mjs|mdx?)$/.test(name)) out.push(p);
+  }
+  return out;
+}
+
+describe("retired design tokens", () => {
+  it("are no longer defined in tokens.css", () => {
+    const css = readFileSync("src/styles/tokens.css", "utf8");
+    for (const name of RETIRED) expect(css, name).not.toMatch(new RegExp(`${name}\\s*:`));
   });
 
-  it.each(MIGRATED)("%s uses no retired token names", (file) => {
-    const used = [...readFileSync(file, "utf8").matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]);
-    expect(used.filter((name) => RETIRED.has(name))).toEqual([]);
+  it("are used nowhere in src", () => {
+    const hits = sourceFiles("src").flatMap((file) => {
+      const text = readFileSync(file, "utf8");
+      return RETIRED.filter((name) => text.includes(`var(${name})`)).map((n) => `${n} in ${file}`);
+    });
+    expect(hits).toEqual([]);
   });
 });

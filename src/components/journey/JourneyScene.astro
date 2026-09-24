@@ -39,7 +39,7 @@
   <g data-activity="rack" class="act">
     <g transform="translate(318 96)">
       <rect width="120" height="238" rx="6" class="c-metal"></rect>
-      <rect x="8" y="8" width="104" height="222" rx="3" class="c-night"></rect>
+      <rect x="8" y="8" width="104" height="222" rx="3" class="c-void"></rect>
       {[0, 1, 2, 3, 4, 5, 6].map((u) => (
         <g transform={`translate(14 ${16 + u * 30})`}>
           <rect width="92" height="22" rx="2" class="c-unit" />
@@ -107,7 +107,7 @@
     <!-- long coat with an open V, and a high collar behind the jaw -->
     <rect x="156" y="196" width="88" height="86" rx="20" class="c-coat"></rect>
     <path d="M180 198 L200 250 L220 198 Z" class="c-coat-v"></path>
-    <path d="M200 250 V282" class="c-seam"></path>
+    <path d="M200 250 V282" class="c-coat-seam"></path>
     <path
       d="M152 216 L162 172 L186 194 L200 204 L214 194 L238 172 L248 216 Z"
       class="c-collar"
@@ -175,7 +175,7 @@
   <g data-activity="wordpress" class="act">
     <g transform="translate(300 214)">
       <rect width="130" height="86" rx="6" class="c-metal"></rect>
-      <rect x="8" y="8" width="114" height="70" rx="3" class="c-night"></rect>
+      <rect x="8" y="8" width="114" height="70" rx="3" class="c-void"></rect>
       <rect x="16" y="16" width="98" height="12" rx="2" class="c-block block block--1"></rect>
       <rect x="16" y="34" width="60" height="30" rx="2" class="c-block block block--2"></rect>
       <rect x="82" y="34" width="32" height="12" rx="2" class="c-block block block--3"></rect>
@@ -240,7 +240,7 @@
             transform={`rotate(${a})`}
           />
         ))}
-        <circle r="10" class="c-night"></circle>
+        <circle r="10" class="c-void"></circle>
       </g>
     </g>
     <g transform="translate(398 168)">
@@ -257,7 +257,7 @@
             transform={`rotate(${a})`}
           />
         ))}
-        <circle r="6" class="c-night"></circle>
+        <circle r="6" class="c-void"></circle>
       </g>
     </g>
     <line x1="290" y1="300" x2="460" y2="300" class="c-belt"></line>
@@ -353,7 +353,7 @@
   .c-shoe {
     fill: var(--color-void);
   }
-  .c-seam {
+  .c-coat-seam {
     fill: none;
     stroke: var(--color-void);
     stroke-width: 3;
@@ -371,7 +371,7 @@
   .c-metal {
     fill: var(--color-slate);
   }
-  .c-night {
+  .c-void {
     fill: var(--color-void);
   }
   .c-slot,

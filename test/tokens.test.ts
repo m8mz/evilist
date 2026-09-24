@@ -81,22 +81,6 @@ describe("design tokens", () => {
     expect(contrast(color("paper"), color("ember"))).toBeLessThan(4.5);
   });
 
-  it("aliases every retired token name so untouched components still render", () => {
-    for (const old of [
-      "--color-night",
-      "--color-seam",
-      "--color-washi",
-      "--color-hanko",
-      "--color-hanko-hot",
-      "--font-display",
-      "--font-body",
-      "--text-lg",
-      "--text-3xl",
-    ]) {
-      expect(tokens.has(old), old).toBe(true);
-    }
-  });
-
   it("wires the configured font into --font-mono and loads it in Head", () => {
     // If these drift apart, every page silently falls back to ui-monospace.
     expect(configFontVars.length).toBeGreaterThan(0);
