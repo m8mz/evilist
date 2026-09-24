@@ -1,5 +1,6 @@
 ---
-// The journey scene: a chibi Marcus plus one prop group per career stage. The root element's
+// The journey scene: an original dark-rival avatar (spec §6.2; not a likeness of anyone, and no
+// existing character's marks) plus one prop group per career stage. The root element's
 // data-activity attribute (set by scripts/journey.ts) decides which props are on stage.
 // Decorative: the accessible version of this content is JourneyTimeline.
 ---
@@ -42,7 +43,12 @@
       {[0, 1, 2, 3, 4, 5, 6].map((u) => (
         <g transform={`translate(14 ${16 + u * 30})`}>
           <rect width="92" height="22" rx="2" class="c-unit" />
-          <circle cx="80" cy="11" r="3.5" class:list={["c-led", "blink", `blink--${u % 4}`]} />
+          <circle
+            cx="80"
+            cy="11"
+            r="3.5"
+            class:list={["c-led", "c-led--on", "blink", `blink--${u % 4}`]}
+          />
           <rect x="8" y="8" width="40" height="6" rx="2" class="c-slot" />
         </g>
       ))}
@@ -82,48 +88,64 @@
 
   <!-- ============ The character ============ -->
   <g class="hero-chibi">
+    <!-- hair, back: spikes swept up and back -->
+    <path
+      d="M148 134 L136 108 L150 102 L144 70 L172 88 L184 46 L204 80 L234 40 L232 84 L272 60 L252 104 L290 98 L256 134 Z"
+      class="c-hair"
+      data-part="hair"
+    ></path>
     <!-- legs -->
     <rect x="178" y="272" width="18" height="56" rx="8" class="c-pants"></rect>
     <rect x="204" y="272" width="18" height="56" rx="8" class="c-pants"></rect>
     <rect x="170" y="320" width="30" height="12" rx="6" class="c-shoe"></rect>
     <rect x="200" y="320" width="30" height="12" rx="6" class="c-shoe"></rect>
     <!-- arms (behind body) -->
-    <rect x="140" y="212" width="20" height="62" rx="10" class="c-hoodie arm arm--l"></rect>
-    <rect x="240" y="212" width="20" height="62" rx="10" class="c-hoodie arm arm--r"></rect>
+    <rect x="140" y="212" width="20" height="62" rx="10" class="c-coat arm arm--l"></rect>
+    <rect x="240" y="212" width="20" height="62" rx="10" class="c-coat arm arm--r"></rect>
     <circle cx="150" cy="276" r="11" class="c-skin"></circle>
     <circle cx="250" cy="276" r="11" class="c-skin"></circle>
-    <!-- hoodie -->
-    <rect x="156" y="196" width="88" height="86" rx="24" class="c-hoodie"></rect>
-    <path d="M200 214 V270" class="c-zip"></path>
-    <!-- scarf -->
-    <path d="M166 200 Q200 222 234 200 L234 212 Q200 234 166 212 Z" class="c-scarf"></path>
-    <path d="M222 212 L236 252 L222 248 L214 214 Z" class="c-scarf"></path>
+    <!-- long coat with an open V, and a high collar behind the jaw -->
+    <rect x="156" y="196" width="88" height="86" rx="20" class="c-coat"></rect>
+    <path d="M180 198 L200 250 L220 198 Z" class="c-coat-v"></path>
+    <path d="M200 250 V282" class="c-seam"></path>
+    <path
+      d="M152 216 L162 172 L186 194 L200 204 L214 194 L238 172 L248 216 Z"
+      class="c-collar"
+    ></path>
+    <path d="M162 172 L186 194 M238 172 L214 194" class="c-collar-line"></path>
     <!-- head -->
     <circle cx="144" cy="152" r="11" class="c-skin"></circle>
     <circle cx="256" cy="152" r="11" class="c-skin"></circle>
     <circle cx="200" cy="148" r="58" class="c-skin"></circle>
-    <!-- curly hair -->
-    <g class="c-hair">
-      <circle cx="152" cy="118" r="18"></circle>
-      <circle cx="168" cy="98" r="19"></circle>
-      <circle cx="192" cy="88" r="20"></circle>
-      <circle cx="218" cy="90" r="19"></circle>
-      <circle cx="240" cy="102" r="18"></circle>
-      <circle cx="252" cy="122" r="16"></circle>
-      <circle cx="146" cy="138" r="12"></circle>
-      <circle cx="256" cy="140" r="11"></circle>
-      <circle cx="178" cy="112" r="14"></circle>
-      <circle cx="206" cy="108" r="14"></circle>
-      <circle cx="230" cy="114" r="13"></circle>
+    <!-- hair, front: jagged fringe, long face-framing bangs, two highlight strands -->
+    <g data-part="hair">
+      <path
+        d="M144 134 Q146 90 200 86 Q254 90 256 134 L242 118 L234 140 L222 120 L210 138 L200 118 L188 140 L178 120 L166 138 L158 118 Z"
+        class="c-hair"
+      ></path>
+      <path d="M150 116 L140 194 L156 176 L162 132 Z" class="c-hair"></path>
+      <path d="M250 116 L260 194 L244 176 L238 132 Z" class="c-hair"></path>
+      <path d="M176 96 L166 118 M214 94 L226 118" class="c-hair-strand"></path>
     </g>
-    <!-- face -->
-    <path d="M172 140 Q180 135 188 139 M212 139 Q220 135 228 140" class="c-brow"></path>
-    <ellipse cx="180" cy="156" rx="5.5" ry="7.5" class="c-eye"></ellipse>
-    <ellipse cx="220" cy="156" rx="5.5" ry="7.5" class="c-eye"></ellipse>
-    <circle cx="182" cy="153" r="1.8" class="c-glint"></circle>
-    <circle cx="222" cy="153" r="1.8" class="c-glint"></circle>
-    <path d="M190 180 Q200 188 210 180" class="c-mouth"></path>
-    <path d="M152 164 Q200 222 248 164 Q200 206 152 164 Z" class="c-stubble"></path>
+    <!-- face: sharp brows, slit-pupil ember eyes, original under-eye marks, a fanged smirk -->
+    <path d="M168 141 L191 148 M232 141 L209 148" class="c-brow"></path>
+    <g data-part="eyes">
+      <path d="M166 156 Q178 147 193 153 Q186 164 172 163 Z" class="c-eye"></path>
+      <path d="M234 156 Q222 147 207 153 Q214 164 228 163 Z" class="c-eye"></path>
+      <ellipse cx="182" cy="156.5" rx="5" ry="5.6" class="c-iris"></ellipse>
+      <ellipse cx="218" cy="156.5" rx="5" ry="5.6" class="c-iris"></ellipse>
+      <ellipse cx="182" cy="156.5" rx="1.4" ry="4.2" class="c-pupil"></ellipse>
+      <ellipse cx="218" cy="156.5" rx="1.4" ry="4.2" class="c-pupil"></ellipse>
+      <circle cx="184.5" cy="154" r="1.3" class="c-glint"></circle>
+      <circle cx="220.5" cy="154" r="1.3" class="c-glint"></circle>
+    </g>
+    <path
+      d="M163 166 Q177 173 192 166 M168 169 L163 182 M237 166 Q223 173 208 166 M232 169 L237 182"
+      class="c-mark"
+      data-part="marks"
+    ></path>
+    <path d="M188 183 Q200 190 214 180" class="c-mouth"></path>
+    <path d="M206 186.4 L209 193 L211.5 185" class="c-fang"></path>
   </g>
 
   <!-- ============ Props in front of the character ============ -->
@@ -263,96 +285,128 @@
     overflow: visible;
   }
 
-  /* Palette (from tokens) */
+  /* Palette: tokens only. The avatar is an original dark-rival character (spec §6.2). */
   .c-shadow {
-    fill: var(--color-night-deep);
+    fill: var(--color-void);
     opacity: 0.6;
   }
   .c-floor {
-    stroke: var(--color-seam);
+    stroke: var(--color-slate);
     stroke-width: 2;
   }
+
+  /* Avatar */
   .c-skin {
-    fill: #8a5a3c;
+    fill: var(--color-paper);
   }
   .c-hair {
-    fill: #1b1512;
+    fill: var(--color-void);
+    stroke: var(--color-steel);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
   }
-  .c-hoodie {
-    fill: #2d3656;
-  }
-  .c-pants {
-    fill: #232a42;
-  }
-  .c-shoe {
-    fill: var(--color-night-deep);
-  }
-  .c-zip {
-    stroke: var(--color-seam);
-    stroke-width: 2;
-  }
-  .c-scarf {
-    fill: var(--color-hanko);
-  }
-  .c-brow {
+  .c-hair-strand {
     fill: none;
-    stroke: #1b1512;
-    stroke-width: 4;
-    stroke-linecap: round;
-  }
-  .c-eye {
-    fill: #1b1512;
-  }
-  .c-glint {
-    fill: var(--color-washi);
-  }
-  .c-mouth {
-    fill: none;
-    stroke: #3b2418;
+    stroke: var(--color-iron);
     stroke-width: 3;
     stroke-linecap: round;
   }
-  .c-stubble {
-    fill: #1b1512;
-    opacity: 0.12;
+  .c-brow {
+    fill: none;
+    stroke: var(--color-void);
+    stroke-width: 5;
+    stroke-linecap: round;
   }
+  .c-eye,
+  .c-pupil {
+    fill: var(--color-void);
+  }
+  .c-iris {
+    fill: var(--color-ember);
+  }
+  .c-glint {
+    fill: var(--color-paper);
+  }
+  .c-mark {
+    fill: none;
+    stroke: var(--color-void);
+    stroke-width: 4;
+    stroke-linecap: round;
+  }
+  .c-mouth {
+    fill: none;
+    stroke: var(--color-void);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .c-fang {
+    fill: var(--color-paper);
+    stroke: var(--color-void);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+  }
+  .c-coat,
+  .c-pants {
+    fill: var(--color-slate);
+  }
+  .c-coat-v,
+  .c-shoe {
+    fill: var(--color-void);
+  }
+  .c-seam {
+    fill: none;
+    stroke: var(--color-void);
+    stroke-width: 3;
+  }
+  .c-collar {
+    fill: var(--color-steel);
+  }
+  .c-collar-line {
+    fill: none;
+    stroke: var(--color-void);
+    stroke-width: 2;
+  }
+
+  /* Props */
   .c-metal {
-    fill: #39425f;
+    fill: var(--color-slate);
   }
   .c-night {
-    fill: var(--color-night);
+    fill: var(--color-void);
   }
   .c-slot,
-  .c-unit {
-    fill: #4a5478;
-  }
+  .c-unit,
   .c-led {
-    fill: #4a5478;
+    fill: var(--color-steel);
   }
   .c-led--on {
-    fill: var(--color-hanko-hot);
+    fill: var(--color-ember);
   }
   .c-paper {
-    fill: var(--color-washi);
+    fill: var(--color-fog);
   }
-  .c-tape,
+  .c-tape {
+    fill: none;
+    stroke: var(--color-ember);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
   .c-cal {
     fill: none;
-    stroke: #9aa0b4;
+    stroke: var(--color-steel);
     stroke-width: 3;
     stroke-linecap: round;
   }
   .c-dash {
     fill: none;
-    stroke: var(--color-ash);
+    stroke: var(--color-slate);
     stroke-width: 2;
     stroke-dasharray: 6 8;
-    opacity: 0.6;
   }
   .c-band,
   .c-boom {
     fill: none;
-    stroke: var(--color-washi);
+    stroke: var(--color-fog);
     stroke-width: 6;
     stroke-linecap: round;
   }
@@ -361,50 +415,48 @@
   }
   .c-cup,
   .c-mic {
-    fill: var(--color-washi);
+    fill: var(--color-fog);
   }
   .c-handset {
     fill: none;
-    stroke: var(--color-washi);
+    stroke: var(--color-fog);
     stroke-width: 10;
     stroke-linecap: round;
   }
   .c-ring {
     fill: none;
-    stroke: var(--color-hanko-hot);
+    stroke: var(--color-fog);
     stroke-width: 4;
     stroke-linecap: round;
   }
-  .c-block {
+  .c-block,
+  .c-gear {
     fill: var(--color-ash);
   }
   .c-accent-fill {
-    fill: var(--color-hanko);
+    fill: var(--color-steel);
   }
   .c-ringmark {
     fill: none;
-    stroke: var(--color-hanko);
+    stroke: var(--color-steel);
     stroke-width: 3;
   }
   .c-shield {
-    fill: #39425f;
-    stroke: var(--color-washi);
+    fill: var(--color-slate);
+    stroke: var(--color-fog);
     stroke-width: 4;
   }
   .c-check {
     fill: none;
-    stroke: var(--color-hanko-hot);
+    stroke: var(--color-paper);
     stroke-width: 6;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
   .c-bang {
-    fill: var(--color-hanko);
-    font-family: var(--font-display);
+    fill: var(--color-carbon);
+    font-family: var(--font-mono);
     font-size: 26px;
-  }
-  .c-gear {
-    fill: var(--color-ash);
   }
   .c-belt {
     stroke: var(--color-ash);
@@ -412,12 +464,12 @@
     stroke-linecap: round;
   }
   .c-grid {
-    stroke: var(--color-seam);
+    stroke: var(--color-slate);
     stroke-width: 1;
   }
   .c-building {
-    fill: #39425f;
-    stroke: var(--color-washi);
+    fill: var(--color-slate);
+    stroke: var(--color-fog);
     stroke-width: 2;
   }
   .c-window {
@@ -427,20 +479,20 @@
   }
   .c-link {
     fill: none;
-    stroke: var(--color-gold);
+    stroke: var(--color-steel);
     stroke-width: 3;
     stroke-dasharray: 5 6;
   }
   .c-pulse {
-    fill: var(--color-gold);
+    fill: var(--color-ember);
   }
   .c-label {
-    fill: var(--color-washi);
-    font-family: var(--font-display);
+    fill: var(--color-fog);
+    font-family: var(--font-mono);
     font-size: 22px;
   }
   .c-blueline {
-    stroke: #5b8bd6;
+    stroke: var(--color-steel);
     stroke-width: 2;
   }
 
@@ -602,7 +654,6 @@
     0%,
     100% {
       opacity: 1;
-      fill: var(--color-hanko-hot);
     }
     50% {
       opacity: 0.35;
