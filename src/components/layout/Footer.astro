@@ -1,12 +1,13 @@
 ---
+// Carbon strip: arrow links to the socials and feed, then the hosting line and the copyright.
 import { PUBLIC_DISCORD_INVITE_URL } from "astro:env/client";
 import { site } from "../../data/site";
 
 const links = [
-  { href: site.socials.github, label: "GitHub" },
-  { href: site.socials.linkedin, label: "LinkedIn" },
-  ...(PUBLIC_DISCORD_INVITE_URL ? [{ href: PUBLIC_DISCORD_INVITE_URL, label: "Discord" }] : []),
-  { href: "/rss.xml", label: "RSS" },
+  { href: site.socials.github, label: "github" },
+  { href: site.socials.linkedin, label: "linkedin" },
+  ...(PUBLIC_DISCORD_INVITE_URL ? [{ href: PUBLIC_DISCORD_INVITE_URL, label: "discord" }] : []),
+  { href: "/rss.xml", label: "rss" },
 ];
 const year = new Date().getFullYear();
 ---
@@ -20,16 +21,17 @@ const year = new Date().getFullYear();
             href={href}
             {...(href.startsWith("http") ? { rel: "me noopener", target: "_blank" } : {})}
           >
+            <span aria-hidden="true">→ </span>
             {label}
           </a>
         </li>
       ))}
     </ul>
-    <p class="site-footer__note">Self-hosted on Linux behind HAProxy. Built with Astro.</p>
+    <p class="site-footer__note">self-hosted on Linux behind HAProxy · built with Astro</p>
     <p class="site-footer__copy">
       © {year} {site.name}.{" "}
       <a href="#main" class="site-footer__top">
-        Back to top
+        back to top
       </a>
     </p>
   </div>
@@ -37,11 +39,11 @@ const year = new Date().getFullYear();
 
 <style>
   .site-footer {
-    border-top: 1px solid var(--color-seam);
-    background: var(--color-night-deep);
     padding-block: 2.5rem;
-    font-size: var(--text-sm);
-    color: var(--color-ash);
+    border-top: 1px solid var(--color-iron);
+    background: var(--color-carbon);
+    font-size: var(--text-caption);
+    color: var(--color-fog);
   }
 
   .site-footer__inner {
@@ -60,16 +62,16 @@ const year = new Date().getFullYear();
   .site-footer__links a {
     display: inline-block;
     padding-block: 0.6rem; /* 44px tap target with line-height */
-    font-weight: 700;
-    color: var(--color-washi);
+    color: var(--color-paper);
     text-decoration: none;
   }
 
-  .site-footer__top {
-    color: var(--color-ash);
+  .site-footer__links a:hover,
+  .site-footer__top:hover {
+    color: var(--color-ember);
   }
 
-  .site-footer__links a:hover {
-    color: var(--color-hanko-hot);
+  .site-footer__top {
+    color: var(--color-fog);
   }
 </style>
