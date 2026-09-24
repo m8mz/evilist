@@ -16,9 +16,10 @@
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --grep-invert @visual",
     "build:pdf": "astro build && node scripts/build-resume-pdf.mjs",
-    "size": "node scripts/check-bundle-size.mjs"
+    "size": "node scripts/check-bundle-size.mjs",
+    "test:visual": "playwright test --grep @visual"
   },
   "dependencies": {
     "@astrojs/mdx": "8.0.2",

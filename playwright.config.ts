@@ -7,6 +7,7 @@ const baseURL = `http://127.0.0.1:${PORT}`;
 // Runs against the production build (`pnpm build` first). CI builds before this step.
 export default defineConfig({
   testDir: "./e2e",
+  snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}-{platform}{ext}",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
