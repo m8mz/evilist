@@ -22,7 +22,6 @@ export function initLogBars(root: ParentNode = document): void {
     return;
   }
   for (const svg of root.querySelectorAll<SVGSVGElement>("[data-log-bars]")) {
-    svg.dataset.animate = "";
     inView(
       svg,
       () => {

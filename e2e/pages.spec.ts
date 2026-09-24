@@ -220,3 +220,35 @@ test.describe("machine-readable files", () => {
     expect(data["@graph"][0].name).toBe("Marcus Hancock-Gaillard");
   });
 });
+
+test.describe("training bars", () => {
+  test("are flat from the first paint until they scroll into view", async ({ page }, info) => {
+    test.skip(!["iphone-15", "pixel-7"].includes(info.project.name), "phones: bars start below");
+    await page.goto("/now");
+    const bars = page.locator(".now__bars");
+    expect(await bars.getAttribute("data-animate")).toBeNull();
+    await expect(bars.locator(".log-bars__bar").first()).toHaveCSS(
+      "transform",
+      "matrix(1, 0, 0, 0, 0, 0)",
+    );
+    await bars.scrollIntoViewIfNeeded();
+    await expect(bars.locator(".log-bars__bar:not(.is-live)")).toHaveCount(0);
+    await expect(bars.locator(".log-bars__bar").last()).toHaveCSS(
+      "transform",
+      "matrix(1, 0, 0, 1, 0, 0)",
+    );
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("stand at full height", async ({ page }, info) => {
+      test.skip(info.project.name !== "desktop", "one project is enough");
+      await page.goto("/now");
+      await expect(page.locator(".now__bars .log-bars__bar").first()).toHaveCSS(
+        "transform",
+        "none",
+      );
+    });
+  });
+});

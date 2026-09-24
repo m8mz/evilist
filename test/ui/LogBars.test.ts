@@ -16,10 +16,11 @@ describe("LogBars", () => {
 
   it("never emits a negative height or a zero-width viewBox", async () => {
     const html = await render(LogBars, { props: { values: [-1, 5, Number.NaN], label: "x" } });
+    expect(html.match(/<rect /g)).toHaveLength(3);
     expect(html).not.toMatch(/height="-/);
     expect(html).toContain('viewBox="0 0 16 24"');
-    expect(await render(LogBars, { props: { values: [], label: "empty" } })).toContain(
-      'viewBox="0 0 4 24"',
-    );
+    const empty = await render(LogBars, { props: { values: [], label: "empty" } });
+    expect(empty).toContain('viewBox="0 0 4 24"');
+    expect(empty).not.toContain("<rect ");
   });
 });

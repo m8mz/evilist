@@ -1,6 +1,6 @@
 ---
 // A row of ember bars whose heights come from `values` (0–1): reads as an event-volume histogram.
-// With scripting and motion, the bars stream in when scrolled into view (scripts/log-bars.ts).
+// With scripting and motion, CSS starts the bars flat and scripts/log-bars.ts streams them in.
 import { barHeight } from "../../scripts/log-bars";
 
 interface Props {
@@ -48,14 +48,15 @@ const width = Math.max(W, values.length * (W + GAP) - GAP);
     transform-origin: bottom;
   }
 
-  /* Only when scripts/log-bars.ts opted in (it checks reduced motion first). */
-  @media (prefers-reduced-motion: no-preference) {
-    .log-bars[data-animate] .log-bars__bar {
+  /* With scripting and motion the bars start flat and scripts/log-bars.ts streams them in when
+     they scroll into view. CSS sets the start, not the script, so the first paint is already flat. */
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .log-bars__bar {
       transform: scaleY(0);
       transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
-    .log-bars[data-animate] .log-bars__bar.is-live {
+    .log-bars__bar.is-live {
       transform: scaleY(1);
     }
   }
