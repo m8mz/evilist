@@ -1,0 +1,127 @@
+---
+// The hero's right pane (spec §4.4): Marcus's stack as a network, laid out at build time from a
+// fixed seed. At rest: steel dots, iron edges, labels hidden. scripts/stack-network.ts lights the
+// node nearest the cursor by toggling .is-source / .is-lit / .is-echo; each element's ember twin
+// cross-fades by opacity. Decorative (aria-hidden).
+import { NETWORK } from "../../data/network";
+import { layoutNetwork } from "../../scripts/network";
+
+const { nodes, edges } = layoutNetwork(NETWORK);
+const at = (id: number) => nodes[id]!;
+const rightHalf = (x: number) => x > NETWORK.width / 2;
+---
+
+<svg
+  class="net"
+  viewBox={`0 0 ${NETWORK.width} ${NETWORK.height}`}
+  preserveAspectRatio="xMidYMid slice"
+  aria-hidden="true"
+  focusable="false"
+  data-network
+>
+  <g>
+    {edges.map(([a, b]) => (
+      <g class="net__edge" data-net-edge={`${a}-${b}`}>
+        <line
+          class="net__base"
+          x1={at(a).x}
+          y1={at(a).y}
+          x2={at(b).x}
+          y2={at(b).y}
+          vector-effect="non-scaling-stroke"
+        />
+        <line
+          class="net__lit"
+          x1={at(a).x}
+          y1={at(a).y}
+          x2={at(b).x}
+          y2={at(b).y}
+          vector-effect="non-scaling-stroke"
+        />
+      </g>
+    ))}
+  </g>
+  <g>
+    {nodes.map((n) => (
+      <g
+        class:list={["net__node", { "net__node--labelled": Boolean(n.label) }]}
+        data-net-node={n.id}
+      >
+        <circle class="net__base" cx={n.x} cy={n.y} r={n.label ? 3 : 2} />
+        <circle class="net__lit" cx={n.x} cy={n.y} r={n.label ? 4.5 : 3} />
+        {n.label && (
+          <text
+            class="net__label"
+            x={rightHalf(n.x) ? n.x - 10 : n.x + 10}
+            y={n.y + 5}
+            text-anchor={rightHalf(n.x) ? "end" : "start"}
+          >
+            {n.label}
+          </text>
+        )}
+      </g>
+    ))}
+  </g>
+</svg>
+
+<style>
+  .net {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  line.net__base {
+    stroke: var(--color-iron);
+    stroke-width: 1;
+  }
+
+  circle.net__base {
+    fill: var(--color-steel);
+  }
+
+  line.net__lit {
+    stroke: var(--color-ember);
+    stroke-width: 1;
+  }
+
+  circle.net__lit {
+    fill: var(--color-ember);
+  }
+
+  /* Lighting is an opacity cross-fade of each element's ember twin: quick on, slow off. */
+  .net__lit,
+  .net__label {
+    opacity: 0;
+    transition: opacity 600ms ease-out;
+  }
+
+  .is-lit > .net__lit {
+    opacity: 1;
+    transition-duration: 150ms;
+  }
+
+  .is-echo > .net__lit {
+    opacity: 0.45;
+    transition-duration: 150ms;
+  }
+
+  /* 14 user units ≈ 12–15px on screen at desktop pane sizes. */
+  .net__label {
+    fill: var(--color-ash);
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+
+  .is-source > .net__label {
+    opacity: 1;
+    transition-duration: 150ms;
+  }
+
+  /* Stacked layouts scale the SVG down until labels are unreadable: dots and edges only. */
+  @media (max-width: 59.99rem) {
+    .net__label {
+      display: none;
+    }
+  }
+</style>
