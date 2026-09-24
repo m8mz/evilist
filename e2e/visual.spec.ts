@@ -45,4 +45,19 @@ test.describe("visual regression @visual", () => {
       threshold: 0.02,
     });
   });
+
+  test("journey start (rank E, headset)", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => {
+      const el = document.querySelector<HTMLElement>("[data-journey]")!;
+      const top = el.getBoundingClientRect().top + scrollY - 56;
+      scrollTo(0, top + (el.offsetHeight - innerHeight + 56) * (0.5 / 7));
+    });
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "headset");
+    await expect(page).toHaveScreenshot("journey-rank-e.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.02,
+    });
+  });
 });

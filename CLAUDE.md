@@ -5,7 +5,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 
 > **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–6 are done, including the quality gates.
 >
-> **Axiom redesign in progress** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. Phase 1 (tokens, primitives, shell) is merged. Phases 2 (home), 3 (`/now`, imagery) and 4 (resume/notes/contact, PDF, ADR) come next, then rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
+> **Axiom redesign in progress** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. Phases 1 (tokens, primitives, shell) and 2 (home, journey avatar, topology) are done. Phases 3 (`/now`, imagery) and 4 (resume/notes/contact, PDF, ADR) come next, then rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 
 ## Commands
 
