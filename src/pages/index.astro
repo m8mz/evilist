@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
 import Hero from "../components/home/Hero.astro";
+import Htop from "../components/home/Htop.astro";
 import Journey from "../components/journey/Journey.astro";
 import Skills from "../components/home/Skills.astro";
 import Work from "../components/home/Work.astro";
@@ -15,6 +16,13 @@ const years = yearsOfExperience();
 
 <BaseLayout>
   <Hero />
+
+  <Section prompt="htop" id="system" aria-labelledby="system-title">
+    <h2 id="system-title" class="visually-hidden">
+      What this site runs on
+    </h2>
+    <Htop />
+  </Section>
 
   <Section tone="carbon" prompt="journey" id="journey" aria-labelledby="journey-title">
     <h2 id="journey-title">From E-rank to S-rank</h2>

@@ -109,3 +109,29 @@ test.describe("off the clock", () => {
     await expect(block.getByRole("link", { name: "more on /now" })).toHaveAttribute("href", "/now");
   });
 });
+
+test.describe("htop band", () => {
+  test("sits under the hero and says it is simulated", async ({ page }) => {
+    await page.goto("/");
+    const band = page.locator("#system");
+    await expect(band.locator(".term__title")).toHaveText("htop · evilist");
+    await expect(band.locator("tbody tr")).toHaveCount(8);
+    await expect(band.locator("figcaption")).toContainText("simulated");
+    const heroBottom = (await page.locator(".hero").boundingBox())!;
+    const bandTop = (await band.boundingBox())!;
+    expect(bandTop.y).toBeGreaterThanOrEqual(heroBottom.y + heroBottom.height - 1);
+  });
+
+  test("drifts only when motion is allowed", async ({ page }, info) => {
+    await page.goto("/");
+    const core = page.locator("[data-core] .htop__bar").first();
+    await page.locator("#system").scrollIntoViewIfNeeded();
+    const before = await core.textContent();
+    if (info.project.name === "reduced-motion") {
+      await page.waitForTimeout(3500);
+      expect(await core.textContent()).toBe(before);
+    } else {
+      await expect.poll(() => core.textContent(), { timeout: 8000 }).not.toBe(before);
+    }
+  });
+});
