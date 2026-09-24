@@ -7,18 +7,11 @@ import { actions } from "astro:actions";
 <BaseLayout pageTitle={pageTitle}>
   <section class="contact-form">
     <h2 class="text-4xl">Contact Me</h2>
-    
+
     <!-- Tab Navigation -->
     <div class="tab-navigation">
-      <button class="tab-btn active" data-type="personal">
-        💬 Personal
-      </button>
-      <button class="tab-btn" data-type="business">
-        💼 Business
-      </button>
-      <button class="tab-btn" data-type="bug">
-        🐛 Bug Report
-      </button>
+      <button class="tab-btn active" data-type="personal"> 💬 Personal </button>
+      <button class="tab-btn" data-type="business"> 💼 Business </button>
     </div>
 
     <form id="personal-form" class="form-section">
@@ -42,46 +35,35 @@ import { actions } from "astro:actions";
       ></textarea>
       <button type="submit">Send Business Inquiry</button>
     </form>
-
-    <form id="bug-form" class="form-section">
-      <input type="text" name="name" placeholder="Your Name" required />
-      <input type="email" name="email" placeholder="Your Email" required />
-      <input type="url" name="url" placeholder="Page URL" required />
-      <textarea name="description" placeholder="Bug Description" required
-      ></textarea>
-      <textarea name="steps" placeholder="Steps to Reproduce" required
-      ></textarea>
-      <button type="submit">Submit Bug Report</button>
-    </form>
   </section>
 </BaseLayout>
 
 <script>
   const tabBtns = document.querySelectorAll(".tab-btn");
   const sections = document.querySelectorAll(".form-section");
-  
+
   function switchTab(targetType) {
     // Update tab buttons
-    tabBtns.forEach(btn => {
+    tabBtns.forEach((btn) => {
       btn.classList.remove("active");
       if (btn.dataset.type === targetType) {
         btn.classList.add("active");
       }
     });
-    
+
     // Update form sections
-    sections.forEach(sec => {
+    sections.forEach((sec) => {
       sec.classList.toggle("active", sec.id === targetType + "-form");
     });
   }
-  
+
   // Add click listeners to tabs
-  tabBtns.forEach(btn => {
+  tabBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       switchTab(btn.dataset.type);
     });
   });
-  
+
   // Set default to personal
   switchTab("personal");
 </script>
@@ -102,29 +84,30 @@ import { actions } from "astro:actions";
     border-bottom: 2px solid #e0e0e0;
     margin-bottom: 2rem;
   }
-  
+
   .tab-btn {
+    width: 50%;
     background: none;
     border: none;
     padding: 1rem 1.5rem;
-    font-size: 1rem;
+    font-size: 1.5rem;
     font-weight: 500;
     color: #666;
     cursor: pointer;
     position: relative;
     transition: color 0.3s ease;
   }
-  
+
   .tab-btn:hover {
     color: #007acc;
   }
-  
+
   .tab-btn.active {
     color: #007acc;
   }
-  
+
   .tab-btn.active::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -2px;
     left: 0;
