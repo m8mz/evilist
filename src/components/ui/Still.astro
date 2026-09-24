@@ -1,0 +1,62 @@
+---
+// A generated still (spec §8.2): AVIF/WebP at 800/1200/1600 px, a 1px iron border, 2px corners
+// and a 20% carbon scrim so every still sits at one brightness. The stills are illustrations,
+// so the alt text always says so. Lazy unless it is a page's hero (then eager, high priority).
+// The <img> fallback is WebP at 1600 px too: Astro defaults it to a full-size PNG.
+import type { ImageMetadata } from "astro";
+import { Picture } from "astro:assets";
+
+interface Props {
+  src: ImageMetadata;
+  /** What the illustration shows; the alt text becomes "Illustration: <subject>". */
+  subject: string;
+  sizes: string;
+  eager?: boolean;
+  class?: string;
+}
+
+const { src, subject, sizes, eager = false, class: className } = Astro.props;
+---
+
+<figure class:list={["still", className]}>
+  <Picture
+    src={src}
+    alt={`Illustration: ${subject}`}
+    widths={[800, 1200, 1600]}
+    width={1600}
+    sizes={sizes}
+    formats={["avif", "webp"]}
+    fallbackFormat="webp"
+    quality={60}
+    loading={eager ? "eager" : "lazy"}
+    fetchpriority={eager ? "high" : undefined}
+    class="still__img"
+  />
+</figure>
+
+<style>
+  .still {
+    position: relative;
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
+    background: var(--color-carbon);
+  }
+
+  .still :global(.still__img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* The scrim: a flat carbon layer at 20%, not a gradient. */
+  .still::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--color-carbon);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+</style>

@@ -3,6 +3,8 @@
 import KeyValue from "../ui/KeyValue.astro";
 import Panel from "../ui/Panel.astro";
 import Topology from "./Topology.astro";
+import Still from "../ui/Still.astro";
+import rack from "../../images/rack.webp";
 import { sharedRepos, work } from "../../data/work";
 ---
 
@@ -37,6 +39,11 @@ import { sharedRepos, work } from "../../data/work";
     <Topology />
     <figcaption class="work__caption">two datacenters, BGP failover, HAProxy in front</figcaption>
   </figure>
+  <Still
+    src={rack}
+    subject="a colocation rack row at night, fully populated and lit by orange status lights"
+    sizes="(min-width: 72rem) 34rem, (min-width: 60rem) 45vw, 92vw"
+  />
 </div>
 
 <style>

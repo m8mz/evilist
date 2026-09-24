@@ -36,6 +36,7 @@ const MIGRATED = [
   "src/components/ui/Icon.astro",
   "src/components/home/NowColumns.astro",
   "src/components/home/OffTheClock.astro",
+  "src/components/ui/Still.astro",
 ];
 
 describe("token migration", () => {

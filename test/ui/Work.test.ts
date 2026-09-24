@@ -29,4 +29,9 @@ describe("Work", () => {
       'aria-label="Two datacenters with BGP failover behind HAProxy"',
     );
   });
+
+  it("shows the rack illustration next to the topology", async () => {
+    const html = await render(Work);
+    expect(html).toMatch(/<figure class="still[^"]*"[\s\S]*alt="Illustration: a colocation rack/);
+  });
 });

@@ -341,8 +341,7 @@ picks one per shot, the rest are discarded. Budget ≈ 18 credits of the 3,010 b
 Each generation run is quoted and approved in chat before it is submitted.
 
 Files are committed to `src/images/` and served through `astro:assets` as AVIF/WebP
-at 800/1200/1600 widths, ≤ 120 KB per rendition, `loading="lazy"`, never in the LCP
-path. CSS treatment on every still: 1px iron border, 2px radius, and a 20% carbon
+at 800/1200/1600 widths, ≤ 120 KB per rendition, `loading="lazy"`, except the `/now` header still, which is that page's hero and loads eagerly with `fetchpriority="high"` (lazy-loading it would delay that page's LCP). CSS treatment on every still: 1px iron border, 2px radius, and a 20% carbon
 scrim overlay so the three shots sit at one brightness. Prompts and the chosen job IDs
 are recorded in `docs/imagery.md` so a regeneration is repeatable.
 
@@ -458,7 +457,7 @@ One branch and one approval per phase. Before every commit: `pnpm check && pnpm 
 | ----- | --------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1     | `feat/axiom-1-system` | §3, §4, §5; delete §9.3 items except `RankBadge` (still used until Phase 2).              | Every page renders in the new skin with old section internals; fonts ≤ 120 KB from `dist/`; `three` absent from `dist/client`; contrast tests pass; `pnpm size` initial-JS number drops; baselines regenerated. |
 | 2     | `feat/axiom-2-home`   | §6.1–6.5, §6.7, §7.5, §8.1 topology + journey recolour; delete `RankBadge`.               | Journey e2e unchanged and green; no `RankBadge` import remains; Lighthouse local a11y 100, perf ≥ 95; baselines regenerated.                                                                                    |
-| 3     | `feat/axiom-3-now`    | §9.1, §6.6, §7.1, §8.1 icons, §8.2 stills (quoted and approved before each run), §7.6 OG. | `/now` and the home block render from `now.ts`; `test/now.test.ts` green; image renditions ≤ 120 KB; no still in the LCP path; nav shows Now; baselines regenerated.                                            |
+| 3     | `feat/axiom-3-now`    | §9.1, §6.6, §7.1, §8.1 icons, §8.2 stills (quoted and approved before each run), §7.6 OG. | `/now` and the home block render from `now.ts`; `test/now.test.ts` green; image renditions ≤ 120 KB; no still in the LCP path except the eager /now hero; nav shows Now; baselines regenerated.                 |
 | 4     | `feat/axiom-4-polish` | §7.2–7.4, PDF regeneration, §9.4 docs, ADR, CLAUDE.md, vault log, final baselines.        | `test/resumePdf.test.ts` green; all Playwright projects green; Lighthouse CI config unchanged and green; Marcus sign-off.                                                                                       |
 
 ## 11. Out of scope
