@@ -45,9 +45,25 @@ import { now } from "../../data/now";
     gap: 1.5rem;
   }
 
+  /* Tablet: the rig takes the wide column so its model numbers don't break at a hyphen. */
   @media (min-width: 48rem) {
     .now-cols {
+      grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    .now-col:first-child {
+      grid-row: span 2;
+    }
+  }
+
+  /* Three columns once the container is at full width (as at 1440). */
+  @media (min-width: 72rem) {
+    .now-cols {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .now-col:first-child {
+      grid-row: auto;
     }
   }
 

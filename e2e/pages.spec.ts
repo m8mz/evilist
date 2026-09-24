@@ -60,6 +60,11 @@ test("/now lists the rig, the games, the anime and what Marcus is building", asy
   await expect(page).toHaveTitle("Now · Marcus Hancock-Gaillard");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Now");
   await expect(page.locator(".now__updated")).toHaveText("updated: 2026-09");
+  // Headings descend in order: h1, then an h2 per panel, then the column heads.
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText([
+    "Rig, games and anime",
+    "Training, learning and building",
+  ]);
   await expect(page.getByRole("heading", { level: 3 })).toHaveText(["rig", "playing", "watching"]);
   for (const text of ["AMD Ryzen 7 7800X3D", "League of Legends", "Demon Slayer"]) {
     await expect(page.locator("main")).toContainText(text);
