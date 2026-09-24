@@ -24,11 +24,11 @@
 
 ## Review Focus
 
-1. **A still rendition is heavier than 120 KB**, or a phone downloads the 1600 px file, making `/` and `/now` slow on mobile. Pinned by `e2e/stills.spec.ts` "serves every still rendition under 120 KB" (Tasks 5–6).
-2. **The `/now` header still hurts that page's LCP or shifts layout** (lazy-loaded above the fold, or no intrinsic size). Pinned by `e2e/pages.spec.ts` "/now leads with the rig still as its eager hero" (Task 6) and `/now/` in Lighthouse CI.
-3. **The fourth nav item wraps the header or goes missing from the phone menu.** Pinned by `e2e/layout.spec.ts` "the nav shows Now and keeps one row from tablet up" (Task 6).
-4. **The `/og-card/` helper page leaks into search** (sitemap entry, indexable). Pinned by `e2e/pages.spec.ts` "the social card's source page stays out of search" (Task 7).
-5. **Social previews break**: the card is missing, the wrong size, or pages still point at the old square portrait. Pinned by `test/ogCard.test.ts` and `e2e/pages.spec.ts` "every page shares the 1200×630 social card" (Task 7).
+1. **A still rendition is heavier than 120 KB**, or a phone downloads the 1600 px file, making `/` and `/now` slow on mobile. Pinned by `e2e/stills.spec.ts` "serves every still rendition under 120 KB" (Tasks 5 and 7).
+2. **The `/now` header still hurts that page's LCP or shifts layout** (lazy-loaded above the fold, or no intrinsic size). Pinned by `e2e/pages.spec.ts` "/now leads with the rig still as its eager hero" (Task 7) and `/now/` in Lighthouse CI.
+3. **The fourth nav item wraps the header or goes missing from the phone menu.** Pinned by `e2e/layout.spec.ts` "the nav shows Now and keeps one row from tablet up" (Task 7).
+4. **The `/og-card/` helper page leaks into search** (sitemap entry, indexable). Pinned by `e2e/pages.spec.ts` "the social card's source page stays out of search" (Task 8).
+5. **Social previews break**: the card is missing, the wrong size, or pages still point at the old square portrait. Pinned by `test/ogCard.test.ts` and `e2e/pages.spec.ts` "every page shares the 1200×630 social card" (Task 8).
 
 ---
 
@@ -40,7 +40,7 @@
 
 **Interfaces:**
 
-- Produces: `export interface NowData` and `export const now: NowData` (shape below). Tasks 3 and 6 read `now.rig` (`{ key, value }[]`, directly usable as `KeyValue` rows), `now.playing`, `now.watching`, `now.learning`, `now.building` (`string[]`), `now.training` (`{ line: string; weeks: number[] }`) and `now.updated` (`"yyyy-mm"`).
+- Produces: `export interface NowData` and `export const now: NowData` (shape below). Tasks 3 and 7 read `now.rig` (`{ key, value }[]`, directly usable as `KeyValue` rows), `now.playing`, `now.watching`, `now.learning`, `now.building` (`string[]`), `now.training` (`{ line: string; weeks: number[] }`) and `now.updated` (`"yyyy-mm"`).
 
 - [ ] **Step 1: Confirm the branch**
 
@@ -536,12 +536,14 @@ git commit -m "feat: off-the-clock block on the home page"
 
 ---
 
-### Task 4: Generate, choose and import the three stills
+### Task 4: Generate, choose and import the stills
+
+**Amended during execution (Marcus, 2026-09-24):** two stills ship (`rig`, `rack`). The rack prompt was replaced by a round-2 prompt; shot 3 (`og-bg`) was dropped after two rounds, because the site's terminal is drawn in code instead (Task 6), and the social card is rendered from it (Task 8). `docs/imagery.md` records every prompt and job. Higgsfield accepts at most 5 jobs at a time.
 
 **Files:**
 
 - Create: `scripts/import-still.mjs`, `test/importStill.test.ts`, `docs/imagery.md`
-- Create (from Higgsfield, after Marcus approves): `src/images/rig.webp`, `src/images/rack.webp`, `src/images/og-bg.webp`
+- Create (from Higgsfield, after Marcus approves): `src/images/rig.webp`, `src/images/rack.webp`
 
 **Interfaces:**
 
@@ -710,11 +712,11 @@ Fill the "Chosen renders" table in `docs/imagery.md`, one row per shot: shot nam
 - [ ] **Step 11: Gate and commit**
 
 Run: `pnpm check && pnpm test && pnpm build && pnpm exec prettier --check scripts test docs`
-Expected: all green. `ls -la src/images/{rig,rack,og-bg}.webp` shows three files, each under 1 MB.
+Expected: all green. `ls -la src/images/{rig,rack}.webp` shows two files, each under 1 MB.
 
 ```bash
 git add scripts/import-still.mjs test/importStill.test.ts docs/imagery.md \
-  src/images/rig.webp src/images/rack.webp src/images/og-bg.webp
+  src/images/rig.webp src/images/rack.webp docs/superpowers/specs/2026-09-24-axiom-design-system-design.md
 git commit -m "feat: three Higgsfield stills with their prompts and import script"
 ```
 
@@ -781,7 +783,7 @@ Create `e2e/stills.spec.ts`:
 ```ts
 import { test, expect } from "@playwright/test";
 
-/** Pages that show stills. Task 6 adds "/now". */
+/** Pages that show stills. Task 7 adds "/now". */
 const PAGES = ["/"];
 
 test.beforeEach(({}, info) => {
@@ -918,7 +920,552 @@ git commit -m "feat: Still component and the rack illustration beside the topolo
 
 ---
 
-### Task 6: The `/now` page and the nav item
+### Task 6: The htop band under the hero
+
+Added during execution on Marcus's direction (2026-09-24): the site should feel like a terminal is running behind it. Spec §6.1a.
+
+**Files:**
+
+- Create: `src/data/htop.ts`, `src/scripts/htop.ts`, `src/components/home/Htop.astro`, `test/htop.test.ts`, `test/ui/Htop.test.ts`
+- Modify: `src/pages/index.astro` (band after `<Hero />`), `e2e/home.spec.ts`, `test/migration.test.ts`
+
+**Interfaces:**
+
+- Produces: `htop: HtopSnapshot` (`cores: number[]`, `memory`/`swap: { used; total }` in GiB, `tasks`, `load: [n, n, n]`, `uptime`, `processes: HtopProcess[]` sorted by CPU%, highest first); `meter(fraction, label, width): string`, `pct(p): string`, `drift(value, spread, min, max, rand?): number`, `initHtop(root?)` in `src/scripts/htop.ts`; `Htop` (no props), root `figure.htop[data-htop]`. Task 8's social card renders `Htop`.
+
+- [ ] **Step 1: Write the failing tests**
+
+`test/htop.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+import { htop } from "../src/data/htop";
+import { drift, meter, pct } from "../src/scripts/htop";
+
+describe("meter", () => {
+  it.each([0, 0.42, 1, -0.5, 1.5, Number.NaN])("is always exactly the width (%s)", (f) => {
+    expect(meter(f, "42.0%", 30)).toHaveLength(30);
+  });
+
+  it("fills bars in proportion to the space left after the label", () => {
+    // width 26, label 5, one space → 20 columns for bars
+    expect(meter(0.5, "50.0%", 26)).toBe(`${"|".repeat(10)}${" ".repeat(10)} 50.0%`);
+  });
+
+  it("formats percentages to one decimal", () => {
+    expect(pct(42)).toBe("42.0%");
+    expect(pct(9.14)).toBe("9.1%");
+  });
+});
+
+describe("drift", () => {
+  it("stays within its bounds and rounds to one decimal", () => {
+    expect(drift(50, 9, 3, 96, () => 0)).toBe(41);
+    expect(drift(50, 9, 3, 96, () => 1)).toBe(59);
+    expect(drift(95, 9, 3, 96, () => 1)).toBe(96);
+    expect(drift(4, 9, 3, 96, () => 0)).toBe(3);
+  });
+});
+
+describe("htop snapshot", () => {
+  it("has sane meters", () => {
+    for (const core of htop.cores) {
+      expect(core).toBeGreaterThanOrEqual(0);
+      expect(core).toBeLessThanOrEqual(100);
+    }
+    expect(htop.memory.used).toBeLessThanOrEqual(htop.memory.total);
+    expect(htop.swap.used).toBeLessThanOrEqual(htop.swap.total);
+  });
+
+  it("lists processes by CPU%, highest first", () => {
+    const cpu = htop.processes.map((p) => p.cpu);
+    expect(cpu).toEqual([...cpu].sort((a, b) => b - a));
+  });
+
+  it("never names a host, an IP address or a real user", () => {
+    const text = JSON.stringify(htop);
+    expect(text).not.toMatch(/\b\d{1,3}(\.\d{1,3}){3}\b/);
+    expect(text).not.toMatch(/\.(com|net|org|io|co|local|internal)\b/);
+    for (const p of htop.processes) expect(["web", "root", "chrony"]).toContain(p.user);
+  });
+});
+```
+
+`test/ui/Htop.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest";
+import Htop from "../../src/components/home/Htop.astro";
+import { htop } from "../../src/data/htop";
+import { render } from "../render";
+
+describe("Htop", () => {
+  it("draws a meter per core, each exactly as wide as the others", async () => {
+    const html = await render(Htop);
+    const bars = [...html.matchAll(/data-core="[^"]*"[\s\S]*?class="htop__bar"[^>]*>([^<]*)</g)];
+    expect(bars).toHaveLength(htop.cores.length);
+    expect(new Set(bars.map((m) => m[1]!.length))).toEqual(new Set([30]));
+  });
+
+  it("lists every process and selects the first", async () => {
+    const html = await render(Htop);
+    for (const p of htop.processes) expect(html).toContain(`>${p.command}<`);
+    expect(html.match(/<tr class="is-selected/g)).toHaveLength(1);
+  });
+
+  it("hides the terminal from assistive tech and says it is simulated", async () => {
+    const html = await render(Htop);
+    expect(html).toMatch(/class="htop__screen" aria-hidden="true"/);
+    expect(html).toMatch(/<figcaption[^>]*>A simulated htop/);
+  });
+});
+```
+
+Append to `MIGRATED` in `test/migration.test.ts`: `"src/components/home/Htop.astro",`
+
+Append to `e2e/home.spec.ts`:
+
+```ts
+test.describe("htop band", () => {
+  test("sits under the hero and says it is simulated", async ({ page }) => {
+    await page.goto("/");
+    const band = page.locator("#system");
+    await expect(band.locator(".term__title")).toHaveText("htop · evilist");
+    await expect(band.locator("tbody tr")).toHaveCount(8);
+    await expect(band.locator("figcaption")).toContainText("simulated");
+    const heroBottom = (await page.locator(".hero").boundingBox())!;
+    const bandTop = (await band.boundingBox())!;
+    expect(bandTop.y).toBeGreaterThanOrEqual(heroBottom.y + heroBottom.height - 1);
+  });
+
+  test("drifts only when motion is allowed", async ({ page }, info) => {
+    await page.goto("/");
+    const core = page.locator("[data-core] .htop__bar").first();
+    await page.locator("#system").scrollIntoViewIfNeeded();
+    const before = await core.textContent();
+    if (info.project.name === "reduced-motion") {
+      await page.waitForTimeout(3500);
+      expect(await core.textContent()).toBe(before);
+    } else {
+      await expect.poll(() => core.textContent(), { timeout: 8000 }).not.toBe(before);
+    }
+  });
+});
+```
+
+- [ ] **Step 2: Run them to verify they fail**
+
+Run: `pnpm vitest run test/htop.test.ts test/ui/Htop.test.ts`
+Expected: FAIL — cannot resolve `src/data/htop`, `src/scripts/htop`, `Htop.astro`.
+
+- [ ] **Step 3: Create `src/data/htop.ts`**
+
+```ts
+// The htop band's snapshot (spec §6.1a): a simulated view of the stack this site runs on:
+// Linux, Podman, HAProxy and Node. Generic names only: no hostnames, IPs or real users.
+export interface HtopProcess {
+  pid: number;
+  user: string;
+  cpu: number;
+  mem: number;
+  time: string;
+  command: string;
+}
+
+export interface HtopSnapshot {
+  /** Busy % per core, 0–100. */
+  cores: number[];
+  /** GiB. */
+  memory: { used: number; total: number };
+  swap: { used: number; total: number };
+  tasks: string;
+  load: [number, number, number];
+  uptime: string;
+  /** Sorted by CPU%, highest first; the first row is htop's selected row. */
+  processes: HtopProcess[];
+}
+
+export const htop: HtopSnapshot = {
+  cores: [42.0, 18.5, 27.3, 9.1],
+  memory: { used: 3.1, total: 7.7 },
+  swap: { used: 0, total: 2 },
+  tasks: "63, 118 thr; 2 running",
+  load: [0.42, 0.38, 0.31],
+  uptime: "41 days, 03:12:09",
+  processes: [
+    {
+      pid: 812,
+      user: "web",
+      cpu: 4.2,
+      mem: 1.8,
+      time: "3:14.07",
+      command: "haproxy -W -db -f /usr/local/etc/haproxy/haproxy.cfg",
+    },
+    {
+      pid: 944,
+      user: "web",
+      cpu: 2.9,
+      mem: 6.3,
+      time: "1:52.40",
+      command: "node ./dist/server/entry.mjs",
+    },
+    {
+      pid: 2210,
+      user: "root",
+      cpu: 1.1,
+      mem: 1.2,
+      time: "0:06.02",
+      command: "dnf-automatic /etc/dnf/automatic.conf --timer",
+    },
+    {
+      pid: 731,
+      user: "web",
+      cpu: 0.7,
+      mem: 0.9,
+      time: "0:41.12",
+      command: "conmon --api-version 1 -c evilist-web",
+    },
+    {
+      pid: 1203,
+      user: "root",
+      cpu: 0.3,
+      mem: 0.5,
+      time: "0:09.81",
+      command: "/usr/lib/systemd/systemd-journald",
+    },
+    {
+      pid: 1,
+      user: "root",
+      cpu: 0.1,
+      mem: 0.4,
+      time: "0:12.55",
+      command: "/usr/lib/systemd/systemd --system --deserialize 31",
+    },
+    {
+      pid: 655,
+      user: "root",
+      cpu: 0,
+      mem: 0.2,
+      time: "0:03.10",
+      command: "sshd: /usr/sbin/sshd -D [listener]",
+    },
+    {
+      pid: 690,
+      user: "chrony",
+      cpu: 0,
+      mem: 0.1,
+      time: "0:01.44",
+      command: "/usr/sbin/chronyd -F 2",
+    },
+  ],
+};
+```
+
+- [ ] **Step 4: Create `src/scripts/htop.ts`**
+
+```ts
+// The htop band: formatting shared by the server render and the client, plus a gentle live
+// update. Every 1.6 s while the band is on screen, core loads and CPU% drift a little. Only text
+// changes, at fixed widths, so nothing reflows. Reduced motion: no updates.
+import { inView } from "motion";
+
+/** An htop meter body in exactly `width` columns: bars, padding, one space, then the label. */
+export function meter(fraction: number, label: string, width: number): string {
+  const f = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
+  const room = Math.max(0, width - label.length - 1);
+  return `${"|".repeat(Math.round(f * room)).padEnd(room)} ${label}`;
+}
+
+export const pct = (p: number): string => `${p.toFixed(1)}%`;
+
+/** `value` nudged by up to ±`spread`, clamped to [min, max] and rounded to one decimal. */
+export function drift(
+  value: number,
+  spread: number,
+  min: number,
+  max: number,
+  rand: () => number = Math.random,
+): number {
+  const next = Math.min(max, Math.max(min, value + (rand() * 2 - 1) * spread));
+  return Math.round(next * 10) / 10;
+}
+
+const WIDTH = 30;
+const HOT = 75;
+
+export function initHtop(root: ParentNode = document): void {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const band = root.querySelector<HTMLElement>("[data-htop]");
+  if (!band) return;
+  const cores = [...band.querySelectorAll<HTMLElement>("[data-core]")];
+  const cpus = [...band.querySelectorAll<HTMLElement>("[data-cpu]")];
+
+  const tick = () => {
+    for (const el of cores) {
+      const next = drift(Number(el.dataset.core), 9, 3, 96);
+      el.dataset.core = String(next);
+      el.classList.toggle("is-hot", next >= HOT);
+      const bar = el.querySelector<HTMLElement>(".htop__bar");
+      if (bar) bar.textContent = meter(next / 100, pct(next), WIDTH);
+    }
+    for (const el of cpus) {
+      const next = drift(Number(el.dataset.cpu), 0.8, 0, 12);
+      el.dataset.cpu = String(next);
+      el.textContent = next.toFixed(1);
+    }
+  };
+
+  inView(band, () => {
+    const timer = window.setInterval(tick, 1600);
+    return () => window.clearInterval(timer);
+  });
+}
+```
+
+- [ ] **Step 5: Create `src/components/home/Htop.astro`**
+
+```astro
+---
+// The htop band under the hero (spec §6.1a): a simulated htop of the stack this site runs on,
+// drawn in code with the site's own type and tokens so it reads as part of the page, never as a
+// picture. The terminal is aria-hidden; the caption says what it is. scripts/htop.ts animates it.
+import TerminalFrame from "../ui/TerminalFrame.astro";
+import { htop } from "../../data/htop";
+import { meter, pct } from "../../scripts/htop";
+
+const WIDTH = 30;
+const HOT = 75;
+const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.total.toFixed(2)}G`;
+---
+
+<figure class="htop" data-htop>
+  <TerminalFrame title="htop · evilist">
+    <div class="htop__screen" aria-hidden="true">
+      <div class="htop__meters">
+        <div>
+          {htop.cores.map((p, i) => (
+            <p class:list={["htop__line", { "is-hot": p >= HOT }]} data-core={p}>
+              <span class="htop__label">{i}</span>[
+              <span class="htop__bar">{meter(p / 100, pct(p), WIDTH)}</span>]
+            </p>
+          ))}
+        </div>
+        <div>
+          <p class="htop__line">
+            <span class="htop__label">Mem</span>[
+            <span class="htop__bar">
+              {meter(htop.memory.used / htop.memory.total, gib(htop.memory), WIDTH)}
+            </span>
+            ]
+          </p>
+          <p class="htop__line">
+            <span class="htop__label">Swp</span>[
+            <span class="htop__bar">
+              {meter(htop.swap.used / htop.swap.total, gib(htop.swap), WIDTH)}
+            </span>
+            ]
+          </p>
+          <p class="htop__line">
+            <span class="htop__key">Tasks:</span> {htop.tasks}
+          </p>
+          <p class="htop__line">
+            <span class="htop__key">Load average:</span>{" "}
+            {htop.load.map((l) => l.toFixed(2)).join(" ")}
+          </p>
+          <p class="htop__line">
+            <span class="htop__key">Uptime:</span> {htop.uptime}
+          </p>
+        </div>
+      </div>
+      <table class="htop__procs">
+        <thead>
+          <tr>
+            <th class="num">PID</th>
+            <th>USER</th>
+            <th class="num">CPU%</th>
+            <th class="num">MEM%</th>
+            <th class="num htop__time">TIME+</th>
+            <th>Command</th>
+          </tr>
+        </thead>
+        <tbody>
+          {htop.processes.map((p, i) => (
+            <tr class:list={{ "is-selected": i === 0 }}>
+              <td class="num">{p.pid}</td>
+              <td>{p.user}</td>
+              <td class="num" data-cpu={p.cpu}>
+                {p.cpu.toFixed(1)}
+              </td>
+              <td class="num">{p.mem.toFixed(1)}</td>
+              <td class="num htop__time">{p.time}</td>
+              <td class="htop__cmd">{p.command}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p class="htop__keys">
+        <span>F1</span>Help <span>F2</span>Setup <span>F3</span>Search <span>F5</span>Tree{" "}
+        <span>F6</span>SortBy <span>F10</span>Quit
+      </p>
+    </div>
+  </TerminalFrame>
+  <figcaption class="htop__caption">
+    A simulated htop of the stack behind this site: Linux, Podman, HAProxy and Node.
+  </figcaption>
+</figure>
+
+<script>
+  import { initHtop } from "../../scripts/htop";
+  initHtop();
+</script>
+
+<style>
+  .htop {
+    margin: 0;
+  }
+
+  .htop__screen {
+    padding: 1rem 1.25rem 1.25rem;
+    overflow: hidden;
+    color: var(--color-fog);
+    font-size: var(--text-caption);
+    line-height: 1.6;
+  }
+
+  .htop__meters {
+    display: grid;
+    gap: 0 3rem;
+  }
+
+  @media (min-width: 48rem) {
+    .htop__meters {
+      grid-template-columns: repeat(2, max-content);
+    }
+  }
+
+  .htop__line {
+    max-width: none;
+    white-space: pre;
+  }
+
+  .htop__label {
+    display: inline-block;
+    width: 3ch;
+    color: var(--color-ash);
+  }
+
+  .htop__line.is-hot .htop__bar {
+    color: var(--color-ember);
+  }
+
+  .htop__key {
+    color: var(--color-ash);
+  }
+
+  .htop__procs {
+    width: 100%;
+    margin-top: 1rem;
+    border-collapse: collapse;
+    white-space: nowrap;
+  }
+
+  .htop__procs th {
+    padding: 0 1ch;
+    background: var(--color-graphite);
+    color: var(--color-paper);
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .htop__procs td {
+    padding: 0 1ch;
+  }
+
+  .htop__procs .num {
+    text-align: right;
+  }
+
+  /* The command column takes the remaining width and truncates. */
+  .htop__cmd {
+    width: 100%;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .htop__procs tr.is-selected td {
+    background: var(--color-ember);
+    color: var(--color-void);
+  }
+
+  .htop__keys {
+    margin-top: 1rem;
+    max-width: none;
+    color: var(--color-ash);
+    white-space: pre;
+  }
+
+  .htop__keys span {
+    margin-left: 1ch;
+    padding: 0 0.25ch;
+    background: var(--color-fog);
+    color: var(--color-void);
+  }
+
+  .htop__caption {
+    margin-top: 0.75rem;
+    color: var(--color-ash);
+    font-size: var(--text-caption);
+  }
+
+  @media (max-width: 47.99rem) {
+    .htop__time,
+    .htop__keys {
+      display: none;
+    }
+  }
+</style>
+```
+
+- [ ] **Step 6: Put the band under the hero**
+
+In `src/pages/index.astro` add `import Htop from "../components/home/Htop.astro";` after the `Hero` import, and after `<Hero />` add:
+
+```astro
+<Section prompt="htop" id="system" aria-labelledby="system-title">
+  <h2 id="system-title" class="visually-hidden">
+    What this site runs on
+  </h2>
+  <Htop />
+</Section>
+```
+
+- [ ] **Step 7: Run the tests and watch them pass**
+
+Run: `pnpm vitest run test/htop.test.ts test/ui/Htop.test.ts test/migration.test.ts`
+Expected: PASS.
+
+Run: `pnpm build && pnpm exec playwright test e2e/home.spec.ts e2e/layout.spec.ts e2e/pages.spec.ts`
+Expected: PASS on every project, including no horizontal overflow at 393 px and the drift test (static on reduced-motion).
+
+- [ ] **Step 8: Look at it**
+
+Capture `#system` at 1440 and 390 with Playwright against the production server on 4396. Check: the band reads as part of the page (same black, same font, same greys), orange appears only on the selected row and any hot core, the table truncates cleanly at 390, and nothing overflows.
+
+- [ ] **Step 9: Gate and commit**
+
+Run: `pnpm check && pnpm test && pnpm build && pnpm exec prettier --check src test e2e`
+Expected: all green.
+
+```bash
+git add src/data/htop.ts src/scripts/htop.ts src/components/home/Htop.astro test/htop.test.ts \
+  test/ui/Htop.test.ts src/pages/index.astro e2e/home.spec.ts test/migration.test.ts
+git commit -m "feat: live htop band under the hero, drawn in code"
+```
+
+---
+
+### Task 7: The `/now` page and the nav item
 
 **Files:**
 
@@ -1166,7 +1713,7 @@ git commit -m "feat: the /now page and its nav item"
 
 ---
 
-### Task 7: The 1200×630 social card
+### Task 8: The 1200×630 social card
 
 **Files:**
 
@@ -1175,7 +1722,7 @@ git commit -m "feat: the /now page and its nav item"
 
 **Interfaces:**
 
-- Consumes: `src/images/og-bg.webp` (Task 4), `Prompt`, `site`.
+- Consumes: `Htop` (Task 6), `Prompt`, `site`.
 - Produces: `pnpm build:og` → `public/og-default.png` (1200×630 PNG). Every page's `og:image` is `https://evilist.io/og-default.png`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1251,11 +1798,12 @@ Expected: FAIL — `og:image` points at the square portrait; `/og-card/` is a 40
 ```astro
 ---
 // The 1200×630 social card. Not a real page: scripts/build-og.mjs renders it once into
-// public/og-default.png. noindex, and excluded from the sitemap in astro.config.ts.
+// public/og-default.png. noindex, and excluded from the sitemap in astro.config.ts. The
+// background is the site's own htop band (spec §6.1a), so the card looks like the site.
 import "../styles/global.css";
-import { Font, Image } from "astro:assets";
+import { Font } from "astro:assets";
+import Htop from "../components/home/Htop.astro";
 import Prompt from "../components/ui/Prompt.astro";
-import ogBg from "../images/og-bg.webp";
 import { site } from "../data/site";
 ---
 
@@ -1268,7 +1816,9 @@ import { site } from "../data/site";
     <Font cssVariable="--font-jetbrains" preload />
   </head>
   <body class="og">
-    <Image src={ogBg} alt="" width={1200} height={630} loading="eager" class="og__bg" />
+    <div class="og__bg">
+      <Htop />
+    </div>
     <div class="og__copy">
       <Prompt path="marcus" cursor class="og__prompt" />
       <p class="og__name">{site.name}</p>
@@ -1290,12 +1840,19 @@ import { site } from "../data/site";
     background: var(--color-void);
   }
 
-  .og :global(.og__bg) {
+  /* The site's own htop band is the background, so the card looks like the site. */
+  .og__bg {
     position: absolute;
     inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    padding: 32px;
+  }
+
+  .og__bg :global(.htop__caption) {
+    display: none;
+  }
+
+  .og__bg :global(.htop__screen) {
+    font-size: 15px;
   }
 
   /* Flat void scrim so the copy reads on any render. */
@@ -1427,7 +1984,7 @@ URL("/og-default.png", Astro.site);
 - [ ] **Step 7: Build the card and look at it**
 
 Run: `pnpm build:og`
-Expected: `Wrote public/og-default.png`. Read the PNG: the terminal close-up behind a dark scrim, `~/marcus` with the cursor, the name, the role line and `evilist.io` in ember, all legible, nothing cut off.
+Expected: `Wrote public/og-default.png`. Read the PNG: the htop band behind a dark scrim, `~/marcus` with the cursor, the name, the role line and `evilist.io` in ember, all legible, nothing cut off.
 
 - [ ] **Step 8: Run the tests and watch them pass**
 
@@ -1450,7 +2007,7 @@ git commit -m "feat: 1200×630 social card built from an internal route"
 
 ---
 
-### Task 8: Phase verification, baselines, screenshots, docs
+### Task 9: Phase verification, baselines, screenshots, docs
 
 **Files:**
 
@@ -1475,7 +2032,7 @@ In `e2e/visual.spec.ts` add `{ name: "now", path: "/now", fullPage: true },` to 
 
 - [ ] **Step 4: Browser check at the four widths**
 
-Serve the build on 4396. Real Chrome at whatever width the window allows (see CLAUDE.md), then Playwright Chromium at 390×844, 430×932, 768×1024, 1440×900 for `/` (the off-the-clock block and the Work row), `/now` and `/og-card/`. For each: no horizontal overflow, no console errors, the nav on one row from 768 up, the stills loaded. Record the results in the ledger; stop the server.
+Serve the build on 4396. Real Chrome at whatever width the window allows (see CLAUDE.md), then Playwright Chromium at 390×844, 430×932, 768×1024, 1440×900 for `/` (the off-the-clock block and the Work row), `/now` and `/og-card/`. For each: no horizontal overflow, no console errors, the nav on one row from 768 up, the stills loaded. On `/`, the htop band reads as part of the page, drifts on desktop and stays still for reduced motion. Record the results in the ledger; stop the server.
 
 - [ ] **Step 5: Lighthouse**
 

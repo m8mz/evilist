@@ -66,7 +66,8 @@ No `box-shadow`, no gradients, no `filter: blur()`, no glow.
 2. The blinking cursor in `Prompt`.
 3. The 2px left border on `Panel case` (work items, notes, journey stage cards).
 4. `LogBars` bars, the topology pulse dot, LEDs and the parcel tape inside the journey SVG
-   scene, and the avatar's eyes (§6.2).
+   scene, the avatar's eyes (§6.2), and in the htop band (§6.1a) the selected process row and
+   any core meter at 75% or more.
 5. Links on hover, `:focus-visible` outline, `::selection` background.
 
 Nowhere else: not headings, not icons, not borders, not status, not the rank chips
@@ -155,7 +156,7 @@ usage moves to `RankChip`).
 
 ## 6. Home page (`src/pages/index.astro`)
 
-Order: Hero → Journey → Skills → Work → About → Off the clock → CTA.
+Order: Hero → htop band → Journey → Skills → Work → About → Off the clock → CTA.
 
 ### 6.1 Hero
 
@@ -172,6 +173,25 @@ Two columns from 60rem (copy 1.35fr, portrait 1fr), stacked below.
   radius.
 - `ArrowField` fills the hero's negative space, clipped by the section: the right side (behind the portrait frame) from 60rem, the lower half on phones. Never behind body copy.
 - No aura, no speed lines, no stamped seal.
+
+### 6.1a htop band (added 2026-09-24, Marcus's direction)
+
+A full-width band directly under the hero, like Axiom's product panel: the site should feel like
+a terminal is running behind it, not show a photo of one. It is drawn in code, never an image, so
+it uses the site's own font, tokens and 60/30/10 split and blends into the page.
+
+- `src/components/home/Htop.astro` in a `TerminalFrame` titled `htop · evilist`: per-core CPU
+  meters, memory and swap meters, tasks, load average and uptime, then a process table (PID, USER,
+  CPU%, MEM%, TIME+, Command) and htop's F-key bar. Text meters (`|||`) in fog; a core at 75% or
+  more turns ember; the selected (first) process row is an ember fill with void text.
+- Data: `src/data/htop.ts`, a simulated snapshot of the stack this site actually runs (Linux,
+  Podman, HAProxy, Node, systemd, sshd, chronyd, dnf-automatic). Generic names only: no
+  hostnames, IPs, real users or employer systems.
+- Honest: a visible caption says it is a simulated htop of the stack behind this site; the
+  terminal itself is `aria-hidden`.
+- Motion: `scripts/htop.ts` drifts the core loads and CPU% every 1.6 s while the band is on
+  screen (text only, fixed widths, nothing reflows). Reduced motion: the snapshot stays static.
+- Phones: the meters stack, TIME+ and the F-key bar hide, commands truncate with an ellipsis.
 
 ### 6.2 Journey
 
@@ -283,8 +303,8 @@ with `→ home` as a ghost button.
 
 ### 7.6 SEO
 
-`public/og-default.png` regenerated (§8.2 shot 3 plus overlaid name and role, built
-once and committed). JSON-LD, sitemap, RSS unchanged. `<meta name="theme-color">` →
+`public/og-default.png` regenerated (the htop band from §6.1a behind a void scrim, plus the
+name, role and URL; rendered from an internal `/og-card/` route and committed). JSON-LD, sitemap, RSS unchanged. `<meta name="theme-color">` →
 `#000000`.
 
 ## 8. Imagery
@@ -307,6 +327,13 @@ All SVG uses palette tokens via classes (no inline `style=`), animates only
   `play`, `dumbbell`, `arrow`. 16×16, 1.5px steel strokes (slate is 1.6:1 on graphite panels and disappears), round caps. Decorative.
 
 ### 8.2 Higgsfield stills
+
+**Amended 2026-09-24 (Marcus's direction):** two stills ship, not three. The rack prompt was
+replaced by a round-2 prompt (a row of fully populated 48U racks: switch, firewalls, load
+balancers, compute servers, backup storage, cable management; no readable labels or vendor
+names). Shot 3 (a generated terminal) was dropped after two rounds: the site's terminal is drawn
+in code (§6.1a) and backs the social card (§7.6). `docs/imagery.md` is the record of every prompt,
+chosen job and rejected job. Higgsfield runs at most 5 jobs at a time.
 
 Model `nano_banana_pro` (Google Nano Banana Pro via Higgsfield MCP), 2K, 2 credits per
 image. Three variants per shot are generated in one `generate_image_batch`, Marcus
