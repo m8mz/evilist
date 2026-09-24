@@ -38,9 +38,14 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 const tokens = declaredTokens(tokensCss);
 const color = (name: string) => tokens.get(`--color-${name}`)!;
 
+/** Font variables the Astro Fonts API sets on :root: every `cssVariable` in astro.config.ts. */
+const configFontVars = [
+  ...readFileSync("astro.config.ts", "utf8").matchAll(/cssVariable:\s*"(--[a-z0-9-]+)"/g),
+].map((m) => m[1]);
+
 /** Custom properties set at runtime rather than in tokens.css. */
 const PROVIDED = new Set([
-  "--font-jetbrains", // set on :root by <Font cssVariable> in Head.astro
+  ...configFontVars, // set by <Font cssVariable> in Head.astro
   "--progress", // set on [data-journey] by scripts/journey.ts
 ]);
 
@@ -90,6 +95,20 @@ describe("design tokens", () => {
     ]) {
       expect(tokens.has(old), old).toBe(true);
     }
+  });
+
+  it("wires the configured font into --font-mono and loads it in Head", () => {
+    // If these drift apart, every page silently falls back to ui-monospace.
+    expect(configFontVars.length).toBeGreaterThan(0);
+    const head = readFileSync("src/components/seo/Head.astro", "utf8");
+    for (const v of configFontVars) {
+      expect(head, `Head.astro loads ${v}`).toContain(`<Font cssVariable="${v}"`);
+    }
+    const fontMono = tokens.get("--font-mono") ?? "";
+    expect(
+      configFontVars.some((v) => fontMono.startsWith(`var(${v})`)),
+      fontMono,
+    ).toBe(true);
   });
 
   it("has no undefined custom property references anywhere in src", () => {
