@@ -71,6 +71,7 @@ Marcus prefers step-by-step delivery:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
   - keep `build.inlineStylesheets: "never"`
+  - keep `trailingSlash: "never"`: the Node adapter attaches the static CSP header only to the slashless path, and `e2e/layout.spec.ts` checks every sitemap URL for it
   - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
 - Journey (`src/components/journey/`):

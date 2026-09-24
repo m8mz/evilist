@@ -86,3 +86,29 @@ test("production build sends a hashed Content-Security-Policy", async ({ request
   expect(csp).toMatch(/script-src 'self' 'sha256-/);
   expect(csp).toMatch(/style-src 'self' 'sha256-/);
 });
+
+test("every URL the sitemap lists is served as listed, with the CSP", async ({ request }) => {
+  const sitemap = await (await request.get("/sitemap-0.xml")).text();
+  const listed = [...sitemap.matchAll(/<loc>https:\/\/evilist\.io([^<]*)<\/loc>/g)].map(
+    (m) => m[1],
+  );
+  expect(listed.length).toBeGreaterThan(4);
+  // The social card's render target is reachable too, so it needs the policy as well.
+  for (const path of [...listed, "/og-card"]) {
+    const res = await request.get(path, { maxRedirects: 0 });
+    expect(res.status(), path).toBe(200);
+    expect(res.headers()["content-security-policy"] ?? "", path).toContain("default-src 'self'");
+  }
+});
+
+test("a trailing slash redirects to the one canonical URL", async ({ request }) => {
+  for (const [from, to] of [
+    ["/now/", "/now"],
+    ["/notes/", "/notes"],
+    ["/notes/ten-years-t1-to-architect/", "/notes/ten-years-t1-to-architect"],
+  ]) {
+    const res = await request.get(from, { maxRedirects: 0 });
+    expect(res.status(), from).toBe(301);
+    expect(res.headers().location, from).toBe(to);
+  }
+});

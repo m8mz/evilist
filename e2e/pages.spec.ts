@@ -95,13 +95,15 @@ test.describe("machine-readable files", () => {
     const xml = await res.text();
     expect(xml).toContain("<rss");
     expect(xml.match(/<item>/g)?.length).toBe(2);
+    // Item links use the canonical, slashless URL (no redirect hop for feed readers).
+    expect(xml).toContain("<link>https://evilist.io/notes/ten-years-t1-to-architect</link>");
   });
 
   test("sitemap, robots.txt and security.txt are served", async ({ request }) => {
     const sitemap = await (await request.get("/sitemap-0.xml")).text();
-    expect(sitemap).toContain("https://evilist.io/notes/ten-years-t1-to-architect/");
-    expect(sitemap).toContain("https://evilist.io/resume/");
-    expect(sitemap).toContain("https://evilist.io/now/");
+    expect(sitemap).toContain("https://evilist.io/notes/ten-years-t1-to-architect");
+    expect(sitemap).toContain("https://evilist.io/resume");
+    expect(sitemap).toContain("https://evilist.io/now");
     expect(await (await request.get("/robots.txt")).text()).toContain(
       "Sitemap: https://evilist.io/sitemap-index.xml",
     );
@@ -137,7 +139,7 @@ test.describe("machine-readable files", () => {
     const sitemap = await (await request.get("/sitemap-0.xml")).text();
     expect(sitemap).not.toContain("og-card");
     // A 404 is noindex too, so first prove the real card page answered.
-    expect((await page.goto("/og-card/"))?.status()).toBe(200);
+    expect((await page.goto("/og-card"))?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
   });
 

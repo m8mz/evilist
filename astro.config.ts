@@ -12,6 +12,9 @@ const isDevServer = process.argv.includes("dev");
 // (the contact page) and the /_actions/* endpoint run on the Node server.
 export default defineConfig({
   site: "https://evilist.io",
+  // One canonical form per page. The adapter's static-header lookup (CSP) only matches the
+  // slashless path, and with "never" it 301s /now/ → /now, so every URL served carries the CSP.
+  trailingSlash: "never",
   adapter: node({ mode: "standalone", staticHeaders: true }),
   // og-card is an internal render target for the social card, not a page.
   integrations: [mdx(), sitemap({ filter: (page) => !page.includes("/og-card") })],

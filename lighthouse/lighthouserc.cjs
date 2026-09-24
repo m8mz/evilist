@@ -8,7 +8,7 @@ module.exports = {
     collect: {
       startServerCommand: `HOST=127.0.0.1 PORT=${PORT} CONTACT_DRY_RUN=true SENDGRID_API_KEY=unused node ./dist/server/entry.mjs`,
       startServerReadyPattern: "Server listening",
-      url: [`${base}/`, `${base}/now/`, `${base}/resume/`, `${base}/notes/`, `${base}/contact`],
+      url: [`${base}/`, `${base}/now`, `${base}/resume`, `${base}/notes`, `${base}/contact`],
       numberOfRuns: 3,
       // Lighthouse defaults to mobile emulation with simulated throttling.
       settings: { chromeFlags: "--headless=new" },

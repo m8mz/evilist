@@ -15,7 +15,7 @@ describe("Header", () => {
   });
 
   it("marks only the current page in the nav", async () => {
-    const html = await render(Header, at("/notes/ten-years-t1-to-architect/"));
+    const html = await render(Header, at("/notes/ten-years-t1-to-architect"));
     expect(html).toMatch(/href="\/notes" aria-current="page"/);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
   });

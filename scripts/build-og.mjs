@@ -30,7 +30,7 @@ try {
     deviceScaleFactor: 1,
     reducedMotion: "reduce",
   });
-  await page.goto(`${base}/og-card/`, { waitUntil: "networkidle" });
+  await page.goto(`${base}/og-card`, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: OUT, type: "png" });
   await browser.close();

@@ -10,7 +10,7 @@ const pages = [
   { name: "resume", path: "/resume", fullPage: true },
   { name: "contact", path: "/contact", fullPage: false },
   { name: "notes", path: "/notes", fullPage: false },
-  { name: "note", path: "/notes/ten-years-t1-to-architect/", fullPage: false },
+  { name: "note", path: "/notes/ten-years-t1-to-architect", fullPage: false },
   { name: "not-found", path: "/definitely-missing", fullPage: false },
 ];
 
