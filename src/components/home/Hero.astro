@@ -1,121 +1,214 @@
 ---
-// Hero: a terminal prompt, the name, the pitch, two actions and the facts as key: value rows.
-// The portrait sits in a terminal window with the S-rank chip in its title bar.
+// Hero (spec §4): a full-bleed split terminal. The left pane runs the site's htop behind the copy,
+// dimmed; the right pane draws the stack as a network behind the portrait; a 1px iron rule divides
+// them in the grid gap, like a tmux split. Copy: prompt, name, rotating title, location, pitch and
+// two actions. scripts/hero.ts wires the live parts.
 import { Image } from "astro:assets";
-import ArrowField from "../ui/ArrowField.astro";
 import Button from "../ui/Button.astro";
-import KeyValue from "../ui/KeyValue.astro";
 import Prompt from "../ui/Prompt.astro";
 import RankChip from "../ui/RankChip.astro";
 import TerminalFrame from "../ui/TerminalFrame.astro";
+import HtopScreen from "./HtopScreen.astro";
+import StackNetwork from "./StackNetwork.astro";
 import authorPic from "../../images/author-pic.webp";
-import { site } from "../../data/site";
-import { yearsOfExperience } from "../../data/career";
+import { heroPitch, site } from "../../data/site";
+import { decadePhrase, yearsOfExperience } from "../../data/career";
 
-// Split so the surname can stay on one line: "Marcus" / "Hancock-Gaillard", never "Hancock-" / "Gaillard".
+// Split so the surname stays on one line: "Marcus" / "Hancock-Gaillard", never "Hancock-" / "Gaillard".
 const [firstName, ...rest] = site.name.split(" ");
 const surname = rest.join(" ");
-
-const facts = [
-  { key: "years", value: String(yearsOfExperience()) },
-  { key: "datacenters", value: "2" },
-  { key: "uptime", value: "99.99%" },
-  { key: "compliance", value: "PCI-DSS, HIPAA" },
-];
+const pitch = heroPitch(decadePhrase(yearsOfExperience()));
 ---
 
-<section class="hero" aria-labelledby="hero-title">
+<section class="hero" aria-labelledby="hero-title" data-hero>
   <div class="wrap hero__grid">
     <div class="hero__copy">
-      <Prompt path="marcus" cursor />
-      <h1 id="hero-title" class="hero__name">
-        {firstName} <span class="hero__surname">{surname}</span>
-      </h1>
-      <p class="hero__role">
-        {site.role} · {site.location}
-      </p>
-      <p class="hero__pitch">{site.pitch}</p>
-      <div class="hero__actions">
-        <Button href="#journey">See the journey</Button>
-        <Button href="/resume" variant="ghost">
-          Read the resume
-        </Button>
+      <div class="hero__pane hero__pane--term" aria-hidden="true">
+        <HtopScreen class="hero__htop" />
       </div>
-      <KeyValue rows={facts} class="hero__facts" />
+      <div class="hero__text">
+        <Prompt path="marcus" cursor />
+        <h1 id="hero-title" class="hero__name">
+          {firstName} <span class="hero__surname">{surname}</span>
+        </h1>
+        <p class="hero__title">
+          <span class="visually-hidden">{site.role}</span>
+          <span
+            class="hero__title-text"
+            aria-hidden="true"
+            data-title-rotator
+            data-titles={JSON.stringify(site.titles)}
+          >
+            {site.titles[0]}
+          </span>
+        </p>
+        <p class="hero__location">{site.location}</p>
+        <p class="hero__pitch">{pitch}</p>
+        <div class="hero__actions">
+          <Button href="#journey">See the journey</Button>
+          <Button href="/resume" variant="ghost">
+            Read the resume
+          </Button>
+        </div>
+      </div>
     </div>
 
-    <figure class="hero__portrait">
-      <ArrowField rows={40} cols={80} class="hero__arrows" />
-      <TerminalFrame title="marcus@evilist:~">
-        <RankChip slot="aside" rank="S" size="sm" label="S-rank: Sr. Systems Architect" />
-        <Image
-          src={authorPic}
-          alt={`Portrait of ${site.name}`}
-          widths={[320, 480, 720]}
-          sizes="(min-width: 60rem) 26rem, 90vw"
-          loading="eager"
-          fetchpriority="high"
-          class="hero__photo"
-        />
-      </TerminalFrame>
-    </figure>
+    <div class="hero__visual">
+      <div class="hero__pane hero__pane--net" aria-hidden="true">
+        <StackNetwork />
+      </div>
+      <figure class="hero__portrait" data-tilt>
+        <TerminalFrame title="marcus@evilist:~">
+          <RankChip slot="aside" rank="S" size="sm" label="S-rank: Sr. Systems Architect" />
+          <Image
+            src={authorPic}
+            alt={`Portrait of ${site.name}`}
+            widths={[320, 480, 720]}
+            sizes="(min-width: 60rem) 26rem, 90vw"
+            loading="eager"
+            fetchpriority="high"
+            class="hero__photo"
+          />
+        </TerminalFrame>
+      </figure>
+    </div>
   </div>
 </section>
 
+<script>
+  import { initHero } from "../../scripts/hero";
+  initHero();
+</script>
+
 <style>
   .hero {
+    --hero-pt: clamp(3rem, 2rem + 6vw, 7rem);
+    --hero-pb: var(--section-y);
+    --hero-gap: clamp(2.5rem, 2rem + 3vw, 4rem);
+    /* From the content column's edge to the viewport's edge (.wrap is max 72rem + gutters). */
+    --hero-edge: calc((100vw - min(72rem, 100vw)) / 2 + var(--gutter));
+    /* Tuned in the browser: visible at a glance, never competing with the copy. */
+    --hero-backdrop-opacity: 0.22;
     position: relative;
     overflow: hidden;
-    padding-block: clamp(3rem, 2rem + 6vw, 7rem) var(--section-y);
-  }
-
-  /* The > texture fills the negative space around the portrait and never reaches the copy:
-     a band 2rem above and below the frame on phones (the grid gap is at least 2.5rem), and
-     from 2rem left of the frame to the screen edge on desktop. The hero clips the overflow.
-     cols={80} makes one strip ~1150 px wide, wider than any visible part. */
-  .hero :global(.hero__arrows) {
-    inset: -2rem -50vw;
-  }
-
-  @media (min-width: 60rem) {
-    .hero :global(.hero__arrows) {
-      inset: -8rem -50vw -8rem -2rem;
-    }
+    padding-block: var(--hero-pt) var(--hero-pb);
   }
 
   .hero__grid {
     position: relative;
     display: grid;
-    gap: clamp(2.5rem, 2rem + 3vw, 4rem);
-    align-items: center;
+    gap: var(--hero-gap);
   }
 
   @media (min-width: 60rem) {
     .hero__grid {
-      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
     }
+  }
+
+  .hero__copy,
+  .hero__visual {
+    position: relative;
+    display: grid;
+    align-content: center;
+  }
+
+  .hero__visual {
+    justify-items: center;
+    perspective: 900px;
+  }
+
+  /* ---------- Panes: behind everything, out to the viewport edges ---------- */
+  .hero__pane {
+    position: absolute;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  /* Stacked: the terminal behind the copy, the network behind the portrait, and a horizontal
+     rule in the middle of the gap between them. */
+  .hero__pane--term {
+    inset: calc(-1 * var(--hero-pt)) calc(-1 * var(--hero-edge)) calc(-0.5 * var(--hero-gap));
+    opacity: var(--hero-backdrop-opacity);
+  }
+
+  .hero__pane--net {
+    inset: calc(-0.5 * var(--hero-gap)) calc(-1 * var(--hero-edge)) calc(-1 * var(--hero-pb));
+    border-top: 1px solid var(--color-iron);
+  }
+
+  /* Side by side: the divider runs down the middle of the grid gap. */
+  @media (min-width: 60rem) {
+    .hero__pane--term {
+      inset: calc(-1 * var(--hero-pt)) calc(-0.5 * var(--hero-gap)) calc(-1 * var(--hero-pb))
+        calc(-1 * var(--hero-edge));
+    }
+
+    .hero__pane--net {
+      inset: calc(-1 * var(--hero-pt)) calc(-1 * var(--hero-edge)) calc(-1 * var(--hero-pb))
+        calc(-0.5 * var(--hero-gap));
+      border-top: 0;
+      border-left: 1px solid var(--color-iron);
+    }
+  }
+
+  .hero__pane--term :global(.hero__htop) {
+    position: relative;
+    height: 100%;
+    padding: 1rem var(--gutter) 1.25rem;
+    font-size: 13px;
+  }
+
+  /* htop keeps its F-key bar on the bottom row, whatever the pane's height. */
+  .hero__pane--term :global(.hero__htop .htop__keys) {
+    position: absolute;
+    inset: auto var(--gutter) 0;
+    margin: 0;
+    padding-block: 0.25rem 1rem;
+    background: var(--color-void);
+  }
+
+  /* ---------- Copy and portrait sit above the panes ---------- */
+  .hero__text,
+  .hero__portrait {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The copy column is a container, so the name and the longest title always fit it. */
+  .hero__text {
+    container-type: inline-size;
   }
 
   .hero__name {
     margin-top: 1rem;
-    font-size: var(--text-hero);
+    /* 16 characters of "Hancock-Gaillard" are 9.6em in JetBrains Mono. */
+    font-size: min(var(--text-hero), 100cqi / 9.8);
     line-height: 1.1;
     max-width: 16ch;
   }
 
-  /* Break after the first name only. Below 22rem the surname cannot fit on one line. */
   .hero__surname {
     white-space: nowrap;
   }
 
-  @media (max-width: 21.99rem) {
-    .hero__surname {
-      white-space: normal;
-    }
+  .hero__title {
+    margin-top: 0.75rem;
+    /* 25 characters ("Forward Deployed Engineer") are 15em. */
+    font-size: min(clamp(1.375rem, 1rem + 1.6vw, 2.25rem), 100cqi / 15.4);
+    line-height: 1.3;
+    height: 1.3em;
+    color: var(--color-paper);
+    white-space: nowrap;
   }
 
-  .hero__role {
-    margin-top: 0.75rem;
+  .hero__title-text {
+    display: inline-block;
+  }
+
+  .hero__location {
+    margin-top: 0.5rem;
     color: var(--color-fog);
   }
 
@@ -132,17 +225,12 @@ const facts = [
     margin-top: 2rem;
   }
 
-  .hero :global(.hero__facts) {
-    margin-top: 2rem;
-  }
-
   .hero__portrait {
-    position: relative;
-    justify-self: center;
     width: min(26rem, 100%);
+    margin: 0;
+    transform-style: preserve-3d;
   }
 
-  /* Positioned so the frame paints over the texture. */
   .hero__portrait :global(.term) {
     position: relative;
   }

@@ -1,20 +1,19 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("hero", () => {
-  test("introduces Marcus with a prompt, facts and two actions", async ({ page }) => {
+  test("introduces Marcus with a prompt, a title, the location and two actions", async ({
+    page,
+  }) => {
     await page.goto("/");
     const hero = page.locator(".hero");
     await expect(hero.locator(".prompt__path")).toHaveText("marcus");
-    await expect(hero.locator(".prompt__cursor")).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Marcus Hancock-Gaillard");
-    await expect(hero.locator(".hero__role")).toHaveText("Sr. Systems Architect · Mesa, Arizona");
-    await expect(hero.locator(".kv__key")).toHaveText([
-      "years:",
-      "datacenters:",
-      "uptime:",
-      "compliance:",
-    ]);
-    await expect(hero.locator(".kv__value").first()).toHaveText(/^\d+$/);
+    await expect(hero.locator(".hero__title .visually-hidden")).toHaveText("Sr. Systems Architect");
+    await expect(hero.locator(".hero__location")).toHaveText("Mesa, Arizona");
+    await expect(hero.locator(".hero__pitch")).toHaveText(
+      /^(A decade|Over a decade) in Linux infrastructure\./,
+    );
+    await expect(hero.locator(".kv__key")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "See the journey" })).toHaveAttribute(
       "href",
       "#journey",
@@ -25,30 +24,70 @@ test.describe("hero", () => {
     );
   });
 
+  test("runs the site's htop behind the copy, dimmed, instead of a band", async ({ page }) => {
+    await page.goto("/");
+    const pane = page.locator(".hero__pane--term");
+    await expect(pane).toHaveAttribute("aria-hidden", "true");
+    await expect(pane.locator("[data-htop] tbody tr")).toHaveCount(24);
+    const opacity = Number(await pane.evaluate((el) => getComputedStyle(el).opacity));
+    expect(opacity).toBeGreaterThan(0.1);
+    expect(opacity).toBeLessThan(0.4);
+    await expect(page.locator("#system")).toHaveCount(0);
+    await expect(page.getByText(/simulated htop/)).toHaveCount(0);
+  });
+
+  for (const width of [0, 960]) {
+    test(`splits the hero like tmux, and no copy crosses the divider${width ? ` (${width}px)` : ""}`, async ({
+      page,
+    }, info) => {
+      if (width) {
+        test.skip(info.project.name !== "desktop", "one extra width, on desktop");
+        await page.setViewportSize({ width, height: 900 });
+      }
+      await page.goto("/");
+      const net = (await page.locator(".hero__pane--net").boundingBox())!;
+      const sideBySide = page.viewportSize()!.width >= 960;
+      // Inline boxes (surname, title) measure the text itself, overflow included.
+      for (const sel of [".hero__surname", ".hero__title-text", ".hero__pitch", ".hero__actions"]) {
+        const box = (await page.locator(sel).boundingBox())!;
+        if (sideBySide) expect(box.x + box.width, sel).toBeLessThanOrEqual(net.x + 1);
+        else expect(box.y + box.height, sel).toBeLessThanOrEqual(net.y + 1);
+      }
+      const portrait = (await page.locator(".hero__portrait").boundingBox())!;
+      if (sideBySide) expect(portrait.x).toBeGreaterThanOrEqual(net.x);
+      else expect(portrait.y).toBeGreaterThanOrEqual(net.y);
+    });
+  }
+
+  test("keeps the surname, and every title, on one line inside the copy column", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    expect(await page.locator(".hero__surname").evaluate((el) => el.getClientRects().length)).toBe(
+      1,
+    );
+    const overflow = await page.evaluate(() => {
+      const column = document.querySelector(".hero__text")!.getBoundingClientRect();
+      const el = document.querySelector<HTMLElement>("[data-title-rotator]")!;
+      const titles = JSON.parse(el.dataset.titles!) as string[];
+      const original = el.textContent;
+      const bad = titles.filter((t) => {
+        el.textContent = t;
+        const r = el.getBoundingClientRect();
+        return el.getClientRects().length !== 1 || r.right > column.right + 1;
+      });
+      el.textContent = original;
+      return bad;
+    });
+    expect(overflow).toEqual([]);
+  });
+
   test("frames the portrait as a terminal window with the S-rank chip", async ({ page }) => {
     await page.goto("/");
     const frame = page.locator(".hero .term");
     await expect(frame.locator(".term__title")).toHaveText("marcus@evilist:~");
     await expect(frame.getByRole("img", { name: "S-rank: Sr. Systems Architect" })).toHaveCount(1);
     await expect(page.locator(".hero .seal")).toHaveCount(0);
-  });
-
-  test("keeps the arrow texture out from behind the copy", async ({ page }) => {
-    await page.goto("/");
-    const arrows = (await page.locator(".hero__arrows").boundingBox())!;
-    const copy = (await page.locator(".hero__copy").boundingBox())!;
-    const overlaps =
-      arrows.x < copy.x + copy.width &&
-      copy.x < arrows.x + arrows.width &&
-      arrows.y < copy.y + copy.height &&
-      copy.y < arrows.y + arrows.height;
-    expect(overlaps).toBe(false);
-  });
-
-  test("keeps the surname on one line", async ({ page }) => {
-    await page.goto("/");
-    const lines = await page.locator(".hero__surname").evaluate((el) => el.getClientRects().length);
-    expect(lines).toBe(1);
   });
 
   test("keeps the portrait's LCP hints and intrinsic size", async ({ page }) => {
@@ -110,31 +149,5 @@ test.describe("off the clock", () => {
     await expect(block).toContainText("Solo Leveling");
     await expect(block.getByRole("img", { name: "Illustrative training rhythm" })).toBeVisible();
     await expect(block.getByRole("link", { name: "more on /now" })).toHaveAttribute("href", "/now");
-  });
-});
-
-test.describe("htop band", () => {
-  test("sits under the hero and says it is simulated", async ({ page }) => {
-    await page.goto("/");
-    const band = page.locator("#system");
-    await expect(band.locator(".term__title")).toHaveText("htop · evilist");
-    await expect(band.locator("tbody tr")).toHaveCount(8);
-    await expect(band.locator("figcaption")).toContainText("simulated");
-    const heroBottom = (await page.locator(".hero").boundingBox())!;
-    const bandTop = (await band.boundingBox())!;
-    expect(bandTop.y).toBeGreaterThanOrEqual(heroBottom.y + heroBottom.height - 1);
-  });
-
-  test("drifts only when motion is allowed", async ({ page }, info) => {
-    await page.goto("/");
-    const core = page.locator("[data-core] .htop__bar").first();
-    await page.locator("#system").scrollIntoViewIfNeeded();
-    const before = await core.textContent();
-    if (info.project.name === "reduced-motion") {
-      await page.waitForTimeout(3500);
-      expect(await core.textContent()).toBe(before);
-    } else {
-      await expect.poll(() => core.textContent(), { timeout: 8000 }).not.toBe(before);
-    }
   });
 });
