@@ -5,7 +5,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 
 > **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–6 are done, including the quality gates.
 >
-> **Axiom redesign in progress** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. Phases 1 (tokens, primitives, shell), 2 (home, journey avatar, topology) and 3 (`/now`, stills, htop band, social card) are done. Phase 4 (resume/notes/contact, PDF, ADR) comes next, then rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
+> **Axiom redesign done** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. All four phases are done (tokens and shell; home, journey avatar and topology; `/now`, stills, htop band and social card; resume, notes, contact, PDF and ADR 0002). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 
 ## Commands
 
@@ -18,6 +18,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 - If the claude-in-chrome window won't resize, check real Chrome at the width it allows, and capture exact widths with Playwright Chromium against the production server on a spare port.
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
 - `pnpm build:og` renders `src/pages/og-card.astro` into `public/og-default.png` (the 1200×630 social card). Re-run it after changing the name, role or card design, and commit the PNG.
+- The resume PDF and the social card are fingerprinted (`scripts/resume-source.mjs`, `scripts/og-source.mjs`). If `test/resumePdf.test.ts` or `test/ogCard.test.ts` says stale, run `pnpm build:pdf` or `pnpm build:og` and commit the result.
 - E2E runs against the production build on port 4399 (never reuses `astro dev` on 4321): `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
 - Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
 - `minimumReleaseAge` rejects any release younger than 24 h. When that happens, pin the previous version; don't add an exclusion.
@@ -51,7 +52,7 @@ Marcus prefers step-by-step delivery:
 - `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the home page's htop band.
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
-- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button`, `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`.
+- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
 - `infra/` holds Dockerfile support, the Quadlet/compose files, `haproxy/haproxy.cfg` (ACME, HTTP/3, rate limits, headers) and `ansible/`.
@@ -63,6 +64,7 @@ Marcus prefers step-by-step delivery:
 
 - Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow.
 - One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, link hover, focus rings, selection, and the S `RankChip`. Nowhere else.
+- Errors and status never use ember: paper text with an ash `error:` prefix, and a 1px paper border on the invalid field.
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
 - Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
 - Sections open with a `~/path` `Prompt` eyebrow and are separated by 1px iron rules.

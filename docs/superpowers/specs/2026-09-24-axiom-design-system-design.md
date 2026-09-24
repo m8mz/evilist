@@ -142,7 +142,7 @@ usage moves to `RankChip`).
 
 - **Header**: 56px void bar, 1px iron bottom rule. Wordmark is text: `~evilist` with
   `~` in ash and `evilist` in paper 700 (the webp logo is dropped from the header; it
-  remains the favicon and the OG mark). Nav: Resume · Now · Notes · Contact, 14px,
+  remains the favicon and the OG mark). Nav: Resume · Now · Notes · Contact, at body size (15px; the type scale has no 14px step),
   `aria-current="page"` shown as a 1px paper underline. Mobile menu keeps
   `scripts/menu.ts` behaviour (button with `aria-expanded`, Escape and outside-click
   close); the panel is a carbon sheet.
@@ -245,7 +245,7 @@ Solo Leveling is why the ranks on this site are letters."
 ### 6.6 Off the clock (new, `src/components/home/OffTheClock.astro`)
 
 Prompt `~/off-the-clock`. One `Panel` with three columns (stacked below 48rem), each
-headed by a `Tag` and a 16px slate icon (§8.1):
+headed by a `Tag` and a 16px steel icon (§8.1):
 
 - `rig` — `KeyValue` from `now.rig`.
 - `playing` — list from `now.playing`.
@@ -274,20 +274,20 @@ building right now."
 Same data and sections. `RankChip` per role, `KeyValue` for org/dates, 1px iron
 dividers. `print.css` overrides to paper background, void text, JetBrains Mono, no
 chips filled. `pnpm build:pdf` regenerated and the PDF committed (the staleness test
-requires it).
+requires it). The page opens with a `~/resume` prompt (hidden in print).
 
 ### 7.3 Notes
 
 List: `Panel variant="case"` rows with title, description, `Tag` per tag, `KeyValue`
 `date` and `read` rows. Body: 15px/1.7 mono in a 68ch measure; headings 400; code
-blocks on carbon with a 1px iron border and 2px radius; inline code on graphite.
+blocks on carbon with a 1px iron border and 2px radius; inline code on graphite. The list opens with `~/notes`; a note opens with `~/notes/<id>` and shows `date`, `read` (and `updated`) as key: value rows. Pager and list links are slashless.
 
 ### 7.4 Contact
 
 Recruiter/client tabs become a chip pair styled like `RankChip` (selected = 1px paper
 border, paper text; unselected = slate border, fog text). Inputs: carbon, 1px iron
 border, 2px radius, ember focus ring. Submit: primary `Button`. `scripts/contact-form.ts`,
-`actions/contact.ts`, honeypot, time-trap, rate limit and CSRF check unchanged.
+`actions/contact.ts`, honeypot, time-trap, rate limit and CSRF check unchanged. Errors (amended in Phase 4): ember never marks status, so an invalid field gets a 1px paper border and its message is paper text with an ash `error: ` prefix; the page-level error and status blocks are carbon with a 1px iron border. The page opens with `~/contact`.
 
 ### 7.5 404
 
@@ -304,7 +304,7 @@ with `→ home` as a ghost button.
 ### 7.6 SEO
 
 `public/og-default.png` regenerated (the htop band from §6.1a behind a void scrim, plus the
-name, role and URL; rendered from an internal `/og-card/` route and committed). JSON-LD, sitemap, RSS unchanged. `<meta name="theme-color">` →
+name, role and URL; rendered from an internal `/og-card/` route and committed). JSON-LD unchanged; sitemap, canonical links and RSS use the slashless URL (`trailingSlash: "never"`, so every served page carries the CSP header). `<meta name="theme-color">` →
 `#000000`.
 
 ## 8. Imagery
@@ -322,7 +322,7 @@ All SVG uses palette tokens via classes (no inline `style=`), animates only
   travelling the straight BGP link on a 6 s `translateX` loop (static under reduced
   motion; not `offset-path`, because only transform/opacity/pathLength may animate).
   `role="img"`, `aria-label="Two datacenters with BGP failover behind HAProxy"`.
-  Target ≤ 4 KB.
+  Target ≤ 4 KB. The BGP link is stroked in steel, not slate, so the dashed line stays visible (about 3:1) on the dark surface; it is decoration, not text. When a caller captions the diagram (Work), it renders `decorative`: `aria-hidden`, with no role or label, so it is described once.
 - **Icon set** (`src/components/ui/Icon.astro`, prop `name`): `tower`, `controller`,
   `play`, `dumbbell`, `arrow`. 16×16, 1.5px steel strokes (slate is 1.6:1 on graphite panels and disappears), round caps. Decorative.
 
