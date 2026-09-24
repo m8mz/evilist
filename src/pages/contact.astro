@@ -1,5 +1,6 @@
 ---
 // On-demand page: it renders a fresh time-trap token per visit and reads no-JS action results.
+// Spec §7.4: the two forms sit behind a chip pair styled like RankChip, on the terminal inputs.
 export const prerender = false;
 
 import { actions, isInputError } from "astro:actions";
@@ -28,7 +29,7 @@ Astro.response.headers.set("Cache-Control", "no-store");
   title="Contact"
   description="Get in touch with Marcus Hancock-Gaillard about infrastructure roles or consulting work."
 >
-  <Section>
+  <Section prompt="contact">
     <h1 class="page-title">Get in touch</h1>
     {sent ? (
       <div class="sent" role="status">
@@ -69,10 +70,10 @@ Astro.response.headers.set("Cache-Control", "no-store");
             id={`panel-${type}`}
             role="tabpanel"
             aria-labelledby={`tab-${type}`}
-            class:list={["panel", { "is-active": i === 0 }]}
+            class:list={["form-panel", { "is-active": i === 0 }]}
             data-contact-panel
           >
-            <h2 class="panel__heading">{tab}</h2>
+            <h2 class="form-panel__heading">{tab}</h2>
             <ContactForm type={type} token={token} errors={fieldErrors} />
           </section>
         ))}
@@ -87,64 +88,72 @@ Astro.response.headers.set("Cache-Control", "no-store");
 
 <style>
   .page-title {
-    font-size: var(--text-3xl);
+    font-size: var(--text-display);
   }
 
   .intro {
     margin-top: 1rem;
-    font-size: var(--text-lg);
+    color: var(--color-fog);
   }
 
   .form-error {
     margin-top: 1.5rem;
     padding: 0.75rem 1rem;
-    border-left: 3px solid var(--color-hanko-hot);
-    background: var(--color-carbon);
     max-width: 38rem;
+    background: var(--color-carbon);
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
+  }
+
+  .form-error::before {
+    content: "error: ";
+    color: var(--color-ash);
   }
 
   .tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 2rem;
+    gap: 0.75rem;
     margin-top: 2.5rem;
-    border-bottom: 1px solid var(--color-seam);
   }
 
+  /* A chip pair styled like RankChip: selected = paper border and text, unselected = slate and fog. */
   .tabs button {
     min-height: 2.75rem;
-    padding: 0.5rem 0;
-    background: none;
-    border: 0;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -1px;
-    color: var(--color-ash);
-    font-weight: 700;
+    padding: 0.5rem 0.9rem;
+    background: var(--color-graphite);
+    border: 1px solid var(--color-slate);
+    border-radius: var(--radius);
+    color: var(--color-fog);
     cursor: pointer;
   }
 
-  .tabs button[aria-selected="true"] {
-    color: var(--color-washi);
-    border-bottom-color: var(--color-hanko);
+  .tabs button:hover {
+    color: var(--color-paper);
   }
 
-  .panel {
+  .tabs button[aria-selected="true"] {
+    border-color: var(--color-paper);
+    color: var(--color-paper);
+  }
+
+  .form-panel {
     margin-top: 2rem;
   }
 
-  .panel__heading {
-    font-size: var(--text-xl);
+  .form-panel__heading {
+    font-size: var(--text-heading);
     margin-bottom: 1.25rem;
   }
 
   /* With scripting: tabs switch panels and the per-panel heading is redundant.
      Without it: no tabs, both forms stacked under their headings. */
   @media (scripting: enabled) {
-    .panel:not(.is-active) {
+    .form-panel:not(.is-active) {
       display: none;
     }
 
-    .panel__heading {
+    .form-panel__heading {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -158,7 +167,7 @@ Astro.response.headers.set("Cache-Control", "no-store");
       display: none;
     }
 
-    .panel + .panel {
+    .form-panel + .form-panel {
       margin-top: 4rem;
     }
   }
@@ -168,7 +177,7 @@ Astro.response.headers.set("Cache-Control", "no-store");
   }
 
   :global(.sent h2) {
-    font-size: var(--text-2xl);
+    font-size: var(--text-heading-lg);
   }
 
   :global(.sent p) {

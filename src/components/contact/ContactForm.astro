@@ -3,6 +3,7 @@
 // scripts/contact-form.ts upgrades it to submit in place and show errors inline.
 import { actions } from "astro:actions";
 import { BUDGETS } from "../../lib/contactSchema";
+import Button from "../ui/Button.astro";
 
 interface Props {
   type: "recruiter" | "client";
@@ -136,9 +137,7 @@ const described = (field: string) => (err(field) ? `${id(field)}-error` : undefi
 
   <p class="form-status" role="status" aria-live="polite" data-form-status></p>
 
-  <button type="submit" class="submit">
-    Send message
-  </button>
+  <Button class="submit">Send message</Button>
 </form>
 
 <style>
@@ -162,12 +161,11 @@ const described = (field: string) => (err(field) ? `${id(field)}-error` : undefi
   }
 
   label {
-    font-weight: 700;
+    color: var(--color-paper);
   }
 
   .field__hint {
     color: var(--color-ash);
-    font-weight: 400;
   }
 
   input,
@@ -176,30 +174,37 @@ const described = (field: string) => (err(field) ? `${id(field)}-error` : undefi
     width: 100%;
     min-height: 2.75rem;
     padding: 0.6rem 0.8rem;
-    background: var(--color-night);
-    color: var(--color-washi);
-    border: 2px solid var(--color-seam);
-    border-radius: 0;
+    background: var(--color-carbon);
+    color: var(--color-paper);
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
   }
 
   textarea {
     resize: vertical;
   }
 
+  /* The ember ring comes from the global :focus-visible rule; keep it close to the field. */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    border-color: var(--color-hanko-hot);
-    outline-offset: 0;
+    outline-offset: 2px;
   }
 
+  /* Errors are paper, never ember (ember doesn't mark status, spec §3.2): a paper border and an
+     `error:` prefix in the site's key: value voice. */
   [aria-invalid="true"] {
-    border-color: var(--color-hanko-hot);
+    border-color: var(--color-paper);
   }
 
   .field__error {
-    color: var(--color-hanko-hot);
-    font-size: var(--text-sm);
+    color: var(--color-paper);
+    font-size: var(--text-caption);
+  }
+
+  .field__error::before {
+    content: "error: ";
+    color: var(--color-ash);
   }
 
   .field__error:empty,
@@ -209,27 +214,12 @@ const described = (field: string) => (err(field) ? `${id(field)}-error` : undefi
 
   .form-status {
     padding: 0.75rem 1rem;
-    border-left: 3px solid var(--color-hanko-hot);
-    background: var(--color-night);
+    background: var(--color-carbon);
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
   }
 
-  .submit {
+  .contact-form :global(.submit) {
     justify-self: start;
-    min-height: 2.75rem;
-    padding: 0.55rem 1.75rem;
-    background: var(--color-ember);
-    color: var(--color-void); /* paper on ember is 3.3:1 */
-    font-weight: 700;
-    border: 0;
-    cursor: pointer;
-  }
-
-  .submit:hover {
-    background: var(--color-paper);
-  }
-
-  .submit[disabled] {
-    opacity: 0.6;
-    cursor: progress;
   }
 </style>

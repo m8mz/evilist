@@ -53,17 +53,19 @@ function initForms(): void {
   for (const form of document.querySelectorAll<HTMLFormElement>("[data-contact-form]")) {
     const status = form.querySelector<HTMLElement>("[data-form-status]")!;
     const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    // The Button primitive keeps its arrow outside the label, so only the label text changes.
+    const label = button.querySelector<HTMLElement>("[data-button-label]") ?? button;
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       status.textContent = "";
       button.disabled = true;
-      button.textContent = "Sending…";
+      label.textContent = "Sending…";
 
       const { error } = await actions.contact(new FormData(form));
 
       button.disabled = false;
-      button.textContent = "Send message";
+      label.textContent = "Send message";
 
       if (!error) {
         const panel = form.closest<HTMLElement>("[data-contact-panel]");

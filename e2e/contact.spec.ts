@@ -69,6 +69,39 @@ test("switches to the client form with tabs", async ({ page }) => {
   await expect(page.locator("#panel-client").getByLabel("Budget")).toBeVisible();
 });
 
+test("the form tabs are a chip pair: paper outline selected, slate unselected", async ({
+  page,
+}) => {
+  await openContact(page);
+  await expect(page.getByRole("tab", { name: "I'm hiring" })).toHaveCSS(
+    "border-top-color",
+    "rgb(238, 238, 238)",
+  );
+  await expect(page.getByRole("tab", { name: "I need help with a project" })).toHaveCSS(
+    "border-top-color",
+    "rgb(58, 58, 58)",
+  );
+});
+
+test("errors read as terminal errors and the button keeps its label and arrow", async ({
+  page,
+}) => {
+  await openContact(page);
+  const form = page.locator("#panel-recruiter form");
+  await form.getByLabel("Email").fill("not-an-email");
+  await form.getByRole("button", { name: "Send message" }).click();
+
+  const error = form.locator('[data-error-for="email"]');
+  await expect(error).toBeVisible();
+  await expect(error).toHaveCSS("color", "rgb(238, 238, 238)");
+  expect(await error.evaluate((el) => getComputedStyle(el, "::before").content)).toBe('"error: "');
+  await expect(form.getByLabel("Email")).toHaveCSS("border-top-color", "rgb(238, 238, 238)");
+
+  const submit = form.locator('button[type="submit"]');
+  await expect(submit).toHaveText(/Send message/);
+  await expect(submit.locator(".btn__arrow")).toHaveCount(1);
+});
+
 test.describe("without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
