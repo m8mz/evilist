@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://evilist.io/sitemap-index.xml

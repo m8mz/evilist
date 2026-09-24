@@ -45,21 +45,23 @@ export default defineConfig({
   env: {
     // Secrets are validated at runtime (on first access), not at build,
     // so CI can build the image without the SendGrid key.
+    // Server settings that must change per environment (CONTACT_*) are declared "secret" too:
+    // astro:env inlines *public* server values at build time, which silently ignored
+    // CONTACT_DRY_RUN=true at runtime.
     schema: {
       SENDGRID_API_KEY: envField.string({ context: "server", access: "secret" }),
       FORM_SECRET: envField.string({ context: "server", access: "secret", optional: true }),
-      CONTACT_TO: envField.string({ context: "server", access: "public", default: "m@evilist.co" }),
+      CONTACT_TO: envField.string({ context: "server", access: "secret", default: "m@evilist.co" }),
       CONTACT_FROM: envField.string({
         context: "server",
-        access: "public",
+        access: "secret",
         default: "no-reply@evilist.co",
       }),
-      CONTACT_DRY_RUN: envField.boolean({ context: "server", access: "public", default: false }),
-      GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      CONTACT_DRY_RUN: envField.boolean({ context: "server", access: "secret", default: false }),
       PUBLIC_DISCORD_INVITE_URL: envField.string({
         context: "client",
         access: "public",
-        optional: true,
+        default: "https://discord.gg/XKQ26mjqN",
       }),
     },
   },

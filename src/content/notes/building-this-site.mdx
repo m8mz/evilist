@@ -1,0 +1,36 @@
+---
+title: "How this site is built"
+description: "Astro, a strict content security policy, a supply-chain-hardened package manager, and a self-hosted HAProxy edge."
+pubDate: 2026-09-24
+tags: ["meta", "security"]
+---
+
+This site is small, but I built it the way I'd build anything that has to stay up and stay safe. Here are the decisions and a few things that surprised me along the way.
+
+## Mostly static, one small server
+
+Every page is rendered to HTML at build time with [Astro](https://astro.build). The only thing that runs on a server is the contact form, handled by a single Node process. Less running code means less to patch and less to attack.
+
+## A package manager that says no
+
+Dependencies are the easiest way into a JavaScript project, so I use pnpm with three rules:
+
+- **No brand-new versions.** Anything published in the last 24 hours is refused. During the build it rejected a UI library release that was only a few hours old, and I pinned the previous version instead.
+- **No install scripts.** Packages can't run code when they install unless I've approved them by name.
+- **No trust downgrades.** If a package's publishing provenance gets weaker between versions, the install fails. It flagged two packages during setup. One was a known false positive that I reviewed and pinned. The other came from a tool I didn't need, so I removed it.
+
+## A content security policy without exceptions
+
+The browser is only allowed to run scripts and styles from this site, and every inline script and style is pinned by hash. Making that work surfaced a couple of framework quirks, including a small inlined stylesheet that the build forgot to hash. The fix was to keep all CSS in files rather than weaken the policy.
+
+## A contact form that assumes bots
+
+The form works without JavaScript, validates every field on the server, escapes everything before it goes into an email, and rate-limits by client address. It also has a hidden field that only bots fill in, and a signed timestamp that rejects forms submitted faster than a person can type.
+
+## My own edge
+
+The site runs on my own Linux server behind HAProxy in rootless Podman containers. HAProxy handles TLS certificates, HTTP/3, security headers, and a second layer of rate limiting. Load balancers are my day job, so it would be strange to hand this part to someone else.
+
+## Measured, not guessed
+
+Every change runs through type checks, unit tests, and browser tests on phone, tablet, and desktop, plus a Lighthouse audit. The homepage currently scores 99 for performance and 100 for accessibility on mobile.

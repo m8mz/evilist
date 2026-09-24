@@ -1,23 +1,292 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
+import Button from "../components/ui/Button.astro";
+import { career, formatRange, yearsOfExperience } from "../data/career";
+import { skillDomains } from "../data/skills";
+import { site } from "../data/site";
+
+const years = yearsOfExperience();
+const newestFirst = [...career].reverse();
+const RESUME_PDF = "/marcus-hancock-gaillard-resume.pdf";
 ---
 
 <BaseLayout
   title="Resume"
-  description="Work history of Marcus Hancock-Gaillard, from T1 support to Sr. Systems Architect."
+  description={`Resume of ${site.name}: ${years} years from T1 support to ${site.role}.`}
 >
-  <Section>
-    <h1 class="page-title">Resume</h1>
-    <p>
-      The full work history is being rebuilt from a single data source and lands in the next phase.
-    </p>
+  <Section class="resume">
+    <header class="resume__head">
+      <div>
+        <h1>{site.name}</h1>
+        <p class="resume__role">
+          {site.role}, {site.location}
+        </p>
+      </div>
+      <ul class="resume__links">
+        <li>
+          <a href={site.url}>evilist.io</a>
+        </li>
+        <li>
+          <a href={site.socials.linkedin}>linkedin.com/in/m8mz</a>
+        </li>
+        <li>
+          <a href={site.socials.github}>github.com/m8mz</a>
+        </li>
+        <li>
+          <a href={`${site.url}/contact`}>evilist.io/contact</a>
+        </li>
+      </ul>
+    </header>
+
+    <div class="resume__actions no-print">
+      <Button href={RESUME_PDF}>Download the PDF</Button>
+    </div>
+
+    <section aria-labelledby="summary-title" class="resume__block">
+      <h2 id="summary-title">Summary</h2>
+      <p>
+        {years} years in infrastructure, from front-line hosting support to architecting two
+        datacenters. {site.pitch}
+      </p>
+    </section>
+
+    <section aria-labelledby="experience-title" class="resume__block">
+      <h2 id="experience-title">Experience</h2>
+      <ol class="jobs">
+        {newestFirst.map((stage) => (
+          <li class="job">
+            <div class="job__head">
+              <h3>{stage.title}</h3>
+              <p class="job__when">{formatRange(stage.start, stage.end)}</p>
+            </div>
+            <p class="job__org">
+              {stage.org}, {stage.location}
+            </p>
+            <p class="job__summary">{stage.summary}</p>
+            <ul class="job__highlights">
+              {stage.highlights.map((h) => (
+                <li>{h}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section aria-labelledby="skills-title" class="resume__block">
+      <h2 id="skills-title">Skills</h2>
+      <dl class="skill-list">
+        {skillDomains.map((d) => (
+          <div>
+            <dt>{d.name}</dt>
+            <dd>{d.items.join(", ")}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+
+    <section aria-labelledby="learning-title" class="resume__block">
+      <h2 id="learning-title">Education</h2>
+      <p>
+        Self-taught through books, online courses, and {years} years of running production systems.
+      </p>
+    </section>
   </Section>
 </BaseLayout>
 
 <style>
-  .page-title {
+  .resume__head {
+    display: grid;
+    gap: 1rem 2rem;
+    align-items: end;
+  }
+
+  @media (min-width: 48rem) {
+    .resume__head {
+      grid-template-columns: 1fr auto;
+    }
+  }
+
+  .resume__head h1 {
     font-size: var(--text-3xl);
+  }
+
+  .resume__role {
+    margin-top: 0.25rem;
+    color: var(--color-ash);
+    font-weight: 700;
+  }
+
+  .resume__links {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+
+  .resume__actions {
+    margin-top: 2rem;
+  }
+
+  .resume__block {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--color-seam);
+  }
+
+  .resume__block h2 {
+    font-size: var(--text-2xl);
     margin-bottom: 1rem;
+  }
+
+  .jobs {
+    display: grid;
+    gap: 2rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .job__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    align-items: baseline;
+  }
+
+  .job__head h3 {
+    font-size: var(--text-lg);
+  }
+
+  .job__when,
+  .job__org {
+    color: var(--color-ash);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .job__summary {
+    margin-top: 0.5rem;
+  }
+
+  .job__highlights {
+    margin-top: 0.5rem;
+    padding-left: 1.2rem;
+    list-style: disc;
+  }
+
+  .job__highlights li::marker {
+    color: var(--color-hanko);
+  }
+
+  .job__highlights li + li {
+    margin-top: 0.25rem;
+  }
+
+  .skill-list {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .skill-list dt {
+    font-weight: 700;
+  }
+
+  .skill-list dd {
+    margin: 0;
+    color: var(--color-ash);
+  }
+
+  /* Print: paper-friendly, one column, no site chrome. Also used to render the PDF. */
+  @media print {
+    @page {
+      margin: 14mm 16mm;
+    }
+
+    :global(html),
+    :global(body) {
+      background: #fff !important;
+      color: #111 !important;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+
+    :global(.site-header),
+    :global(.site-footer),
+    :global(.skip-link),
+    .no-print {
+      display: none !important;
+    }
+
+    :global(.band) {
+      padding-block: 0 !important;
+    }
+
+    .resume__head h1 {
+      font-size: 22pt;
+    }
+
+    .resume__role,
+    .job__when,
+    .job__org,
+    .skill-list dd {
+      color: #444 !important;
+    }
+
+    .resume__block {
+      margin-top: 1.1rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid #bbb;
+    }
+
+    .resume__block h2 {
+      font-size: 13pt;
+      margin-bottom: 0.5rem;
+    }
+
+    .jobs {
+      gap: 0.9rem;
+    }
+
+    .job {
+      break-inside: avoid;
+    }
+
+    .job__summary,
+    .job__highlights {
+      margin-top: 0.2rem;
+    }
+
+    .job__highlights li + li {
+      margin-top: 0;
+    }
+
+    .job__highlights li::marker {
+      color: #111;
+    }
+
+    .skill-list {
+      gap: 0.15rem;
+    }
+
+    .skill-list > div {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .skill-list dt {
+      flex: none;
+    }
+
+    .skill-list dt::after {
+      content: ":";
+    }
+
+    a {
+      color: #111 !important;
+      text-decoration: none;
+    }
   }
 </style>

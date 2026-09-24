@@ -1,23 +1,71 @@
 ---
-import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import Section from "../../components/ui/Section.astro";
+import { formatDate, getPublishedNotes } from "../../lib/notes";
 
-const notes = (await getCollection("notes", ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-);
+const notes = await getPublishedNotes();
 ---
 
 <BaseLayout
   title="Notes"
-  description="Notes from Marcus Hancock-Gaillard on infrastructure, careers, and building things."
+  description="Notes from Marcus Hancock-Gaillard on careers, infrastructure, and how this site is built."
 >
-  <h1>Notes</h1>
-  {notes.length === 0 && <p>No notes published yet.</p>}
-  <ul>
-    {notes.map((note) => (
-      <li>
-        <a href={`/notes/${note.id}/`}>{note.data.title}</a>
-      </li>
-    ))}
-  </ul>
+  <Section>
+    <h1 class="page-title">Notes</h1>
+    <p class="intro">
+      Short writing on my career and how this site is built. Longer technical posts will live on{" "}
+      linux.engineering. <a href="/rss.xml">Subscribe by RSS</a>.
+    </p>
+
+    {notes.length === 0 && <p class="empty">No notes published yet. Check back soon.</p>}
+
+    <ol class="notes">
+      {notes.map((note) => (
+        <li>
+          <h2>
+            <a href={`/notes/${note.id}/`}>{note.data.title}</a>
+          </h2>
+          <p class="notes__date">
+            <time datetime={note.data.pubDate.toISOString()}>{formatDate(note.data.pubDate)}</time>
+          </p>
+          <p>{note.data.description}</p>
+        </li>
+      ))}
+    </ol>
+  </Section>
 </BaseLayout>
+
+<style>
+  .page-title {
+    font-size: var(--text-3xl);
+  }
+
+  .intro,
+  .empty {
+    margin-top: 1rem;
+    color: var(--color-ash);
+    font-size: var(--text-lg);
+  }
+
+  .notes {
+    display: grid;
+    gap: 2.5rem;
+    margin-top: 3rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .notes h2 {
+    font-size: var(--text-xl);
+  }
+
+  .notes h2 a {
+    text-decoration: none;
+  }
+
+  .notes__date {
+    margin-block: 0.3rem 0.5rem;
+    color: var(--color-ash);
+    font-size: var(--text-sm);
+  }
+</style>

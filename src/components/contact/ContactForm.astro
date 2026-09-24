@@ -1,0 +1,235 @@
+---
+// One contact form (recruiter or client). Posts to the `contact` action, so it works without JS;
+// scripts/contact-form.ts upgrades it to submit in place and show errors inline.
+import { actions } from "astro:actions";
+import { BUDGETS } from "../../lib/contactSchema";
+
+interface Props {
+  type: "recruiter" | "client";
+  token: string;
+  /** Field errors from a no-JS submission, keyed by field name. */
+  errors?: Record<string, string[] | undefined>;
+}
+
+const { type, token, errors = {} } = Astro.props;
+const id = (field: string) => `${type}-${field}`;
+const err = (field: string) => errors[field]?.[0];
+const described = (field: string) => (err(field) ? `${id(field)}-error` : undefined);
+---
+
+<form method="POST" action={actions.contact} class="contact-form" data-contact-form novalidate>
+  <input type="hidden" name="type" value={type} />
+  <input type="hidden" name="ts" value={token} />
+
+  <!-- Honeypot: hidden from people and assistive tech; bots fill it in. -->
+  <div class="trap" aria-hidden="true">
+    <label for={id("website")}>Leave this field empty</label>
+    <input id={id("website")} name="website" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <div class="field">
+    <label for={id("name")}>Your name</label>
+    <input
+      id={id("name")}
+      name="name"
+      type="text"
+      required
+      maxlength="120"
+      autocomplete="name"
+      aria-invalid={err("name") ? "true" : undefined}
+      aria-describedby={described("name")}
+    />
+    <p class="field__error" id={`${id("name")}-error`} data-error-for="name">
+      {err("name")}
+    </p>
+  </div>
+
+  <div class="field">
+    <label for={id("email")}>Email</label>
+    <input
+      id={id("email")}
+      name="email"
+      type="email"
+      required
+      maxlength="254"
+      autocomplete="email"
+      aria-invalid={err("email") ? "true" : undefined}
+      aria-describedby={described("email")}
+    />
+    <p class="field__error" id={`${id("email")}-error`} data-error-for="email">
+      {err("email")}
+    </p>
+  </div>
+
+  <div class="field">
+    <label for={id("company")}>
+      Company{type === "client" && <span class="field__hint"> (optional)</span>}
+    </label>
+    <input
+      id={id("company")}
+      name="company"
+      type="text"
+      required={type === "recruiter"}
+      maxlength="120"
+      autocomplete="organization"
+      aria-invalid={err("company") ? "true" : undefined}
+      aria-describedby={described("company")}
+    />
+    <p class="field__error" id={`${id("company")}-error`} data-error-for="company">
+      {err("company")}
+    </p>
+  </div>
+
+  {type === "recruiter" ? (
+    <>
+      <div class="field">
+        <label for={id("role")}>
+          Role you're hiring for<span class="field__hint"> (optional)</span>
+        </label>
+        <input id={id("role")} name="role" type="text" maxlength="160" />
+      </div>
+      <div class="field">
+        <label for={id("message")}>Message</label>
+        <textarea
+          id={id("message")}
+          name="message"
+          rows="6"
+          required
+          maxlength="5000"
+          aria-invalid={err("message") ? "true" : undefined}
+          aria-describedby={described("message")}
+        ></textarea>
+        <p class="field__error" id={`${id("message")}-error`} data-error-for="message">
+          {err("message")}
+        </p>
+      </div>
+    </>
+  ) : (
+    <>
+      <div class="field">
+        <label for={id("budget")}>Budget</label>
+        <select id={id("budget")} name="budget" required>
+          {Object.entries(BUDGETS).map(([value, label]) => (
+            <option value={value} selected={value === "not-sure"}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div class="field">
+        <label for={id("details")}>What do you need help with?</label>
+        <textarea
+          id={id("details")}
+          name="details"
+          rows="6"
+          required
+          maxlength="5000"
+          aria-invalid={err("details") ? "true" : undefined}
+          aria-describedby={described("details")}
+        ></textarea>
+        <p class="field__error" id={`${id("details")}-error`} data-error-for="details">
+          {err("details")}
+        </p>
+      </div>
+    </>
+  )}
+
+  <p class="form-status" role="status" aria-live="polite" data-form-status></p>
+
+  <button type="submit" class="submit">
+    Send message
+  </button>
+</form>
+
+<style>
+  .contact-form {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 38rem;
+  }
+
+  .trap {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .field {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  label {
+    font-weight: 700;
+  }
+
+  .field__hint {
+    color: var(--color-ash);
+    font-weight: 400;
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--color-night);
+    color: var(--color-washi);
+    border: 2px solid var(--color-seam);
+    border-radius: 0;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    border-color: var(--color-hanko-hot);
+    outline-offset: 0;
+  }
+
+  [aria-invalid="true"] {
+    border-color: var(--color-hanko-hot);
+  }
+
+  .field__error {
+    color: var(--color-hanko-hot);
+    font-size: var(--text-sm);
+  }
+
+  .field__error:empty,
+  .form-status:empty {
+    display: none;
+  }
+
+  .form-status {
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--color-hanko-hot);
+    background: var(--color-night);
+  }
+
+  .submit {
+    justify-self: start;
+    min-height: 2.75rem;
+    padding: 0.55rem 1.75rem;
+    background: var(--color-hanko-ink);
+    color: var(--color-washi);
+    font-weight: 700;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .submit:hover {
+    background: var(--color-hanko);
+  }
+
+  .submit[disabled] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+</style>

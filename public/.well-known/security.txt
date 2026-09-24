@@ -1,0 +1,4 @@
+Contact: https://evilist.io/contact
+Expires: 2027-09-24T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://evilist.io/.well-known/security.txt

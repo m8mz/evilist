@@ -1,0 +1,42 @@
+---
+import { skillDomains } from "../../data/skills";
+---
+
+<dl class="skills">
+  {skillDomains.map((domain) => (
+    <div class="skills__row">
+      <dt>{domain.name}</dt>
+      <dd>{domain.items.join(", ")}</dd>
+    </div>
+  ))}
+</dl>
+
+<style>
+  .skills {
+    display: grid;
+    margin-top: 2rem;
+    border-top: 1px solid var(--color-seam);
+  }
+
+  .skills__row {
+    display: grid;
+    gap: 0.25rem 2rem;
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--color-seam);
+  }
+
+  @media (min-width: 48rem) {
+    .skills__row {
+      grid-template-columns: 17rem minmax(0, 1fr);
+    }
+  }
+
+  .skills dt {
+    font-weight: 700;
+  }
+
+  .skills dd {
+    margin: 0;
+    color: var(--color-ash);
+  }
+</style>

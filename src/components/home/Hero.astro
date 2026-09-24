@@ -1,0 +1,164 @@
+---
+import { Image } from "astro:assets";
+import Button from "../ui/Button.astro";
+import RankBadge from "../ui/RankBadge.astro";
+import SpeedLines from "../ui/SpeedLines.astro";
+import authorPic from "../../images/author-pic.webp";
+import { site } from "../../data/site";
+import { yearsOfExperience } from "../../data/career";
+
+const years = yearsOfExperience();
+const facts = [
+  `${years} years in production infrastructure`,
+  "Two datacenters, one a disaster-recovery hot site",
+  "99.99% uptime target",
+  "PCI-DSS and HIPAA",
+];
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <SpeedLines class="hero__lines" />
+  <div class="wrap hero__grid">
+    <div class="hero__copy">
+      <p class="hero__role">
+        {site.role} in {site.location}
+      </p>
+      <h1 id="hero-title" class="hero__name">
+        {site.name}
+      </h1>
+      <p class="hero__pitch">{site.pitch}</p>
+      <div class="hero__actions">
+        <Button href="#journey">See the {years}-year journey</Button>
+        <Button href="/resume" variant="ghost">
+          Read the resume
+        </Button>
+      </div>
+      <ul class="hero__facts" aria-label="At a glance">
+        {facts.map((fact) => (
+          <li>{fact}</li>
+        ))}
+      </ul>
+    </div>
+
+    <figure class="hero__portrait">
+      <Image
+        src={authorPic}
+        alt={`Portrait of ${site.name}`}
+        widths={[320, 480, 720]}
+        sizes="(min-width: 60rem) 26rem, 70vw"
+        loading="eager"
+        fetchpriority="high"
+        class="hero__photo"
+      />
+      <RankBadge
+        rank="S"
+        size="lg"
+        stamp
+        backed
+        label="S-rank: Sr. Systems Architect"
+        class="hero__seal"
+      />
+    </figure>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(3rem, 2rem + 6vw, 7.5rem) calc(var(--section-y) + var(--cut));
+  }
+
+  .hero :global(.hero__lines) {
+    left: auto;
+    width: min(70rem, 120%);
+    right: -20%;
+  }
+
+  .hero__grid {
+    position: relative;
+    display: grid;
+    gap: clamp(2.5rem, 2rem + 3vw, 4rem);
+    align-items: center;
+  }
+
+  @media (min-width: 60rem) {
+    .hero__grid {
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    }
+  }
+
+  .hero__role {
+    color: var(--color-ash);
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .hero__name {
+    font-size: var(--text-hero);
+    line-height: 1.02;
+    max-width: 12ch;
+  }
+
+  .hero__pitch {
+    margin-top: 1.5rem;
+    font-size: var(--text-lg);
+    line-height: 1.55;
+    max-width: 34rem;
+  }
+
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin-top: 2.25rem;
+  }
+
+  .hero__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.5rem;
+    margin-top: 2rem;
+    padding: 0;
+    list-style: none;
+    color: var(--color-ash);
+    font-size: var(--text-sm);
+    max-width: 36rem;
+  }
+
+  .hero__facts li {
+    position: relative;
+    padding-left: 0.9rem;
+  }
+
+  .hero__facts li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 0.35rem;
+    height: 0.35rem;
+    background: var(--color-hanko);
+    transform: rotate(45deg);
+  }
+
+  .hero__portrait {
+    position: relative;
+    justify-self: center;
+    width: min(26rem, 78vw);
+  }
+
+  .hero :global(.hero__photo) {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border: 2px solid var(--color-seam);
+    filter: saturate(0.9) contrast(1.05);
+  }
+
+  .hero :global(.hero__seal) {
+    position: absolute;
+    right: -1.25rem;
+    bottom: -1.75rem;
+  }
+</style>

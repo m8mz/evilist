@@ -1,0 +1,40 @@
+---
+import { yearsOfExperience } from "../../data/career";
+
+const years = yearsOfExperience();
+---
+
+<div class="about">
+  <p>
+    I started on the phones in 2016, answering hosting support tickets. {years} years later I
+    architect the infrastructure behind hundreds of banking websites. I'm self-taught: everything in
+    between I learned from books, online courses, and running production systems.
+  </p>
+  <p>
+    Security and data integrity drive most of my decisions. I design for failure first: two
+    datacenters, failover that gets tested, and monitoring that pages before customers notice.
+  </p>
+  <p>
+    I'd rather automate a task than do it twice, and I write things down so the next person doesn't
+    have to guess. At work that means Ansible, CI/CD pipelines, and internal tools in Go and Python.
+  </p>
+  <p class="about__personal">
+    Outside work I lift, play basketball, and watch a lot of anime. Solo Leveling is why the ranks
+    on this site are letters.
+  </p>
+</div>
+
+<style>
+  .about {
+    display: grid;
+    gap: 1.1rem;
+    margin-top: 1.5rem;
+    font-size: var(--text-lg);
+    line-height: 1.6;
+  }
+
+  .about__personal {
+    color: var(--color-ash);
+    font-size: var(--text-base);
+  }
+</style>

@@ -16,7 +16,8 @@
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:pdf": "astro build && node scripts/build-resume-pdf.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "8.0.2",

@@ -1,0 +1,70 @@
+---
+// Static career timeline. Phase 4 layers the scroll-driven animation on top; this stays as the
+// no-JS and reduced-motion version, and it is what search engines and screen readers read.
+import RankBadge from "../ui/RankBadge.astro";
+import { career, formatRange } from "../../data/career";
+---
+
+<ol class="timeline">
+  {career.map((stage) => (
+    <li class="timeline__stage" data-stage={stage.id}>
+      <RankBadge rank={stage.rankLabel} size="md" label={`Rank ${stage.rankLabel}`} />
+      <div class="timeline__body">
+        <h3 class="timeline__title">{stage.title}</h3>
+        <p class="timeline__meta">
+          {stage.org}, {formatRange(stage.start, stage.end)}
+        </p>
+        <p class="timeline__summary">{stage.summary}</p>
+      </div>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .timeline {
+    position: relative;
+    display: grid;
+    gap: 2.25rem;
+    margin-top: 2.5rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The rail the seals sit on. */
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 1.7rem;
+    top: 1rem;
+    bottom: 1rem;
+    width: 2px;
+    background: var(--color-seam);
+  }
+
+  .timeline__stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .timeline__stage :global(.seal) {
+    background: var(--color-slate);
+  }
+
+  .timeline__title {
+    font-size: var(--text-xl);
+  }
+
+  .timeline__meta {
+    margin-top: 0.25rem;
+    color: var(--color-ash);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .timeline__summary {
+    margin-top: 0.5rem;
+  }
+</style>

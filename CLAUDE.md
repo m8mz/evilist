@@ -76,5 +76,5 @@ Marcus prefers step-by-step delivery:
 
 ## Env
 
-`SENDGRID_API_KEY` (secret), `FORM_SECRET` (secret), `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_DRY_RUN`, `GITHUB_TOKEN` (optional, used at build time), `PUBLIC_DISCORD_INVITE_URL`. See `.env.example`.
+`SENDGRID_API_KEY` (secret), `FORM_SECRET` (secret), `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_DRY_RUN`, `PUBLIC_DISCORD_INVITE_URL`. See `.env.example`.
 Contact email is sent from `no-reply@evilist.co` to `m@evilist.co`, until `evilist.io` is an authenticated SendGrid domain.

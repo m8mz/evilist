@@ -1,19 +1,27 @@
 ---
-import { getCollection, render } from "astro:content";
-import BaseLayout from "../../layouts/BaseLayout.astro";
+import { render } from "astro:content";
+import NoteLayout from "../../layouts/NoteLayout.astro";
+import { getPublishedNotes, type Note } from "../../lib/notes";
 
 export async function getStaticPaths() {
-  const notes = await getCollection("notes", ({ data }) => !data.draft);
-  return notes.map((note) => ({ params: { id: note.id }, props: { note } }));
+  const notes = await getPublishedNotes();
+  return notes.map((note, i) => ({
+    params: { id: note.id },
+    // Newest first, so the previous array item is the newer note.
+    props: { note, newer: notes[i - 1], older: notes[i + 1] },
+  }));
 }
 
-const { note } = Astro.props;
+interface Props {
+  note: Note;
+  newer?: Note;
+  older?: Note;
+}
+
+const { note, newer, older } = Astro.props;
 const { Content } = await render(note);
 ---
 
-<BaseLayout title={note.data.title} description={note.data.description}>
-  <article>
-    <h1>{note.data.title}</h1>
-    <Content />
-  </article>
-</BaseLayout>
+<NoteLayout note={note} newer={newer} older={older}>
+  <Content />
+</NoteLayout>

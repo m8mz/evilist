@@ -1,0 +1,51 @@
+---
+import { PUBLIC_DISCORD_INVITE_URL } from "astro:env/client";
+import Button from "../ui/Button.astro";
+import { site } from "../../data/site";
+---
+
+<div class="cta">
+  <h2 id="cta-title">Hiring, or need infrastructure help?</h2>
+  <p>
+    Tell me about the role or the problem: load balancing, failover, automation, or keeping an
+    auditor happy. I'll reply by email.
+  </p>
+  <div class="cta__actions">
+    <Button href="/contact">Send me a message</Button>
+    <Button href={site.socials.linkedin} variant="ghost">
+      Connect on LinkedIn
+    </Button>
+  </div>
+  {PUBLIC_DISCORD_INVITE_URL && (
+    <p class="cta__discord">
+      Or talk shop with other engineers on{" "}
+      <a href={PUBLIC_DISCORD_INVITE_URL} rel="noopener" target="_blank">
+        the evilist Discord
+      </a>
+      .
+    </p>
+  )}
+</div>
+
+<style>
+  .cta h2 {
+    max-width: 18ch;
+  }
+
+  .cta > p {
+    margin-top: 1rem;
+    font-size: var(--text-lg);
+  }
+
+  .cta__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .cta__discord {
+    margin-top: 1.5rem;
+    color: var(--color-ash);
+  }
+</style>

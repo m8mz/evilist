@@ -1,171 +1,177 @@
 ---
+// On-demand page: it renders a fresh time-trap token per visit and reads no-JS action results.
+export const prerender = false;
+
+import { actions, isInputError } from "astro:actions";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Section from "../components/ui/Section.astro";
+import ContactForm from "../components/contact/ContactForm.astro";
+import { issueToken } from "../lib/timeTrap";
+import { formSecret } from "../lib/formSecret";
+
+const result = Astro.getActionResult(actions.contact);
+const sent = Boolean(result?.data?.sent);
+const fieldErrors = result?.error && isInputError(result.error) ? result.error.fields : {};
+const formError = result?.error && !isInputError(result.error) ? result.error.message : undefined;
+const token = issueToken(formSecret);
+
+const forms = [
+  { type: "recruiter", tab: "I'm hiring" },
+  { type: "client", tab: "I need help with a project" },
+] as const;
+
+// Pages with per-request tokens must never be cached.
+Astro.response.headers.set("Cache-Control", "no-store");
 ---
 
 <BaseLayout
   title="Contact"
-  description="Get in touch with Marcus Hancock-Gaillard about roles or infrastructure work."
+  description="Get in touch with Marcus Hancock-Gaillard about infrastructure roles or consulting work."
 >
-  <section class="contact-form">
-    <h2 class="text-4xl">Contact Me</h2>
+  <Section>
+    <h1 class="page-title">Get in touch</h1>
+    {sent ? (
+      <div class="sent" role="status">
+        <h2>Message sent</h2>
+        <p>Thanks. I'll reply to you by email.</p>
+      </div>
+    ) : (
+      <>
+        <p class="intro">
+          Hiring for an infrastructure role, or need help with load balancing, failover, or
+          automation? Tell me a little about it and I'll reply by email.
+        </p>
 
-    <!-- Tab Navigation -->
-    <div class="tab-navigation">
-      <button class="tab-btn active" data-type="personal">
-        💬 Personal
-      </button>
-      <button class="tab-btn" data-type="business">
-        💼 Business
-      </button>
-    </div>
+        {formError && (
+          <p class="form-error" role="alert">
+            {formError}
+          </p>
+        )}
 
-    <form id="personal-form" class="form-section">
-      <input type="text" name="name" placeholder="Your Name" required />
-      <input type="email" name="email" placeholder="Your Email" required />
-      <textarea name="message" placeholder="Your Message" required></textarea>
-      <button type="submit">Send Personal Inquiry</button>
-    </form>
+        <div class="tabs" role="tablist" aria-label="Why you're writing">
+          {forms.map(({ type, tab }, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`tab-${type}`}
+              aria-controls={`panel-${type}`}
+              aria-selected={i === 0 ? "true" : "false"}
+              tabindex={i === 0 ? 0 : -1}
+              data-contact-tab
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
 
-    <form id="business-form" class="form-section">
-      <input type="text" name="name" placeholder="Your Name" required />
-      <input type="email" name="email" placeholder="Your Email" required />
-      <input type="text" name="company" placeholder="Company Name" required />
-      <input type="number" name="budget" placeholder="Project Budget (USD)" required />
-      <textarea name="details" placeholder="Project Details" required></textarea>
-      <button type="submit">Send Business Inquiry</button>
-    </form>
-  </section>
+        {forms.map(({ type, tab }, i) => (
+          <section
+            id={`panel-${type}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${type}`}
+            class:list={["panel", { "is-active": i === 0 }]}
+            data-contact-panel
+          >
+            <h2 class="panel__heading">{tab}</h2>
+            <ContactForm type={type} token={token} errors={fieldErrors} />
+          </section>
+        ))}
+      </>
+    )}
+  </Section>
 </BaseLayout>
 
 <script>
-  const tabBtns = document.querySelectorAll<HTMLElement>(".tab-btn");
-  const sections = document.querySelectorAll(".form-section");
-
-  function switchTab(targetType: string | undefined) {
-    // Update tab buttons
-    tabBtns.forEach((btn) => {
-      btn.classList.remove("active");
-      if (btn.dataset.type === targetType) {
-        btn.classList.add("active");
-      }
-    });
-
-    // Update form sections
-    sections.forEach((sec) => {
-      sec.classList.toggle("active", sec.id === targetType + "-form");
-    });
-  }
-
-  // Add click listeners to tabs
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      switchTab(btn.dataset.type);
-    });
-  });
-
-  // Set default to personal
-  switchTab("personal");
+  import "../scripts/contact-form";
 </script>
 
 <style>
-  .contact-form {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 1rem;
+  .page-title {
+    font-size: var(--text-3xl);
   }
-  .contact-form h2 {
-    text-align: center;
-    margin-bottom: 1rem;
+
+  .intro {
+    margin-top: 1rem;
+    font-size: var(--text-lg);
   }
-  .tab-navigation {
+
+  .form-error {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--color-hanko-hot);
+    background: var(--color-slate);
+    max-width: 38rem;
+  }
+
+  .tabs {
     display: flex;
-    justify-content: center;
-    border-bottom: 2px solid #e0e0e0;
-    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 0.5rem 2rem;
+    margin-top: 2.5rem;
+    border-bottom: 1px solid var(--color-seam);
   }
 
-  .tab-btn {
-    width: 50%;
+  .tabs button {
+    min-height: 2.75rem;
+    padding: 0.5rem 0;
     background: none;
-    border: none;
-    padding: 1rem 1.5rem;
-    font-size: 1.5rem;
-    font-weight: 500;
-    color: #666;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    color: var(--color-ash);
+    font-weight: 700;
     cursor: pointer;
-    position: relative;
-    transition: color 0.3s ease;
   }
 
-  .tab-btn:hover {
-    color: #007acc;
+  .tabs button[aria-selected="true"] {
+    color: var(--color-washi);
+    border-bottom-color: var(--color-hanko);
   }
 
-  .tab-btn.active {
-    color: #007acc;
+  .panel {
+    margin-top: 2rem;
   }
 
-  .tab-btn.active::after {
-    content: "";
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #007acc;
+  .panel__heading {
+    font-size: var(--text-xl);
+    margin-bottom: 1.25rem;
   }
-  .form-section {
-    display: none;
-    opacity: 0;
-    transform: translateY(10px);
-    transition:
-      opacity 0.3s ease,
-      transform 0.3s ease;
-  }
-  .form-section.active {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-    animation: fadeIn 0.5s ease-out;
-  }
-  .form-section input,
-  .form-section textarea {
-    width: 100%;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    transition:
-      border 0.3s,
-      box-shadow 0.3s;
-  }
-  .form-section input:focus,
-  .form-section textarea:focus {
-    border-color: #007acc;
-    box-shadow: 0 0 5px rgba(0, 122, 204, 0.5);
-    outline: none;
-  }
-  .form-section button {
-    display: block;
-    width: 100%;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 4px;
-    background: #007acc;
-    color: #fff;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background 0.3s;
-  }
-  .form-section button:hover {
-    background: #005fa3;
-  }
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
+
+  /* With scripting: tabs switch panels and the per-panel heading is redundant.
+     Without it: no tabs, both forms stacked under their headings. */
+  @media (scripting: enabled) {
+    .panel:not(.is-active) {
+      display: none;
     }
-    to {
-      opacity: 1;
+
+    .panel__heading {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
     }
+  }
+
+  @media (scripting: none) {
+    .tabs {
+      display: none;
+    }
+
+    .panel + .panel {
+      margin-top: 4rem;
+    }
+  }
+
+  :global(.sent) {
+    margin-top: 2rem;
+  }
+
+  :global(.sent h2) {
+    font-size: var(--text-2xl);
+  }
+
+  :global(.sent p) {
+    margin-top: 0.5rem;
   }
 </style>
