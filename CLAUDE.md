@@ -1,9 +1,11 @@
 # CLAUDE.md — evilist.io
 
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
-Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
+Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–6 are done, including the quality gates. Phase 7 (container, HAProxy, VPS runbook and release pipeline) is next.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–6 are done, including the quality gates.
+>
+> **Axiom redesign in progress** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. Phase 1 (tokens, primitives, shell) is merged. Phases 2 (home), 3 (`/now`, imagery) and 4 (resume/notes/contact, PDF, ADR) come next, then rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 
 ## Commands
 
@@ -11,7 +13,9 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
 - `pnpm test:visual` runs the visual regression baselines (macOS, local only). After an intentional design change, run `pnpm test:visual --update-snapshots`, review the new images, and commit them.
 - Lighthouse CI config: `lighthouse/lighthouserc.cjs`. To run it locally: `pnpm build && npx -y @lhci/cli@0.15.1 autorun --config=lighthouse/lighthouserc.cjs --upload.target=filesystem --upload.outputDir=/tmp/lhci`. Don't install it with pnpm.
-- `pnpm size` checks JS budgets against `dist/` (it runs in CI).
+- `pnpm size` checks `dist/` (it runs in CI): initial JS on `/`, fonts between 20 and 120 KB (0 means the Fonts API entry broke), and no Three.js chunk.
+- Component tests render `.astro` files through `test/render.ts` (Astro Container API) and assert on markup. Pass `request` for components that read `Astro.url`. Scoped styles append `data-astro-cid-*` as the last attribute, so match `class="x"[^>]*>text<`.
+- If the claude-in-chrome window won't resize, check real Chrome at the width it allows, and capture exact widths with Playwright Chromium against the production server on a spare port.
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
 - E2E runs against the production build on port 4399 (never reuses `astro dev` on 4321): `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
 - Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
@@ -43,8 +47,9 @@ Marcus prefers step-by-step delivery:
 ## Where things live
 
 - `src/data/career.ts` is the single source of truth for the timeline, resume, journey, JSON-LD and PDF. `src/data/site.ts` holds name, socials and the pitch.
-- `src/styles/tokens.css` holds the design tokens (`@theme`) and follows 60/30/10: ink base, charcoal surfaces, red accent (`--color-accent`). Use the accent only for CTAs, active states, rank badges and focus.
-- `src/components/{layout,seo,ui,hero,journey,home,notes,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
+- `src/styles/tokens.css` holds the design tokens (`@theme`). Its `:root` block aliases the retired manga token names (`--color-washi`, `--color-hanko`, …) so unmigrated components still render. Never use an alias in new code; Phase 4 deletes them.
+- `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
+- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button`, `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`. `RankBadge` is legacy until Phase 2 removes it.
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
 - `infra/` holds Dockerfile support, the Quadlet/compose files, `haproxy/haproxy.cfg` (ACME, HTTP/3, rate limits, headers) and `ansible/`.
@@ -54,9 +59,12 @@ Marcus prefers step-by-step delivery:
 
 ## Design brief
 
-- Concept: "manga panel at night, stamped with a hanko seal". Night indigo `#0F1320` base, washi text, hanko crimson. The rank seal (`RankBadge`) is the one bold element; keep everything else quiet.
-- Crimson roles: `--color-hanko` for graphics only (3.7:1), `--color-hanko-ink` for fills that carry text, `--color-hanko-hot` for red text, links and focus.
-- Fonts: Dela Gothic One for display, Zen Kaku Gothic New for body. Both come through the Fonts API with the **Fontsource** provider; Google's provider ships hundreds of CJK slices.
+- Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow.
+- One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, link hover, focus rings, selection, and the S `RankChip`. Nowhere else.
+- Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
+- Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
+- Sections open with a `~/path` `Prompt` eyebrow and are separated by 1px iron rules.
+- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them; prompts and job IDs go in `docs/imagery.md`.
 - CSP gotchas:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
@@ -68,15 +76,16 @@ Marcus prefers step-by-step delivery:
   - On SVG elements a CSS `transform` animation replaces the element's `transform` attribute. Put positioning on an outer `<g>` and the animation on an inner one.
   - Switch stages with visibility/opacity, never `display`, or the layout shifts.
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
-- Avoid template tells: all-caps eyebrow labels, arrows on buttons, card grids with soft shadows, fade-up on every section.
+- Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
-- Dark only. Anime-inspired but professional: rank-up E→S, aura glow, diagonal section cuts, an SVG chibi avatar.
+- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S as terminal chips and an SVG chibi in the journey. No aura, no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
 - Animate only `transform`, `opacity` and `pathLength`.
 - Budgets:
   - initial JS on `/`: ≤ 100 KB gz
   - Motion: ≤ 30 KB gz
-  - Three.js: lazy, ≤ 170 KB gz, never in the LCP path
+  - fonts: ≤ 120 KB
+  - no Three.js (removed in the Axiom redesign)
   - zero third-party requests
 
 ## Security checklist (before merge)
