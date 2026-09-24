@@ -3,7 +3,7 @@
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
 Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phase 1 (pnpm + Astro 7 skeleton) is done; legacy components remain until Phases 2–3 replace them.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–2 are done (tooling, Astro 7, design system). Contact/resume pages still carry legacy markup until Phase 3.
 
 ## Commands
 
@@ -47,6 +47,16 @@ Marcus prefers step-by-step delivery:
 - `src/fetch.ts` is reserved by Astro 7. Never create it.
 
 ## Design brief
+
+- Concept: "manga panel at night, stamped with a hanko seal". Night indigo `#0F1320` base, washi text, hanko crimson. The rank seal (`RankBadge`) is the one bold element; keep everything else quiet.
+- Crimson roles: `--color-hanko` for graphics only (3.7:1), `--color-hanko-ink` for fills that carry text, `--color-hanko-hot` for red text, links and focus.
+- Fonts: Dela Gothic One for display, Zen Kaku Gothic New for body. Both come through the Fonts API with the **Fontsource** provider; Google's provider ships hundreds of CJK slices.
+- CSP gotchas:
+  - no inline `style=` attributes; use classes or data attributes
+  - no `is:inline` scripts
+  - keep `build.inlineStylesheets: "never"`
+  - use `@media (scripting: enabled)` for JS-only states
+- Avoid template tells: all-caps eyebrow labels, arrows on buttons, card grids with soft shadows, fade-up on every section.
 
 - Dark only. Anime-inspired but professional: rank-up E→S, aura glow, diagonal section cuts, an SVG chibi avatar.
 - Respect `prefers-reduced-motion` in every animation.
