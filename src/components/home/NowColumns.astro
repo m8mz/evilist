@@ -1,0 +1,72 @@
+---
+// The three off-the-clock columns (spec §6.6): the rig, what Marcus is playing, what he is
+// watching. Shared by the home page block and /now; the data lives in src/data/now.ts.
+import Icon from "../ui/Icon.astro";
+import KeyValue from "../ui/KeyValue.astro";
+import Tag from "../ui/Tag.astro";
+import { now } from "../../data/now";
+---
+
+<div class="now-cols">
+  <div class="now-col">
+    <h3 class="now-col__head">
+      <Icon name="tower" />
+      <Tag>rig</Tag>
+    </h3>
+    <KeyValue rows={now.rig} class="now-col__body" />
+  </div>
+  <div class="now-col">
+    <h3 class="now-col__head">
+      <Icon name="controller" />
+      <Tag>playing</Tag>
+    </h3>
+    <ul class="now-col__body now-col__list">
+      {now.playing.map((game) => (
+        <li>{game}</li>
+      ))}
+    </ul>
+  </div>
+  <div class="now-col">
+    <h3 class="now-col__head">
+      <Icon name="play" />
+      <Tag>watching</Tag>
+    </h3>
+    <ul class="now-col__body now-col__list">
+      {now.watching.map((show) => (
+        <li>{show}</li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .now-cols {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .now-cols {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .now-col__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--text-caption);
+    line-height: 1.5;
+  }
+
+  .now-cols :global(.now-col__body) {
+    margin-top: 0.75rem;
+  }
+
+  .now-col__list {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0;
+    list-style: none;
+  }
+</style>

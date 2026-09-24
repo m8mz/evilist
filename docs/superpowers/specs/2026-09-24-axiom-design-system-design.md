@@ -232,8 +232,7 @@ headed by a `Tag` and a 16px slate icon (§8.1):
 - `watching` — list from `now.watching`.
 
 Below the columns: `training: lifting, for health` with `LogBars` (`values` from
-`now.training.weeks`, an illustrative 12-week array with no numbers shown) and a
-`→ /now` link.
+`now.training.weeks`, an illustrative 12-week array with no numbers shown) and a `→ more on /now` link (so the link's accessible name says where it goes, not just "/now").
 
 ### 6.7 CTA
 

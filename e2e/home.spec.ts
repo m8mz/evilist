@@ -91,3 +91,21 @@ test.describe("infrastructure diagram", () => {
     else expect(name).not.toBe("none");
   });
 });
+
+test.describe("off the clock", () => {
+  test("shows the rig, what's playing and what's on, with a link to /now", async ({ page }) => {
+    await page.goto("/");
+    const block = page.locator("#off-the-clock");
+    await expect(block.locator(".prompt__path")).toHaveText("off-the-clock");
+    await expect(block.getByRole("heading", { level: 3 })).toHaveText([
+      "rig",
+      "playing",
+      "watching",
+    ]);
+    await expect(block).toContainText("MacBook Pro (M2 Max)");
+    await expect(block).toContainText("Old School RuneScape");
+    await expect(block).toContainText("Solo Leveling");
+    await expect(block.getByRole("img", { name: "Illustrative training rhythm" })).toBeVisible();
+    await expect(block.getByRole("link", { name: "more on /now" })).toHaveAttribute("href", "/now");
+  });
+});

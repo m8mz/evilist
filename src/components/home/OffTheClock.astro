@@ -1,0 +1,48 @@
+---
+// Home page block (spec §6.6): the three columns, the training line with its bar texture, and a
+// link to /now. The bars are illustrative; no training numbers are ever shown.
+import KeyValue from "../ui/KeyValue.astro";
+import LogBars from "../ui/LogBars.astro";
+import Panel from "../ui/Panel.astro";
+import NowColumns from "./NowColumns.astro";
+import { now } from "../../data/now";
+---
+
+<div class="otc">
+  <Panel>
+    <NowColumns />
+    <div class="otc__training">
+      <KeyValue rows={[{ key: "training", value: now.training.line }]} />
+      <LogBars values={now.training.weeks} label="Illustrative training rhythm" />
+    </div>
+    <p class="otc__more">
+      <a href="/now">
+        <span aria-hidden="true">→ </span>more on /now
+      </a>
+    </p>
+  </Panel>
+</div>
+
+<style>
+  .otc {
+    margin-top: 2rem;
+  }
+
+  .otc__training {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-iron);
+  }
+
+  .otc__more {
+    margin-top: 1.5rem;
+  }
+
+  .otc__more a {
+    text-decoration: none;
+  }
+</style>

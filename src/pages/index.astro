@@ -6,6 +6,7 @@ import Journey from "../components/journey/Journey.astro";
 import Skills from "../components/home/Skills.astro";
 import Work from "../components/home/Work.astro";
 import About from "../components/home/About.astro";
+import OffTheClock from "../components/home/OffTheClock.astro";
 import CTA from "../components/home/CTA.astro";
 import { yearsOfExperience } from "../data/career";
 
@@ -40,7 +41,13 @@ const years = yearsOfExperience();
     <About />
   </Section>
 
-  <Section tone="carbon" prompt="contact" id="contact" aria-labelledby="cta-title">
+  <Section tone="carbon" prompt="off-the-clock" id="off-the-clock" aria-labelledby="otc-title">
+    <h2 id="otc-title">Off the clock</h2>
+    <p class="lede">The rig, the games and the anime. And lifting, for my health.</p>
+    <OffTheClock />
+  </Section>
+
+  <Section prompt="contact" id="contact" aria-labelledby="cta-title">
     <CTA />
   </Section>
 </BaseLayout>
