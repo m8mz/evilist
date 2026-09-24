@@ -175,21 +175,104 @@ export function lightingFor(network: Network, source: number): Lighting {
   };
 }
 
+/** The labelled node nearest (x, y) within `maxDistance`, among those `accept` lets through. */
 export function nearestLabelled(
   network: Network,
   x: number,
   y: number,
   maxDistance: number,
+  accept: (id: number) => boolean = () => true,
 ): number | null {
   let best: number | null = null;
   let bestDistance = maxDistance;
   for (const n of network.nodes) {
     if (!n.label) continue;
     const d = Math.hypot(n.x - x, n.y - y);
-    if (d <= bestDistance) {
+    if (d <= bestDistance && accept(n.id)) {
       bestDistance = d;
       best = n.id;
     }
   }
   return best;
+}
+
+// ---------- What the visitor can see (screen geometry, CSS px) ----------
+
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** "start": the label runs right from the dot; "end": it ends left of the dot. */
+export type LabelSide = "start" | "end";
+
+const grow = (b: Box, by: number): Box => ({
+  left: b.left - by,
+  top: b.top - by,
+  right: b.right + by,
+  bottom: b.bottom + by,
+});
+
+const holds = (b: Box, p: Point) =>
+  p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom;
+
+const encloses = (outer: Box, inner: Box) =>
+  inner.left >= outer.left &&
+  inner.right <= outer.right &&
+  inner.top >= outer.top &&
+  inner.bottom <= outer.bottom;
+
+const overlaps = (a: Box, b: Box) =>
+  a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
+/** The part of `pane` inside a `width` × `height` viewport, inset by `inset` on every side. */
+export function visibleBox(pane: Box, width: number, height: number, inset = 4): Box {
+  return {
+    left: Math.max(pane.left, 0) + inset,
+    top: Math.max(pane.top, 0) + inset,
+    right: Math.min(pane.right, width) - inset,
+    bottom: Math.min(pane.bottom, height) - inset,
+  };
+}
+
+/** A dot the visitor can see: inside the visible pane and clear of the portrait (+ `margin`). */
+export function isDotVisible(dot: Point, pane: Box, portrait: Box, margin = 8): boolean {
+  return holds(pane, dot) && !holds(grow(portrait, margin), dot);
+}
+
+/**
+ * Where a `labelWidth` × `labelHeight` label beside `dot` can go: preferably on the side away from
+ * the portrait's centre, else the other side, as long as it stays inside the visible pane and
+ * clear of the portrait (+ `margin`); null when neither side fits.
+ */
+export function labelSide(
+  dot: Point,
+  labelWidth: number,
+  labelHeight: number,
+  pane: Box,
+  portrait: Box,
+  gap = 10,
+  margin = 8,
+): LabelSide | null {
+  const keepOut = grow(portrait, margin);
+  const top = dot.y - labelHeight / 2;
+  const bottom = dot.y + labelHeight / 2;
+  const box = (side: LabelSide): Box =>
+    side === "start"
+      ? { left: dot.x + gap, right: dot.x + gap + labelWidth, top, bottom }
+      : { left: dot.x - gap - labelWidth, right: dot.x - gap, top, bottom };
+  const preferred: LabelSide = dot.x >= (portrait.left + portrait.right) / 2 ? "start" : "end";
+  const other: LabelSide = preferred === "start" ? "end" : "start";
+  for (const side of [preferred, other]) {
+    const b = box(side);
+    if (encloses(pane, b) && !overlaps(b, keepOut)) return side;
+  }
+  return null;
 }

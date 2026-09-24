@@ -2,12 +2,14 @@
 // The hero's right pane (spec §4.4): Marcus's stack as a network, laid out at build time from a
 // fixed seed. At rest: steel dots, iron edges, labels hidden. scripts/stack-network.ts lights the
 // node nearest the cursor by toggling .is-source / .is-lit / .is-echo; each element's ember twin
-// cross-fades by opacity. Decorative (aria-hidden).
+// cross-fades by opacity. It also moves a lit label to whichever side of its dot is clear of the
+// portrait (.is-unlabelled when neither is). Decorative (aria-hidden).
 import { NETWORK } from "../../data/network";
 import { layoutNetwork } from "../../scripts/network";
 
 const { nodes, edges } = layoutNetwork(NETWORK);
 const at = (id: number) => nodes[id]!;
+// Until the script places it: the side away from the middle, where the portrait sits.
 const rightHalf = (x: number) => x > NETWORK.width / 2;
 ---
 
@@ -52,9 +54,9 @@ const rightHalf = (x: number) => x > NETWORK.width / 2;
         {n.label && (
           <text
             class="net__label"
-            x={rightHalf(n.x) ? n.x - 10 : n.x + 10}
-            y={n.y + 5}
-            text-anchor={rightHalf(n.x) ? "end" : "start"}
+            x={rightHalf(n.x) ? n.x + 10 : n.x - 10}
+            y={n.y}
+            text-anchor={rightHalf(n.x) ? "start" : "end"}
           >
             {n.label}
           </text>
@@ -106,19 +108,21 @@ const rightHalf = (x: number) => x > NETWORK.width / 2;
     transition-duration: 150ms;
   }
 
-  /* 14 user units ≈ 12–15px on screen at desktop pane sizes. */
+  /* 14px on screen at any size: the script sets --net-scale to the SVG's scale (user units to CSS
+     px). Centred on the dot's height, so the script's fit check can use the dot as the middle. */
   .net__label {
     fill: var(--color-ash);
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: calc(14px / var(--net-scale, 1));
+    dominant-baseline: central;
   }
 
-  .is-source > .net__label {
+  .is-source:not(.is-unlabelled) > .net__label {
     opacity: 1;
     transition-duration: 150ms;
   }
 
-  /* Stacked layouts scale the SVG down until labels are unreadable: dots and edges only. */
+  /* Stacked, the portrait covers nearly all of the pane: dots and edges only (spec §4.4). */
   @media (max-width: 59.99rem) {
     .net__label {
       display: none;

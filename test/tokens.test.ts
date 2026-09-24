@@ -47,6 +47,7 @@ const configFontVars = [
 const PROVIDED = new Set([
   ...configFontVars, // set by <Font cssVariable> in Head.astro
   "--progress", // set on [data-journey] by scripts/journey.ts
+  "--net-scale", // set on [data-network] by scripts/stack-network.ts
 ]);
 
 describe("design tokens", () => {

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("hero", () => {
   test("introduces Marcus with a prompt, a title, the location and two actions", async ({
@@ -207,23 +207,49 @@ test.describe("off the clock", () => {
 });
 
 test.describe("stack network", () => {
-  /** A labelled node whose dot is inside the visible network pane, in page coordinates. */
-  const visibleNode = (page: import("@playwright/test").Page) =>
-    page.evaluate(() => {
-      const pane = document.querySelector(".hero__pane--net")!.getBoundingClientRect();
+  interface Dot {
+    id: string;
+    x: number;
+    y: number;
+  }
+
+  /**
+   * Labelled nodes the network may light, by scripts/stack-network.ts's rule: the dot is inside
+   * the visible pane (inset 4px) and clear of the portrait (+8px). `slack` px on top of both
+   * leaves out a node that the portrait's tilt could cover while the cursor moves.
+   */
+  const eligibleNodes = (page: Page, slack = 0): Promise<Dot[]> =>
+    page.evaluate((slack) => {
+      const pane = document.querySelector("[data-network]")!.getBoundingClientRect();
+      const photo = document.querySelector(".hero__portrait")!.getBoundingClientRect();
+      const inset = 4 + slack;
+      const margin = 8 + slack;
+      const dots = [];
       for (const g of document.querySelectorAll<SVGGElement>(".net__node--labelled")) {
         const r = g.querySelector("circle")!.getBoundingClientRect();
         const x = r.x + r.width / 2;
         const y = r.y + r.height / 2;
-        const inside =
-          x > pane.left + 12 &&
-          x < pane.right - 12 &&
-          y > pane.top + 12 &&
-          y < Math.min(pane.bottom, innerHeight) - 12;
-        if (inside) return { id: g.dataset.netNode!, x, y };
+        const inPane =
+          x >= Math.max(pane.left, 0) + inset &&
+          x <= Math.min(pane.right, innerWidth) - inset &&
+          y >= Math.max(pane.top, 0) + inset &&
+          y <= Math.min(pane.bottom, innerHeight) - inset;
+        const underPhoto =
+          x >= photo.left - margin &&
+          x <= photo.right + margin &&
+          y >= photo.top - margin &&
+          y <= photo.bottom + margin;
+        if (inPane && !underPhoto) dots.push({ id: g.dataset.netNode!, x, y });
       }
-      throw new Error("no labelled node on screen");
-    });
+      return dots;
+    }, slack);
+
+  /** The first node the cursor can light, clear of the tilt's reach. */
+  const visibleNode = async (page: Page): Promise<Dot> => {
+    const [node] = await eligibleNodes(page, 4);
+    if (!node) throw new Error("no labelled node on screen");
+    return node;
+  };
 
   test.describe("under a mouse", () => {
     test.beforeEach(({}, info) => {
@@ -246,6 +272,10 @@ test.describe("stack network", () => {
     test("still finds the node after a resize", async ({ page }) => {
       await page.goto("/");
       await page.setViewportSize({ width: 1180, height: 820 });
+      // Viewport units (the pane's 100vw edge) can lag a resize until the next frame is drawn.
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
       const node = await visibleNode(page);
       await page.mouse.move(node.x, node.y, { steps: 3 });
       await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
@@ -254,19 +284,88 @@ test.describe("stack network", () => {
     test("keeps a hovered node lit when an idle pulse was running", async ({ page }, info) => {
       test.skip(info.project.name === "reduced-motion", "no pulses under reduced motion");
       await page.goto("/");
-      await expect(page.locator(".net__node.is-source")).toHaveCount(1, { timeout: 7000 });
-      const node = await visibleNode(page);
+      const pulsing = page.locator(".net__node.is-source");
+      await expect(pulsing).toHaveCount(1, { timeout: 7000 });
+      // The pulse only lights nodes the visitor can see, so its dot is there to hover.
+      const node = await pulsing.evaluate((g: SVGGElement) => {
+        const r = g.querySelector("circle")!.getBoundingClientRect();
+        return { id: g.dataset.netNode!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
       await page.mouse.move(node.x, node.y, { steps: 3 });
-      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+      const source = page.locator(`[data-net-node="${node.id}"]`);
+      await expect(source).toHaveClass(/is-source/);
       await page.waitForTimeout(1800); // longer than PULSE_HOLD_MS (1400ms)
-      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+      await expect(source).toHaveClass(/is-source/);
     });
+
+    test("never lights a node hidden under the portrait", async ({ page }, info) => {
+      test.skip(info.project.name !== "desktop", "one width");
+      await page.goto("/");
+      const photo = (await page.locator(".hero__portrait").boundingBox())!;
+      await page.mouse.move(photo.x + photo.width / 2, photo.y + photo.height / 2, { steps: 3 });
+      await page.waitForTimeout(400);
+      const covered = await page.evaluate(() => {
+        const photo = document.querySelector(".hero__portrait")!.getBoundingClientRect();
+        return [...document.querySelectorAll<SVGGElement>(".net__node.is-source")]
+          .filter((g) => {
+            const r = g.querySelector("circle")!.getBoundingClientRect();
+            const x = r.x + r.width / 2;
+            const y = r.y + r.height / 2;
+            return x >= photo.left && x <= photo.right && y >= photo.top && y <= photo.bottom;
+          })
+          .map((g) => g.dataset.netNode);
+      });
+      expect(covered).toEqual([]);
+    });
+
+    for (const width of [1152, 1440]) {
+      test(`keeps each label on screen and off the portrait (${width}px)`, async ({
+        page,
+      }, info) => {
+        test.skip(info.project.name !== "desktop", "two widths, on desktop");
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto("/");
+        await page.evaluate(() => document.fonts.ready);
+        const nodes = await eligibleNodes(page, 4);
+        expect(nodes.length).toBeGreaterThanOrEqual(3);
+        let shown = 0;
+        for (const node of nodes) {
+          await page.mouse.move(node.x, node.y, { steps: 3 });
+          const source = page.locator(`[data-net-node="${node.id}"]`);
+          await expect(source).toHaveClass(/is-source/);
+          // A label with no room on either side stays hidden.
+          if ((await source.getAttribute("class"))!.includes("is-unlabelled")) continue;
+          const label = source.locator(".net__label");
+          await expect(label).toHaveCSS("opacity", "1");
+          const box = (await label.boundingBox())!;
+          const photo = (await page.locator(".hero__portrait").boundingBox())!;
+          const name = (await label.textContent())!;
+          const clear =
+            box.x >= photo.x + photo.width ||
+            box.x + box.width <= photo.x ||
+            box.y >= photo.y + photo.height ||
+            box.y + box.height <= photo.y;
+          expect(clear, `${name} clears the portrait`).toBe(true);
+          expect(box.x, name).toBeGreaterThanOrEqual(0);
+          expect(box.y, name).toBeGreaterThanOrEqual(0);
+          expect(box.x + box.width, name).toBeLessThanOrEqual(width);
+          expect(box.y + box.height, name).toBeLessThanOrEqual(900);
+          shown++;
+        }
+        expect(shown).toBeGreaterThanOrEqual(3);
+      });
+    }
   });
 
   test("pulses on its own when left alone, but never under reduced motion", async ({
     page,
   }, info) => {
     await page.goto("/");
+    // Pulses only light nodes on screen; on phones the pane starts below the fold.
+    await page.locator("[data-network]").evaluate((el) => {
+      const bottom = el.getBoundingClientRect().bottom;
+      if (bottom > innerHeight) scrollBy({ top: bottom - innerHeight, behavior: "instant" });
+    });
     const lit = page.locator(".net__node.is-source");
     if (info.project.name === "reduced-motion") {
       await page.waitForTimeout(6000);
