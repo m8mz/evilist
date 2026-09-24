@@ -87,8 +87,9 @@ const pitch = heroPitch(decadePhrase(yearsOfExperience()));
     --hero-gap: clamp(2.5rem, 2rem + 3vw, 4rem);
     /* From the content column's edge to the viewport's edge (.wrap is max 72rem + gutters). */
     --hero-edge: calc((100vw - min(72rem, 100vw)) / 2 + var(--gutter));
-    /* Tuned in the browser: visible at a glance, never competing with the copy. */
-    --hero-backdrop-opacity: 0.22;
+    /* Tuned in the browser. At 0.14 the htop's fog text lands on graphite (#191919): one surface
+       step above void, so it reads as texture and never competes with the copy. */
+    --hero-backdrop-opacity: 0.14;
     position: relative;
     overflow: hidden;
     padding-block: var(--hero-pt) var(--hero-pb);
