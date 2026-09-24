@@ -207,6 +207,30 @@ const pitch = heroPitch(decadePhrase(yearsOfExperience()));
     display: inline-block;
   }
 
+  /* Only with scripting and motion allowed: the global reduced-motion rule would otherwise run
+       this once and leave the title on its last keyframe, invisible. */
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .hero__title-text {
+      animation: hero-title-cycle 4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes hero-title-cycle {
+    0% {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    10%,
+    90% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-1rem);
+    }
+  }
+
   .hero__location {
     margin-top: 0.5rem;
     color: var(--color-fog);

@@ -134,6 +134,36 @@ test.describe("infrastructure diagram", () => {
   });
 });
 
+test.describe("rotating title", () => {
+  test("moves on to the next title, and holds still under reduced motion", async ({
+    page,
+  }, info) => {
+    await page.goto("/");
+    const title = page.locator("[data-title-rotator]");
+    await expect(title).toHaveText("Sr. Systems Architect");
+    if (info.project.name === "reduced-motion") {
+      await page.waitForTimeout(5000);
+      await expect(title).toHaveText("Sr. Systems Architect");
+      await expect(title).toHaveCSS("opacity", "1");
+      await expect(title).toHaveCSS("animation-name", "none");
+    } else {
+      await expect(title).toHaveText("Forward Deployed Engineer", { timeout: 6000 });
+    }
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("shows the current role, still", async ({ page }) => {
+      await page.goto("/");
+      const title = page.locator("[data-title-rotator]");
+      await expect(title).toHaveText("Sr. Systems Architect");
+      await expect(title).toHaveCSS("animation-name", "none");
+      await expect(title).toHaveCSS("opacity", "1");
+    });
+  });
+});
+
 test.describe("off the clock", () => {
   test("shows the rig, what's playing and what's on, with a link to /now", async ({ page }) => {
     await page.goto("/");
