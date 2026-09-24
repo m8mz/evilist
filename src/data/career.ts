@@ -176,6 +176,16 @@ export function yearsOfExperience(now: Date = new Date()): number {
   return Math.floor(months / 12);
 }
 
+/** How the site says Marcus's experience: "9 years", then "a decade", then "over a decade". */
+export function decadePhrase(years: number): string {
+  if (years < 10) return `${years} years`;
+  return years === 10 ? "a decade" : "over a decade";
+}
+
+/** The phrase with its first letter upper-cased, for the start of a sentence. */
+export const capitalise = (phrase: string): string =>
+  phrase.charAt(0).toUpperCase() + phrase.slice(1);
+
 export function currentStage(): CareerStage {
   return career.find((s) => s.end === null) ?? career[career.length - 1];
 }

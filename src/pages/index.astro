@@ -9,9 +9,10 @@ import Work from "../components/home/Work.astro";
 import About from "../components/home/About.astro";
 import OffTheClock from "../components/home/OffTheClock.astro";
 import CTA from "../components/home/CTA.astro";
-import { yearsOfExperience } from "../data/career";
+import { capitalise, decadePhrase, yearsOfExperience } from "../data/career";
 
 const years = yearsOfExperience();
+const decade = capitalise(decadePhrase(years));
 ---
 
 <BaseLayout>
@@ -27,7 +28,7 @@ const years = yearsOfExperience();
   <Section tone="carbon" prompt="journey" id="journey" aria-labelledby="journey-title">
     <h2 id="journey-title">From E-rank to S-rank</h2>
     <p class="lede">
-      {years} years, seven ranks: from answering support calls to architecting two datacenters.
+      {decade}, seven ranks: from answering support calls to architecting two datacenters.
     </p>
     <Journey />
   </Section>

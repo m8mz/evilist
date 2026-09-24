@@ -9,4 +9,9 @@ describe("About", () => {
     expect(html).toContain("Solo Leveling is why the ranks on this site are letters.");
     expect(html).not.toMatch(/basketball/i);
   });
+
+  it("says a decade, not a number of years", async () => {
+    const html = await render(About);
+    expect(html).toMatch(/(A decade|Over a decade) later I architect/);
+  });
 });

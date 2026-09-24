@@ -4,6 +4,8 @@ import {
   formatRange,
   yearsOfExperience,
   currentStage,
+  decadePhrase,
+  capitalise,
   type Activity,
 } from "../src/data/career";
 
@@ -76,5 +78,21 @@ describe("currentStage", () => {
   it("is the ongoing S-rank role", () => {
     expect(currentStage().rankLabel).toBe("S");
     expect(currentStage().end).toBeNull();
+  });
+});
+
+describe("decadePhrase", () => {
+  it("counts years below ten, then speaks in decades", () => {
+    expect(decadePhrase(9)).toBe("9 years");
+    expect(decadePhrase(10)).toBe("a decade");
+    expect(decadePhrase(11)).toBe("over a decade");
+    expect(decadePhrase(14)).toBe("over a decade");
+  });
+});
+
+describe("capitalise", () => {
+  it("upper-cases only the first letter", () => {
+    expect(capitalise("a decade")).toBe("A decade");
+    expect(capitalise("over a decade")).toBe("Over a decade");
   });
 });

@@ -1,14 +1,14 @@
 ---
-import { yearsOfExperience } from "../../data/career";
+import { capitalise, decadePhrase, yearsOfExperience } from "../../data/career";
 
-const years = yearsOfExperience();
+const decade = capitalise(decadePhrase(yearsOfExperience()));
 ---
 
 <div class="about">
   <p>
-    I started on the phones in 2016, answering hosting support tickets. {years} years later I
-    architect the infrastructure behind hundreds of banking websites. I'm self-taught: everything in
-    between I learned from books, online courses, and running production systems.
+    I started on the phones in 2016, answering hosting support tickets. {decade} later I architect
+    the infrastructure behind hundreds of banking websites. I'm self-taught: everything in between I
+    learned from books, online courses, and running production systems.
   </p>
   <p>
     Security and data integrity drive most of my decisions. I design for failure first: two
