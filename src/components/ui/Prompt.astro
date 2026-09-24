@@ -1,0 +1,48 @@
+---
+// Terminal prompt line, `~/path`, with an optional blinking cursor. The eyebrow for every section.
+// The cursor blinks with a CSS animation; global reduced-motion rules freeze it.
+interface Props {
+  path: string;
+  cursor?: boolean;
+  class?: string;
+}
+
+const { path, cursor = false, class: className } = Astro.props;
+---
+
+<p class:list={["prompt", className]}>
+  <span class="prompt__prefix" aria-hidden="true">
+    ~/
+  </span>
+  <span class="prompt__path">{path}</span>
+  {cursor && <span class="prompt__cursor" aria-hidden="true"></span>}
+</p>
+
+<style>
+  .prompt {
+    display: flex;
+    align-items: center;
+    font-size: var(--text-caption);
+    line-height: 1.5;
+    color: var(--color-paper);
+  }
+
+  .prompt__prefix {
+    color: var(--color-ash);
+  }
+
+  .prompt__cursor {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.1em;
+    margin-left: 0.35em;
+    background: var(--color-ember);
+    animation: blink 1s steps(1, end) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
+</style>
