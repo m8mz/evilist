@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const routes = ["/", "/now", "/resume", "/notes", "/contact"];
+const routes = ["/", "/now", "/resume", "/notes", "/notes/ten-years-t1-to-architect", "/contact"];
 // Matches the 45rem breakpoint in Header.astro (below it, the nav collapses behind a toggle).
 const COLLAPSED_NAV_MAX = 720;
 
@@ -118,4 +118,36 @@ test("a trailing slash redirects to the one canonical URL", async ({ request }) 
     expect(res.status(), from).toBe(301);
     expect(res.headers().location, from).toBe(to);
   }
+});
+
+test.describe("internal links", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(info.project.name !== "desktop", "one project is enough");
+  });
+
+  test("internal links point straight at their page, with no redirect hop", async ({
+    page,
+    request,
+  }) => {
+    const pages = [
+      "/",
+      "/now",
+      "/resume",
+      "/notes",
+      "/notes/ten-years-t1-to-architect",
+      "/notes/building-this-site",
+    ];
+    for (const path of pages) {
+      await page.goto(path);
+      const hrefs = await page
+        .locator('a[href^="/"]')
+        .evaluateAll((links) => [
+          ...new Set(links.map((a) => a.getAttribute("href")!.split("#")[0]!).filter(Boolean)),
+        ]);
+      for (const href of hrefs) {
+        const res = await request.get(href, { maxRedirects: 0 });
+        expect(res.status(), `${path} → ${href}`).toBe(200);
+      }
+    }
+  });
 });

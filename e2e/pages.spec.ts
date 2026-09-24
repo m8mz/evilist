@@ -65,7 +65,50 @@ test("notes list links to readable posts", async ({ page }) => {
   await expect(links).toHaveCount(2);
   await links.first().click();
   await expect(page.locator("article h1")).toBeVisible();
-  await expect(page.locator(".note__meta")).toContainText("min read");
+  await expect(page.locator(".note__meta")).toContainText(/read:\s*\d+ min/);
+});
+
+test("each note on the list is a case panel with its tags, date and reading time", async ({
+  page,
+}) => {
+  await page.goto("/notes");
+  const rows = page.locator(".notes .panel--case");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first().locator(".kv__key")).toHaveText(["date:", "read:"]);
+  await expect(rows.first().locator(".kv__value").last()).toHaveText(/^\d+ min$/);
+  await expect(page.locator(".notes .tag", { hasText: "career" })).toHaveCount(1);
+});
+
+test("a note opens with its path as the prompt, then date and reading time", async ({ page }) => {
+  await page.goto("/notes/ten-years-t1-to-architect");
+  await expect(page.locator(".note__prompt")).toContainText("notes/ten-years-t1-to-architect");
+  await expect(page.locator(".note__meta .kv__key")).toHaveText(["date:", "read:"]);
+});
+
+test("note code sits on carbon with an iron hairline, inline code on graphite", async ({
+  page,
+}) => {
+  await page.goto("/notes/building-this-site");
+  // No published note has code yet, so add some to the rendered body and read its styles.
+  const styles = await page.evaluate(() => {
+    const prose = document.querySelector(".prose")!;
+    prose.insertAdjacentHTML("beforeend", "<pre><code>ls</code></pre><p><code>x</code></p>");
+    const s = (sel: string) => getComputedStyle(prose.querySelector(sel)!);
+    return {
+      preBg: s("pre").backgroundColor,
+      preBorder: s("pre").borderTopColor,
+      preRadius: s("pre").borderTopLeftRadius,
+      inlineBg: s("p > code").backgroundColor,
+      body: getComputedStyle(prose).fontSize,
+    };
+  });
+  expect(styles).toEqual({
+    preBg: "rgb(17, 17, 17)",
+    preBorder: "rgb(32, 32, 32)",
+    preRadius: "2px",
+    inlineBg: "rgb(25, 25, 25)",
+    body: "15px",
+  });
 });
 
 test("404 shows a terminal session and a way home", async ({ page }) => {

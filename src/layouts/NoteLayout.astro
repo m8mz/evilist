@@ -1,7 +1,12 @@
 ---
+// One note (spec §7.3): a `~/notes/<id>` prompt, the title, date and reading time as key: value
+// rows, then the body in a 68ch measure at 15px/1.7. Code blocks sit on carbon, inline code on
+// graphite. Pager links are slashless (trailingSlash: "never").
 import BaseLayout from "./BaseLayout.astro";
+import Prompt from "../components/ui/Prompt.astro";
+import KeyValue from "../components/ui/KeyValue.astro";
 import { formatDate, type Note } from "../lib/notes";
-import { readingTime } from "../lib/readingTime";
+import { readingMinutes } from "../lib/readingTime";
 
 interface Props {
   note: Note;
@@ -11,24 +16,24 @@ interface Props {
 
 const { note, newer, older } = Astro.props;
 const { title, description, pubDate, updatedDate } = note.data;
+const meta = [
+  { key: "date", value: formatDate(pubDate) },
+  { key: "read", value: `${readingMinutes(note.body ?? "")} min` },
+  ...(updatedDate ? [{ key: "updated", value: formatDate(updatedDate) }] : []),
+];
 ---
 
 <BaseLayout title={title} description={description}>
   <article class="wrap note">
     <header class="note__head">
       <p class="note__back">
-        <a href="/notes">All notes</a>
+        <a href="/notes">
+          <span aria-hidden="true">← </span>all notes
+        </a>
       </p>
+      <Prompt path={`notes/${note.id}`} class="note__prompt" />
       <h1>{title}</h1>
-      <p class="note__meta">
-        <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>,{" "}
-        {readingTime(note.body ?? "")}
-        {updatedDate && (
-          <>
-            . Updated <time datetime={updatedDate.toISOString()}>{formatDate(updatedDate)}</time>
-          </>
-        )}
-      </p>
+      <KeyValue rows={meta} class="note__meta" />
     </header>
 
     <div class="prose">
@@ -38,14 +43,18 @@ const { title, description, pubDate, updatedDate } = note.data;
     {(newer || older) && (
       <nav class="note__pager" aria-label="More notes">
         {older && (
-          <a href={`/notes/${older.id}/`} rel="prev">
-            <span>Older</span>
+          <a href={`/notes/${older.id}`} rel="prev" class="note__pager-link">
+            <span class="note__pager-label">
+              <span aria-hidden="true">← </span>older
+            </span>
             {older.data.title}
           </a>
         )}
         {newer && (
-          <a href={`/notes/${newer.id}/`} rel="next" class="note__pager-next">
-            <span>Newer</span>
+          <a href={`/notes/${newer.id}`} rel="next" class="note__pager-link note__pager-next">
+            <span class="note__pager-label">
+              newer<span aria-hidden="true"> →</span>
+            </span>
             {newer.data.title}
           </a>
         )}
@@ -62,24 +71,32 @@ const { title, description, pubDate, updatedDate } = note.data;
 
   .note__back a {
     color: var(--color-ash);
-    font-weight: 700;
+    font-size: var(--text-caption);
+    text-decoration: none;
+  }
+
+  .note__back a:hover {
+    color: var(--color-ember);
+  }
+
+  .note__head :global(.note__prompt) {
+    margin-top: 2rem;
   }
 
   .note__head h1 {
-    margin-top: 1rem;
-    font-size: var(--text-3xl);
+    margin-top: 0.5rem;
+    font-size: var(--text-display);
   }
 
-  .note__meta {
-    margin-top: 0.75rem;
-    color: var(--color-ash);
-    font-size: var(--text-sm);
+  .note__head :global(.note__meta) {
+    margin-top: 1rem;
+    font-size: var(--text-caption);
   }
 
   .prose {
     margin-top: 2.5rem;
-    font-size: var(--text-lg);
-    line-height: 1.7;
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
   }
 
   .prose :global(> * + *) {
@@ -88,11 +105,12 @@ const { title, description, pubDate, updatedDate } = note.data;
 
   .prose :global(h2) {
     margin-top: 2em;
-    font-size: var(--text-2xl);
+    font-size: var(--text-heading-lg);
   }
 
   .prose :global(h3) {
     margin-top: 1.6em;
+    font-size: var(--text-heading);
   }
 
   .prose :global(ul),
@@ -101,11 +119,15 @@ const { title, description, pubDate, updatedDate } = note.data;
   }
 
   .prose :global(ul) {
-    list-style: disc;
+    list-style: "- ";
   }
 
   .prose :global(ol) {
     list-style: decimal;
+  }
+
+  .prose :global(li::marker) {
+    color: var(--color-ash);
   }
 
   .prose :global(li + li) {
@@ -114,28 +136,32 @@ const { title, description, pubDate, updatedDate } = note.data;
 
   .prose :global(blockquote) {
     padding-left: 1em;
-    border-left: 3px solid var(--color-hanko);
-    color: var(--color-ash);
+    border-left: 2px solid var(--color-slate);
+    color: var(--color-fog);
   }
 
   .prose :global(code) {
-    font-size: 0.9em;
-    padding: 0.1em 0.3em;
-    background: var(--color-carbon);
+    padding: 0.1em 0.35em;
+    border-radius: var(--radius);
+    background: var(--color-graphite);
+    font-size: 0.93em;
   }
 
   .prose :global(pre) {
     padding: 1rem;
     overflow-x: auto;
     background: var(--color-carbon);
-    border: 1px solid var(--color-seam);
-    font-size: var(--text-sm);
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
+    font-size: var(--text-caption);
     line-height: 1.5;
   }
 
   .prose :global(pre code) {
     padding: 0;
+    border-radius: 0;
     background: none;
+    font-size: inherit;
   }
 
   .note__pager {
@@ -143,7 +169,7 @@ const { title, description, pubDate, updatedDate } = note.data;
     gap: 1rem;
     margin-top: 4rem;
     padding-top: 1.5rem;
-    border-top: 2px solid var(--color-seam);
+    border-top: 1px solid var(--color-iron);
   }
 
   @media (min-width: 40rem) {
@@ -152,21 +178,19 @@ const { title, description, pubDate, updatedDate } = note.data;
     }
   }
 
-  .note__pager a {
+  .note__pager-link {
     display: grid;
-    gap: 0.2rem;
-    font-weight: 700;
+    gap: 0.25rem;
     text-decoration: none;
   }
 
-  .note__pager span {
+  .note__pager-label {
     color: var(--color-ash);
-    font-size: var(--text-sm);
-    font-weight: 400;
+    font-size: var(--text-caption);
   }
 
   .note__pager-next {
-    text-align: right;
     grid-column: 2;
+    text-align: right;
   }
 </style>

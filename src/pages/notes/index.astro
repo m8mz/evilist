@@ -1,7 +1,13 @@
 ---
+// Notes list (spec §7.3): each note is a case panel with its title, description, tags, and its
+// date and reading time as key: value rows.
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Section from "../../components/ui/Section.astro";
+import Panel from "../../components/ui/Panel.astro";
+import Tag from "../../components/ui/Tag.astro";
+import KeyValue from "../../components/ui/KeyValue.astro";
 import { formatDate, getPublishedNotes } from "../../lib/notes";
+import { readingMinutes } from "../../lib/readingTime";
 
 const notes = await getPublishedNotes();
 ---
@@ -10,7 +16,7 @@ const notes = await getPublishedNotes();
   title="Notes"
   description="Notes from Marcus Hancock-Gaillard on careers, infrastructure, and how this site is built."
 >
-  <Section>
+  <Section prompt="notes">
     <h1 class="page-title">Notes</h1>
     <p class="intro">
       Short writing on my career and how this site is built. Longer technical posts will live on{" "}
@@ -19,16 +25,29 @@ const notes = await getPublishedNotes();
 
     {notes.length === 0 && <p class="empty">No notes published yet. Check back soon.</p>}
 
-    <ol class="notes">
+    <ol class="notes" role="list">
       {notes.map((note) => (
         <li>
-          <h2>
-            <a href={`/notes/${note.id}`}>{note.data.title}</a>
-          </h2>
-          <p class="notes__date">
-            <time datetime={note.data.pubDate.toISOString()}>{formatDate(note.data.pubDate)}</time>
-          </p>
-          <p>{note.data.description}</p>
+          <Panel variant="case" class="note-row">
+            <h2 class="note-row__title">
+              <a href={`/notes/${note.id}`}>{note.data.title}</a>
+            </h2>
+            <p class="note-row__desc">{note.data.description}</p>
+            {note.data.tags.length > 0 && (
+              <p class="note-row__tags">
+                {note.data.tags.map((tag) => (
+                  <Tag>{tag}</Tag>
+                ))}
+              </p>
+            )}
+            <KeyValue
+              class="note-row__meta"
+              rows={[
+                { key: "date", value: formatDate(note.data.pubDate) },
+                { key: "read", value: `${readingMinutes(note.body ?? "")} min` },
+              ]}
+            />
+          </Panel>
         </li>
       ))}
     </ol>
@@ -37,35 +56,47 @@ const notes = await getPublishedNotes();
 
 <style>
   .page-title {
-    font-size: var(--text-3xl);
+    font-size: var(--text-display);
   }
 
   .intro,
   .empty {
     margin-top: 1rem;
-    color: var(--color-ash);
-    font-size: var(--text-lg);
+    color: var(--color-fog);
   }
 
   .notes {
     display: grid;
-    gap: 2.5rem;
-    margin-top: 3rem;
+    gap: 1rem;
+    margin-top: 2.5rem;
     padding: 0;
     list-style: none;
   }
 
-  .notes h2 {
-    font-size: var(--text-xl);
+  .notes :global(.note-row) {
+    display: grid;
+    gap: 0.75rem;
   }
 
-  .notes h2 a {
+  .note-row__title {
+    font-size: var(--text-heading);
+  }
+
+  .note-row__title a {
     text-decoration: none;
   }
 
-  .notes__date {
-    margin-block: 0.3rem 0.5rem;
-    color: var(--color-ash);
-    font-size: var(--text-sm);
+  .note-row__title a:hover {
+    text-decoration: underline;
+  }
+
+  .note-row__desc {
+    color: var(--color-fog);
+  }
+
+  .note-row__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
   }
 </style>

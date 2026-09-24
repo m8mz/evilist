@@ -41,6 +41,8 @@ const MIGRATED = [
   "src/pages/now.astro",
   "src/pages/og-card.astro",
   "src/pages/resume.astro",
+  "src/pages/notes/index.astro",
+  "src/layouts/NoteLayout.astro",
 ];
 
 describe("token migration", () => {
