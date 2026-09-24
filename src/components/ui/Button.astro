@@ -1,6 +1,6 @@
 ---
-// Slanted "manga caption" button. The slant lives on a pseudo-element so the
-// focus outline and text stay upright and unclipped.
+// Terminal button: 2px corners, an arrow after the label, colour change only on hover.
+// Primary carries void text on the ember fill: paper on ember is 3.3:1 and fails AA (spec §3.1).
 interface Props {
   href: string;
   variant?: "primary" | "ghost";
@@ -11,57 +11,51 @@ const { href, variant = "primary", class: className } = Astro.props;
 ---
 
 <a href={href} class:list={["btn", `btn--${variant}`, className]}>
-  <span class="btn__label">
-    <slot />
+  <slot />
+  <span class="btn__arrow" aria-hidden="true">
+    →
   </span>
 </a>
 
 <style>
   .btn {
-    position: relative;
-    isolation: isolate;
     display: inline-flex;
     align-items: center;
+    gap: 0.6ch;
     min-height: 2.75rem; /* 44px tap target */
-    padding: 0.55rem 1.5rem;
+    padding: 0.55rem 1rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-size: var(--text-body);
     font-weight: 700;
+    line-height: 1.2;
     text-decoration: none;
-    color: var(--color-washi);
-    transition: color 150ms ease-out;
-  }
-
-  .btn::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    transform: skewX(-10deg);
     transition:
       background-color 150ms ease-out,
-      border-color 150ms ease-out;
+      border-color 150ms ease-out,
+      color 150ms ease-out;
   }
 
-  .btn--primary::before {
-    background: var(--color-hanko-ink);
+  .btn--primary {
+    background: var(--color-ember);
+    border-color: var(--color-ember);
+    color: var(--color-void);
   }
 
   .btn--primary:hover {
-    color: var(--color-washi);
+    background: var(--color-paper);
+    border-color: var(--color-paper);
+    color: var(--color-void);
   }
 
-  .btn--primary:hover::before {
-    background: var(--color-hanko);
-  }
-
-  .btn--ghost::before {
-    border: 2px solid var(--color-seam);
+  .btn--ghost {
+    border-color: var(--color-slate);
+    color: var(--color-paper);
+    font-weight: 400;
   }
 
   .btn--ghost:hover {
-    color: var(--color-washi);
-  }
-
-  .btn--ghost:hover::before {
-    border-color: var(--color-washi);
+    border-color: var(--color-paper);
+    color: var(--color-paper);
   }
 </style>
