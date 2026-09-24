@@ -1,0 +1,54 @@
+---
+// Decorative `>` glyph texture: Axiom's "streaming data" background. Two identical strips drift
+// left inside a track so the loop is seamless; global reduced-motion rules freeze it.
+// The parent must be `position: relative; overflow: hidden`.
+interface Props {
+  rows?: number;
+  class?: string;
+}
+
+const { rows = 8, class: className } = Astro.props;
+const COLS = 40;
+const strip = Array.from(
+  { length: rows },
+  (_, r) => `${" ".repeat(r % 4)}${"> ".repeat(COLS).trimEnd()}`,
+).join("\n");
+---
+
+<div class:list={["arrows", className]} aria-hidden="true">
+  <div class="arrows__track">
+    <pre class="arrows__strip">{strip}</pre>
+    <pre class="arrows__strip">{strip}</pre>
+  </div>
+</div>
+
+<style>
+  .arrows {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    color: var(--color-slate);
+    font-size: var(--text-caption);
+    line-height: 1.6;
+    transform: skewY(-8deg);
+  }
+
+  .arrows__track {
+    display: flex;
+    width: max-content;
+    animation: drift 40s linear infinite;
+  }
+
+  .arrows__strip {
+    margin: 0;
+    font: inherit;
+    white-space: pre;
+  }
+
+  @keyframes drift {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+</style>
