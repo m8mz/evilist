@@ -4,6 +4,10 @@ import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 
+// `astro dev` serves Vite-injected inline <style>/<script> tags (HMR) that Astro cannot hash,
+// so a CSP there blocks every style. Enforce CSP only for production builds and previews.
+const isDevServer = process.argv.includes("dev");
+
 // Static by default. Only pages with `export const prerender = false`
 // (the contact page) and the /_actions/* endpoint run on the Node server.
 export default defineConfig({
@@ -60,15 +64,17 @@ export default defineConfig({
     },
   },
   security: {
-    csp: {
-      directives: [
-        "default-src 'self'",
-        "img-src 'self' data:",
-        "connect-src 'self'",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ],
-    },
+    csp: isDevServer
+      ? false
+      : {
+          directives: [
+            "default-src 'self'",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+          ],
+        },
   },
 });

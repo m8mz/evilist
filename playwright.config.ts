@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 4321;
+// Dedicated port: never collide with (or silently reuse) `astro dev` on 4321.
+const PORT = 4399;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
 // Runs against the production build (`pnpm build` first). CI builds before this step.
@@ -17,7 +18,7 @@ export default defineConfig({
     command: "node ./dist/server/entry.mjs",
     gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
     url: `${baseURL}/healthz`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     env: {
       HOST: "127.0.0.1",
       PORT: String(PORT),

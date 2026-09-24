@@ -10,7 +10,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted
 - `pnpm dev` / `pnpm build` / `pnpm preview` (runs `node ./dist/server/entry.mjs`)
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
-- E2E runs against the production build: `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
+- E2E runs against the production build on port 4399 (never reuses `astro dev` on 4321): `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
 - Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
 - `minimumReleaseAge` rejects any release younger than 24 h. When that happens, pin the previous version; don't add an exclusion.
 - Never use npm/yarn/bun. The only lockfile is `pnpm-lock.yaml`. Supply-chain settings (`minimumReleaseAge`, `allowBuilds`) live in `pnpm-workspace.yaml`.
@@ -55,6 +55,7 @@ Marcus prefers step-by-step delivery:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
   - keep `build.inlineStylesheets: "never"`
+  - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
 - Avoid template tells: all-caps eyebrow labels, arrows on buttons, card grids with soft shadows, fade-up on every section.
 

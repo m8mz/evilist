@@ -64,3 +64,12 @@ test.describe("collapsed navigation (phones)", () => {
     expect(Math.abs((brand?.y ?? 0) - (toggle?.y ?? 100))).toBeLessThan(20);
   });
 });
+
+test("production build sends a hashed Content-Security-Policy", async ({ request }) => {
+  const res = await request.get("/");
+  const csp = res.headers()["content-security-policy"] ?? "";
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("frame-ancestors 'none'");
+  expect(csp).toMatch(/script-src 'self' 'sha256-/);
+  expect(csp).toMatch(/style-src 'self' 'sha256-/);
+});
