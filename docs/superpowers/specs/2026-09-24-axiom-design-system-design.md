@@ -178,7 +178,7 @@ Two columns from 60rem (copy 1.35fr, portrait 1fr), stacked below.
 Mechanics untouched: pinned stage, `scripts/journey.ts` scroll mapping,
 `JourneyTimeline` fallback for no-JS and reduced motion, skip link. Restyle:
 
-- Rail: 1px iron track; nodes are `RankChip size="sm"`; the progress fill is ember.
+- Rail: 1px slate track (iron disappears on the carbon band); nodes are `RankChip size="sm"`, dimmed by colour (ash text, iron border) until reached; the progress fill is ember.
 - Stage cards: `Panel variant="case"`; `Tag` for the date range; `RankChip size="md"`;
   title, org, summary, first highlight unchanged.
 - `JourneyScene.astro` props: recolour classes only. Metal, floor and buildings in

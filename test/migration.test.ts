@@ -23,6 +23,8 @@ const MIGRATED = [
   "src/components/ui/Tag.astro",
   "src/components/ui/TerminalFrame.astro",
   "src/components/home/Hero.astro",
+  "src/components/journey/Journey.astro",
+  "src/components/journey/JourneyTimeline.astro",
 ];
 
 describe("token migration", () => {

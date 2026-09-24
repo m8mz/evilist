@@ -8,7 +8,9 @@
 // with reduced motion.
 import JourneyScene from "./JourneyScene.astro";
 import JourneyTimeline from "./JourneyTimeline.astro";
-import RankBadge from "../ui/RankBadge.astro";
+import Panel from "../ui/Panel.astro";
+import RankChip from "../ui/RankChip.astro";
+import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
 ---
 
@@ -21,7 +23,7 @@ import { career, formatRange } from "../../data/career";
     <ol class="journey__rail">
       {career.map((stage, i) => (
         <li class:list={["journey__node", { "is-reached is-current": i === 0 }]} data-node>
-          <RankBadge rank={stage.rankLabel} size="sm" />
+          <RankChip rank={stage.rankLabel} size="sm" />
         </li>
       ))}
       <li class="journey__track-line" role="presentation">
@@ -35,19 +37,21 @@ import { career, formatRange } from "../../data/career";
 
     <div class="journey__cards">
       {career.map((stage, i) => (
-        <article
+        <Panel
+          variant="case"
           class:list={["journey__card", { "is-active": i === 0 }]}
           data-card
           data-activity={stage.activity}
         >
-          <RankBadge rank={stage.rankLabel} size="md" />
+          <div class="journey__card-head">
+            <RankChip rank={stage.rankLabel} size="md" />
+            <Tag>{formatRange(stage.start, stage.end)}</Tag>
+          </div>
           <h3>{stage.shortTitle ?? stage.title}</h3>
-          <p class="journey__meta">
-            {stage.org}, {formatRange(stage.start, stage.end)}
-          </p>
+          <p class="journey__meta">{stage.org}</p>
           <p>{stage.summary}</p>
           <p class="journey__highlight">{stage.highlights[0]}</p>
-        </article>
+        </Panel>
       ))}
     </div>
   </div>
@@ -117,7 +121,7 @@ import { career, formatRange } from "../../data/career";
   /* ---------- Track and pinned stage ---------- */
   .journey {
     --stages: 7;
-    --header: 4rem;
+    --header: 3.5rem;
     position: relative;
     height: calc(var(--stages) * 62dvh + 100dvh - var(--header));
     margin-top: 2rem;
@@ -165,34 +169,38 @@ import { career, formatRange } from "../../data/career";
     transition: transform 240ms ease-out;
   }
 
-  .journey__node :global(.seal) {
-    background: var(--color-carbon);
-    transition: opacity 240ms ease-out;
-  }
-
-  .journey__node:not(.is-reached) :global(.seal) {
-    opacity: 0.2;
-  }
-
   .journey__node.is-current {
-    transform: scale(1.18);
+    transform: scale(1.12);
+  }
+
+  /* Not reached yet: dimmed by colour, not opacity, so the chip text still passes 4.5:1. */
+  .journey__node:not(.is-reached) :global(.rank-chip) {
+    border-color: var(--color-iron);
+    background: var(--color-graphite);
+    color: var(--color-ash);
+  }
+
+  /* Seven chips must fit a 390 px phone. */
+  @media (max-width: 39.99rem) {
+    .journey__node :global(.rank-chip) {
+      padding-inline: 0.25rem;
+    }
   }
 
   .journey__track-line {
     position: absolute;
     inset: 50% 1rem auto;
-    height: 2px;
-    background: var(--color-seam);
+    height: 1px;
+    background: var(--color-slate);
   }
 
   .journey__fill {
     position: absolute;
     inset: 0;
-    background: var(--color-hanko);
+    background: var(--color-ember);
     transform-origin: left;
     transform: scaleX(var(--progress, 0));
   }
-
   /* ---------- Scene ---------- */
   .journey__scene {
     min-height: 0;
@@ -211,8 +219,9 @@ import { career, formatRange } from "../../data/career";
   }
 
   /* All cards share one grid cell, so the area is always as tall as the tallest card and
-     switching stages never shifts the layout. Inactive cards are hidden with visibility. */
-  .journey__card {
+       switching stages never shifts the layout. Inactive cards are hidden with visibility.
+       The cards are Panel components, so the class is reached with :global. */
+  .journey__cards :global(.journey__card) {
     grid-area: 1 / 1;
     display: grid;
     align-content: start;
@@ -221,44 +230,42 @@ import { career, formatRange } from "../../data/career";
     opacity: 0;
   }
 
-  .journey__card.is-active {
+  .journey__cards :global(.journey__card.is-active) {
     visibility: visible;
     opacity: 1;
     animation: card-in 320ms ease-out both;
   }
 
-  /* Re-stamp the rank seal each time its card becomes active. */
-  .journey__card.is-active :global(.seal) {
-    animation: stamp 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 80ms both;
+  .journey__card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .journey__card h3 {
-    margin-top: 0.5rem;
-    font-size: var(--text-2xl);
+  .journey__cards h3 {
+    margin-top: 0.25rem;
+    font-size: var(--text-heading-lg);
   }
 
   .journey__meta {
     color: var(--color-ash);
-    font-size: var(--text-sm);
+    font-size: var(--text-caption);
     font-weight: 700;
   }
 
   .journey__highlight {
-    padding-left: 0.9rem;
-    border-left: 3px solid var(--color-hanko);
-    color: var(--color-ash);
+    color: var(--color-fog);
   }
 
   @media (max-width: 59.99rem) {
-    .journey__card p:not(.journey__meta) {
-      font-size: var(--text-sm);
+    .journey__cards p:not(.journey__meta) {
+      font-size: var(--text-caption);
     }
 
     .journey__highlight {
       display: none;
     }
   }
-
   @keyframes card-in {
     from {
       opacity: 0;

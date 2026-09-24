@@ -1,19 +1,19 @@
 ---
-// Static career timeline. Phase 4 layers the scroll-driven animation on top; this stays as the
-// no-JS and reduced-motion version, and it is what search engines and screen readers read.
-import RankBadge from "../ui/RankBadge.astro";
+// Static career timeline: the no-JS and reduced-motion version of the journey, and what search
+// engines and screen readers read.
+import RankChip from "../ui/RankChip.astro";
+import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
 ---
 
 <ol class="timeline">
   {career.map((stage) => (
     <li class="timeline__stage" data-stage={stage.id}>
-      <RankBadge rank={stage.rankLabel} size="md" label={`Rank ${stage.rankLabel}`} />
+      <RankChip rank={stage.rankLabel} size="md" />
       <div class="timeline__body">
         <h3 class="timeline__title">{stage.title}</h3>
-        <p class="timeline__meta">
-          {stage.org}, {formatRange(stage.start, stage.end)}
-        </p>
+        <p class="timeline__meta">{stage.org}</p>
+        <Tag class="timeline__dates">{formatRange(stage.start, stage.end)}</Tag>
         <p class="timeline__summary">{stage.summary}</p>
       </div>
     </li>
@@ -30,37 +30,39 @@ import { career, formatRange } from "../../data/career";
     list-style: none;
   }
 
-  /* The rail the seals sit on. */
+  /* The rail the chips sit on (slate: iron disappears on the carbon band). */
   .timeline::before {
     content: "";
     position: absolute;
-    left: 1.7rem;
+    left: 2.5rem;
     top: 1rem;
     bottom: 1rem;
-    width: 2px;
-    background: var(--color-seam);
+    width: 1px;
+    background: var(--color-slate);
   }
 
   .timeline__stage {
     position: relative;
     display: grid;
-    grid-template-columns: 3.5rem minmax(0, 1fr);
+    grid-template-columns: 5rem minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
   }
 
-  .timeline__stage :global(.seal) {
-    background: var(--color-carbon);
+  /* Positioned so the chip paints over the rail line. */
+  .timeline__stage :global(.rank-chip) {
+    position: relative;
+    justify-self: center;
   }
 
   .timeline__title {
-    font-size: var(--text-xl);
+    font-size: var(--text-heading);
   }
 
   .timeline__meta {
     margin-top: 0.25rem;
     color: var(--color-ash);
-    font-size: var(--text-sm);
+    font-size: var(--text-caption);
     font-weight: 700;
   }
 

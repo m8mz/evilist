@@ -48,6 +48,23 @@ test.describe("animated journey", () => {
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "wordpress");
   });
 
+  test("keeps the active card inside the viewport at every stage", async ({ page }, info) => {
+    test.skip(!["iphone-15", "pixel-7"].includes(info.project.name), "phone heights only");
+    await page.goto("/");
+    const viewport = page.viewportSize()!.height;
+    const stageTop = () =>
+      page.evaluate(() => document.querySelector(".journey__stage")!.getBoundingClientRect().top);
+    for (const [i, [activity]] of ORDER.entries()) {
+      await scrollToStage(page, i);
+      await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", activity);
+      // Stage 0's activity is already set on load, so also wait for the smooth scroll to pin
+      // the stage under the header before measuring.
+      await expect.poll(stageTop).toBeLessThanOrEqual(64);
+      const box = (await page.locator(".journey__card.is-active").boundingBox())!;
+      expect(box.y + box.height, `stage ${i}`).toBeLessThanOrEqual(viewport);
+    }
+  });
+
   test("is hidden from assistive tech while the timeline stays readable", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("[data-journey]")).toHaveAttribute("aria-hidden", "true");

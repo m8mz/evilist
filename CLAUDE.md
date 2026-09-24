@@ -49,7 +49,7 @@ Marcus prefers step-by-step delivery:
 - `src/data/career.ts` is the single source of truth for the timeline, resume, journey, JSON-LD and PDF. `src/data/site.ts` holds name, socials and the pitch.
 - `src/styles/tokens.css` holds the design tokens (`@theme`). Its `:root` block aliases the retired manga token names (`--color-washi`, `--color-hanko`, …) so unmigrated components still render. Never use an alias in new code; Phase 4 deletes them.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
-- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button`, `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`. `RankBadge` is legacy until Phase 2 removes it.
+- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button`, `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`.
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
 - `infra/` holds Dockerfile support, the Quadlet/compose files, `haproxy/haproxy.cfg` (ACME, HTTP/3, rate limits, headers) and `ansible/`.
