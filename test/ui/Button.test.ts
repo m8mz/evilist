@@ -28,4 +28,12 @@ describe("Button", () => {
     expect(html).toContain("btn--ghost");
     expect(html).not.toContain("btn--primary");
   });
+
+  it("renders a submit button, with its label in a span a script can relabel", async () => {
+    const html = await render(Button, { slots: { default: "Send message" } });
+    expect(html).toMatch(/<button type="submit" class="btn btn--primary[^"]*"/);
+    expect(html).toMatch(/<span data-button-label[^>]*>\s*Send message\s*<\/span>/);
+    expect(html).toMatch(/class="btn__arrow" aria-hidden="true"[^>]*>→</);
+    expect(html).not.toContain("<a ");
+  });
 });

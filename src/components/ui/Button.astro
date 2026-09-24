@@ -1,21 +1,36 @@
 ---
-// Terminal button: 2px corners, an arrow after the label, colour change only on hover.
-// Primary carries void text on the ember fill: paper on ember is 3.3:1 and fails AA (spec §3.1).
+// Terminal button: 2px corners, an arrow after the label, an instant colour change on hover (no
+// transition: only transform, opacity and pathLength animate). With `href` it is a link; without,
+// a <button>, e.g. a form's submit. Primary carries void text on the ember fill: paper on ember
+// is 3.3:1 and fails AA (spec §3.1).
 interface Props {
-  href: string;
+  href?: string;
+  type?: "submit" | "button";
   variant?: "primary" | "ghost";
   class?: string;
 }
 
-const { href, variant = "primary", class: className } = Astro.props;
+const { href, type = "submit", variant = "primary", class: className } = Astro.props;
+const classes = ["btn", `btn--${variant}`, className];
 ---
 
-<a href={href} class:list={["btn", `btn--${variant}`, className]}>
-  <slot />
-  <span class="btn__arrow" aria-hidden="true">
-    →
-  </span>
-</a>
+{href ? (
+  <a href={href} class:list={classes}>
+    <slot />
+    <span class="btn__arrow" aria-hidden="true">
+      →
+    </span>
+  </a>
+) : (
+  <button type={type} class:list={classes}>
+    <span data-button-label>
+      <slot />
+    </span>
+    <span class="btn__arrow" aria-hidden="true">
+      →
+    </span>
+  </button>
+)}
 
 <style>
   .btn {
@@ -30,10 +45,15 @@ const { href, variant = "primary", class: className } = Astro.props;
     font-weight: 700;
     line-height: 1.2;
     text-decoration: none;
-    transition:
-      background-color 150ms ease-out,
-      border-color 150ms ease-out,
-      color 150ms ease-out;
+  }
+
+  button.btn {
+    cursor: pointer;
+  }
+
+  .btn[disabled] {
+    opacity: 0.6;
+    cursor: progress;
   }
 
   .btn--primary {
@@ -49,6 +69,7 @@ const { href, variant = "primary", class: className } = Astro.props;
   }
 
   .btn--ghost {
+    background: none;
     border-color: var(--color-slate);
     color: var(--color-paper);
     font-weight: 400;
