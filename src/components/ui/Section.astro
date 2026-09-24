@@ -1,0 +1,35 @@
+---
+// Page band. `tone="slate"` raises the band onto the surface color; `cut` slants its
+// top edge like the gutter between manga panels. Use the cut sparingly (once or twice a page).
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"section"> {
+  tone?: "night" | "slate";
+  cut?: boolean;
+}
+
+const { tone = "night", cut = false, class: className, ...rest } = Astro.props;
+---
+
+<section class:list={["band", `band--${tone}`, { "band--cut": cut }, className]} {...rest}>
+  <div class="wrap">
+    <slot />
+  </div>
+</section>
+
+<style>
+  .band {
+    position: relative;
+    padding-block: var(--section-y);
+  }
+
+  .band--slate {
+    background: var(--color-slate);
+  }
+
+  .band--cut {
+    padding-top: calc(var(--section-y) + var(--cut));
+    clip-path: polygon(0 var(--cut), 100% 0, 100% 100%, 0 100%);
+    margin-top: calc(var(--cut) * -1);
+  }
+</style>

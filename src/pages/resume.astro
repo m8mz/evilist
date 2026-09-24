@@ -1,17 +1,23 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-const pageTitle = "Projects";
+import Section from "../components/ui/Section.astro";
 ---
 
+<BaseLayout
+  title="Resume"
+  description="Work history of Marcus Hancock-Gaillard, from T1 support to Sr. Systems Architect."
+>
+  <Section>
+    <h1 class="page-title">Resume</h1>
+    <p>
+      The full work history is being rebuilt from a single data source and lands in the next phase.
+    </p>
+  </Section>
+</BaseLayout>
+
 <style>
-  .title {
-    font-size: 2em;
-    width: 100%;
-    margin: 1em 0;
-    text-align: center;
+  .page-title {
+    font-size: var(--text-3xl);
+    margin-bottom: 1rem;
   }
 </style>
-
-<BaseLayout pageTitle={pageTitle}>
-  <h2 class="title">My Resume</h2>
-</BaseLayout>

@@ -1,152 +1,133 @@
 @import "tailwindcss";
+@import "./tokens.css";
 
-@theme {
-  /* Light mode */
-  --color-brand-50: #eef0ff;
-  --color-brand-100: #dfe3ff;
-  --color-brand-500: #5c6ac4;
-  --color-brand-600: #4b57a8;
-  --color-brand-900: #252a54;
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-  --fs-base: 1rem; /* 16 px default */
-  --fs-scale: clamp(1rem, 0.9rem + 0.5vw, 1.3rem);
-  --radius: 0.5rem;
-  --gap: 1.25rem;
-}
+  * {
+    margin: 0;
+  }
 
-/* 2.  Dark‑mode overrides (class strategy shown here) */
-@theme .dark {
-  --color-brand-50: #252a54;
-  --color-brand-100: #2d3370;
-  --color-brand-500: #7d89ff;
-  --color-brand-900: #eef0ff;
-}
+  :root {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
 
-/* ------------------------------------------------------------------
-   reset.css — minimal, modern CSS reset   (last updated: 2025‑05‑16)
-   • Zeroes out margin/padding
-   • Border‑box sizing everywhere
-   • Safe, legible defaults for text & media
-   • Plays nicely with dark‑mode and native focus styles
-------------------------------------------------------------------- */
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem; /* sticky header */
+  }
 
-* {
-  margin: 0;
-  padding: 0;
-}
+  body {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-night);
+    color: var(--color-washi);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: 1.65;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
 
-/* 3 | Improve text rendering & provide a stable line‑height */
-html {
-  line-height: 1.5;
-  -webkit-text-size-adjust: 100%;
-  /* Respect user’s light/dark theme for form controls */
-  /* color-scheme: light dark; */
-}
+  main {
+    flex: 1;
+  }
 
-/* 4 | Make body fill the viewport */
-body {
-  margin: 0;
-  font-family: var(--font-raleway), sans-serif;
-  line-height: 1.55;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  text-rendering: optimizeLegibility;
-}
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
 
-/* 5 | Ensure media elements never overflow their containers */
-img,
-picture,
-video,
-canvas,
-svg {
-  display: block;
-  max-width: 100%;
-}
+  h2 {
+    font-size: var(--text-3xl);
+  }
 
-/* 6 | Inherit fonts for form controls & keep text from spilling */
-input,
-button,
-textarea,
-select {
-  font: inherit;
-}
-p,
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  overflow-wrap: break-word;
-}
+  h3 {
+    font-size: var(--text-xl);
+  }
 
-/* 7 | Create a new stacking context for React / Vue portals, etc. */
-#root,
-#__next {
-  isolation: isolate;
-}
+  p {
+    max-width: var(--measure);
+    text-wrap: pretty;
+  }
 
-/* -------- Your styles go below this line -------- */
-/* Example:
-   body { font-family: system-ui, sans-serif; background:#f9f9f9; }
-*/
+  a {
+    color: inherit;
+    text-decoration-color: var(--color-hanko-hot);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.25em;
+  }
 
-body {
-  display: flex;
-}
+  a:hover {
+    color: var(--color-hanko-hot);
+  }
 
-main {
-  flex-grow: 1;
-  align-items: center;
-  justify-content: center;
-}
+  img,
+  svg,
+  video {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
 
-section {
-  margin: 4em 0;
-}
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+  }
 
-.btn {
-  display: inline-block;
-  padding: 0.75em 1.25em;
-  background: var(--color-brand-500);
-  color: #fff;
-  border-radius: var(--radius);
-  text-decoration: none;
-  font-weight: 600;
-  transition: background 200ms;
-}
-.btn:hover,
-.btn:focus {
-  background: #4754a8;
-}
-.btn.sm {
-  padding: 0.5em 1em;
-  font-size: 0.9em;
+  ::selection {
+    background: var(--color-hanko-ink);
+    color: var(--color-washi);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-hanko-hot);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-#back-to-top {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 1.25rem;
-  border: none;
-  border-radius: 0.25rem;
-  background: #333;
-  color: #fff;
-  cursor: pointer;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.3s ease,
-    visibility 0.3s ease;
-  z-index: 1000;
-}
-#back-to-top.show {
-  opacity: 0.75;
-  visibility: visible;
-}
-#back-to-top:hover {
-  opacity: 1;
+@layer components {
+  /* Centered content column with responsive gutters. */
+  .wrap {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

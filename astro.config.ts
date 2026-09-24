@@ -11,17 +11,31 @@ export default defineConfig({
   adapter: node({ mode: "standalone", staticHeaders: true }),
   integrations: [mdx(), sitemap()],
   devToolbar: { enabled: false },
+  // Keep all CSS external: inlined component styles are not covered by the CSP hashes.
+  build: { inlineStylesheets: "never" },
   prefetch: { prefetchAll: true, defaultStrategy: "viewport" },
   vite: { plugins: [tailwindcss()] },
   // Fonts are downloaded at build time and self-hosted (no third-party requests; CSP-safe).
   fonts: [
     {
-      provider: fontProviders.google(),
-      name: "Raleway",
-      cssVariable: "--font-raleway",
-      weights: ["100 900"],
-      styles: ["normal", "italic"],
+      // Display: heavy Japanese poster gothic (manga title-card feel). Headings + rank seals only.
+      provider: fontProviders.fontsource(),
+      name: "Dela Gothic One",
+      cssVariable: "--font-dela",
+      weights: [400],
+      styles: ["normal"],
       subsets: ["latin"],
+      fallbacks: ["Impact", "sans-serif"],
+    },
+    {
+      // Body: Zen Kaku Gothic New, same Japanese type tradition, readable at text sizes.
+      provider: fontProviders.fontsource(),
+      name: "Zen Kaku Gothic New",
+      cssVariable: "--font-zen",
+      weights: [400, 700],
+      styles: ["normal"],
+      subsets: ["latin"],
+      fallbacks: ["system-ui", "sans-serif"],
     },
   ],
   env: {

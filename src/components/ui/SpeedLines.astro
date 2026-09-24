@@ -1,0 +1,55 @@
+---
+// Manga focus lines radiating from a point. Purely decorative, very low contrast.
+interface Props {
+  class?: string;
+  lines?: number;
+}
+
+const { class: className, lines = 48 } = Astro.props;
+// Deterministic pseudo-random lengths so the build output is stable.
+const rays = Array.from({ length: lines }, (_, i) => {
+  const angle = (i / lines) * Math.PI * 2;
+  const inner = 38 + ((i * 37) % 17);
+  return {
+    x1: 50 + Math.cos(angle) * inner,
+    y1: 50 + Math.sin(angle) * inner,
+    x2: 50 + Math.cos(angle) * 90,
+    y2: 50 + Math.sin(angle) * 90,
+    w: 0.25 + ((i * 13) % 5) * 0.08,
+  };
+});
+---
+
+<svg
+  class:list={["speed-lines", className]}
+  viewBox="0 0 100 100"
+  preserveAspectRatio="xMidYMid slice"
+  aria-hidden="true"
+  focusable="false"
+>
+  {rays.map((r) => (
+    <line
+      x1={r.x1.toFixed(2)}
+      y1={r.y1.toFixed(2)}
+      x2={r.x2.toFixed(2)}
+      y2={r.y2.toFixed(2)}
+      stroke-width={r.w.toFixed(2)}
+    />
+  ))}
+</svg>
+
+<style>
+  .speed-lines {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .speed-lines line {
+    stroke: var(--color-washi);
+    opacity: 0.05;
+    stroke-linecap: round;
+  }
+</style>

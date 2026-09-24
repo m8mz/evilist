@@ -1,53 +1,25 @@
 ---
 import "../styles/global.css";
-import Header from "../components/Header.astro";
-import { Font } from "astro:assets";
-const { pageTitle } = Astro.props;
+import Head, { type Props as HeadProps } from "../components/seo/Head.astro";
+import SkipLink from "../components/layout/SkipLink.astro";
+import Header from "../components/layout/Header.astro";
+import Footer from "../components/layout/Footer.astro";
+import SealInkFilter from "../components/ui/SealInkFilter.astro";
+
+type Props = HeadProps;
 ---
 
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <Font cssVariable="--font-raleway" preload />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{pageTitle}</title>
+    <Head {...Astro.props} />
   </head>
   <body>
-    <header>
-      <Header />
-    </header>
-    <main>
+    <SkipLink />
+    <SealInkFilter />
+    <Header />
+    <main id="main" tabindex="-1">
       <slot />
     </main>
-    <footer class="text-center text-sm text-brand-50">
-      <button id="back-to-top" aria-label="Back to top">
-        ▲
-      </button>
-      © {new Date().getFullYear()} Marcus Hancock-Gaillard. All rights reserved.
-    </footer>
+    <Footer />
   </body>
 </html>
-
-<script>
-  (function () {
-    const btn = document.getElementById("back-to-top");
-    if (!btn) return;
-    const showAfter = 300; // px scrolled before showing
-
-    // on scroll, check position
-    window.addEventListener("scroll", () => {
-      if (window.scrollY > showAfter) {
-        btn.classList.add("show");
-      } else {
-        btn.classList.remove("show");
-      }
-    });
-
-    // on click, scroll to top
-    btn.addEventListener("click", () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  })();
-</script>

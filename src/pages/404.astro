@@ -1,11 +1,26 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-const pageTitle = "Not found";
+import Section from "../components/ui/Section.astro";
+import Button from "../components/ui/Button.astro";
 ---
 
-<BaseLayout pageTitle={pageTitle}>
-  <h1>404</h1>
-  <p>
-    That page doesn't exist. <a href="/">Head home</a>.
-  </p>
+<BaseLayout title="Page not found" index={false}>
+  <Section>
+    <h1 class="page-title">This page doesn't exist</h1>
+    <p>The link may be old, or the address has a typo.</p>
+    <p class="actions">
+      <Button href="/">Go to the home page</Button>
+    </p>
+  </Section>
 </BaseLayout>
+
+<style>
+  .page-title {
+    font-size: var(--text-3xl);
+    margin-bottom: 1rem;
+  }
+
+  .actions {
+    margin-top: 2rem;
+  }
+</style>

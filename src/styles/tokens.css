@@ -1,0 +1,43 @@
+/*
+ * Design tokens: "manga panel at night, stamped with a hanko seal".
+ * 60/30/10: Night base (60%), Slate surfaces + Washi text (30%), Hanko crimson (10%).
+ * Crimson is reserved for CTAs, active states, focus, and rank seals.
+ */
+@theme {
+  /* 60% base */
+  --color-night: #0f1320;
+  --color-night-deep: #0a0d17;
+
+  /* 30% surfaces and text */
+  --color-slate: #1b2133;
+  --color-seam: #2a3149; /* panel borders / dividers */
+  --color-washi: #ede8df; /* body text, 15:1 on night */
+  --color-ash: #9aa0b4; /* muted text, 7:1 on night */
+
+  /* 10% accent */
+  --color-hanko: #d7263d; /* graphics + seals (3.7:1, large/non-text only) */
+  --color-hanko-ink: #c21f36; /* fills that carry washi text (4.9:1) */
+  --color-hanko-hot: #ff5a6b; /* red text, links, focus (6.1:1) */
+
+  /* Mascot gold: S-rank seal ring only */
+  --color-gold: #e3b55b;
+
+  /* Type */
+  --font-display: var(--font-dela), Impact, sans-serif;
+  --font-body: var(--font-zen), system-ui, sans-serif;
+
+  /* Classical scale (Bringhurst), fluid at the top end */
+  --text-sm: 0.875rem;
+  --text-base: 1.0625rem;
+  --text-lg: 1.3125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
+  --text-3xl: clamp(2.1rem, 1.6rem + 2.2vw, 3rem);
+  --text-hero: clamp(1.9rem, 0.9rem + 5.6vw, 4.5rem);
+
+  /* Layout */
+  --measure: 68ch;
+  --gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
+  --section-y: clamp(3.5rem, 2rem + 6vw, 7rem);
+  --cut: clamp(1.5rem, 4vw, 4rem); /* height of the slanted panel gutter */
+}

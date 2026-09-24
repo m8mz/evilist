@@ -11,7 +11,7 @@ const { note } = Astro.props;
 const { Content } = await render(note);
 ---
 
-<BaseLayout pageTitle={note.data.title}>
+<BaseLayout title={note.data.title} description={note.data.description}>
   <article>
     <h1>{note.data.title}</h1>
     <Content />

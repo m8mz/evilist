@@ -1,0 +1,20 @@
+---
+// A manga panel: square corners, heavy seam border. Content framing, not decoration.
+import type { HTMLAttributes } from "astro/types";
+
+type Props = HTMLAttributes<"div">;
+
+const { class: className, ...rest } = Astro.props;
+---
+
+<div class:list={["panel", className]} {...rest}>
+  <slot />
+</div>
+
+<style>
+  .panel {
+    border: 2px solid var(--color-seam);
+    background: var(--color-night);
+    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+  }
+</style>

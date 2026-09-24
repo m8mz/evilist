@@ -1,0 +1,67 @@
+---
+// Slanted "manga caption" button. The slant lives on a pseudo-element so the
+// focus outline and text stay upright and unclipped.
+interface Props {
+  href: string;
+  variant?: "primary" | "ghost";
+  class?: string;
+}
+
+const { href, variant = "primary", class: className } = Astro.props;
+---
+
+<a href={href} class:list={["btn", `btn--${variant}`, className]}>
+  <span class="btn__label">
+    <slot />
+  </span>
+</a>
+
+<style>
+  .btn {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem; /* 44px tap target */
+    padding: 0.55rem 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--color-washi);
+    transition: color 150ms ease-out;
+  }
+
+  .btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    transform: skewX(-10deg);
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out;
+  }
+
+  .btn--primary::before {
+    background: var(--color-hanko-ink);
+  }
+
+  .btn--primary:hover {
+    color: var(--color-washi);
+  }
+
+  .btn--primary:hover::before {
+    background: var(--color-hanko);
+  }
+
+  .btn--ghost::before {
+    border: 2px solid var(--color-seam);
+  }
+
+  .btn--ghost:hover {
+    color: var(--color-washi);
+  }
+
+  .btn--ghost:hover::before {
+    border-color: var(--color-washi);
+  }
+</style>

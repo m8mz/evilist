@@ -1,0 +1,22 @@
+<a href="#main" class="skip-link">
+  Skip to content
+</a>
+
+<style>
+  .skip-link {
+    position: absolute;
+    left: var(--gutter);
+    top: 0.75rem;
+    z-index: 100;
+    padding: 0.5rem 1rem;
+    background: var(--color-hanko-ink);
+    color: var(--color-washi);
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-200%);
+  }
+
+  .skip-link:focus-visible {
+    transform: none;
+  }
+</style>

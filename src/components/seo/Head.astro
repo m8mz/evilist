@@ -1,0 +1,48 @@
+---
+import { Font, getImage } from "astro:assets";
+import { site } from "../../data/site";
+import authorPic from "../../images/author-pic.webp";
+import JsonLd from "./JsonLd.astro";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  /** Set false for pages that should not be indexed (e.g. 404). */
+  index?: boolean;
+}
+
+const { title, description = site.description, index = true } = Astro.props;
+
+const fullTitle = title ? `${title} · ${site.name}` : `${site.name}, ${site.role}`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+// Interim social image (square portrait). A designed 1200×630 card lands in Phase 8.
+const ogImage = await getImage({ src: authorPic, width: 1024, format: "jpeg" });
+const ogImageUrl = new URL(ogImage.src, Astro.site);
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{!index && <meta name="robots" content="noindex" />}
+
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0f1320" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="alternate" type="application/rss+xml" title={`${site.name}: Notes`} href="/rss.xml" />
+<link rel="sitemap" href="/sitemap-index.xml" />
+
+<Font cssVariable="--font-dela" preload />
+<Font cssVariable="--font-zen" preload />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={site.name} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImageUrl} />
+<meta property="og:image:alt" content={`Portrait of ${site.name}`} />
+<meta name="twitter:card" content="summary" />
+
+<JsonLd />

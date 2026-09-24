@@ -5,10 +5,12 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 const notes = (await getCollection("notes", ({ data }) => !data.draft)).sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
 );
-const pageTitle = "Notes";
 ---
 
-<BaseLayout pageTitle={pageTitle}>
+<BaseLayout
+  title="Notes"
+  description="Notes from Marcus Hancock-Gaillard on infrastructure, careers, and building things."
+>
   <h1>Notes</h1>
   {notes.length === 0 && <p>No notes published yet.</p>}
   <ul>

@@ -1,0 +1,75 @@
+---
+import { PUBLIC_DISCORD_INVITE_URL } from "astro:env/client";
+import { site } from "../../data/site";
+
+const links = [
+  { href: site.socials.github, label: "GitHub" },
+  { href: site.socials.linkedin, label: "LinkedIn" },
+  ...(PUBLIC_DISCORD_INVITE_URL ? [{ href: PUBLIC_DISCORD_INVITE_URL, label: "Discord" }] : []),
+  { href: "/rss.xml", label: "RSS" },
+];
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap site-footer__inner">
+    <ul class="site-footer__links">
+      {links.map(({ href, label }) => (
+        <li>
+          <a
+            href={href}
+            {...(href.startsWith("http") ? { rel: "me noopener", target: "_blank" } : {})}
+          >
+            {label}
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p class="site-footer__note">Self-hosted on Linux behind HAProxy. Built with Astro.</p>
+    <p class="site-footer__copy">
+      © {year} {site.name}.{" "}
+      <a href="#main" class="site-footer__top">
+        Back to top
+      </a>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-seam);
+    background: var(--color-night-deep);
+    padding-block: 2.5rem;
+    font-size: var(--text-sm);
+    color: var(--color-ash);
+  }
+
+  .site-footer__inner {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .site-footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .site-footer__links a {
+    display: inline-block;
+    padding-block: 0.6rem; /* 44px tap target with line-height */
+    font-weight: 700;
+    color: var(--color-washi);
+    text-decoration: none;
+  }
+
+  .site-footer__top {
+    color: var(--color-ash);
+  }
+
+  .site-footer__links a:hover {
+    color: var(--color-hanko-hot);
+  }
+</style>
