@@ -2,8 +2,6 @@
 import { Image } from "astro:assets";
 import Button from "../ui/Button.astro";
 import RankBadge from "../ui/RankBadge.astro";
-import SpeedLines from "../ui/SpeedLines.astro";
-import HeroAura from "./HeroAura.astro";
 import authorPic from "../../images/author-pic.webp";
 import { site } from "../../data/site";
 import { yearsOfExperience } from "../../data/career";
@@ -18,7 +16,6 @@ const facts = [
 ---
 
 <section class="hero" aria-labelledby="hero-title">
-  <SpeedLines class="hero__lines" />
   <div class="wrap hero__grid">
     <div class="hero__copy">
       <p class="hero__role">
@@ -42,7 +39,6 @@ const facts = [
     </div>
 
     <figure class="hero__portrait">
-      <HeroAura />
       <Image
         src={authorPic}
         alt={`Portrait of ${site.name}`}
@@ -68,13 +64,7 @@ const facts = [
   .hero {
     position: relative;
     overflow: hidden;
-    padding-block: clamp(3rem, 2rem + 6vw, 7.5rem) calc(var(--section-y) + var(--cut));
-  }
-
-  .hero :global(.hero__lines) {
-    left: auto;
-    width: min(70rem, 120%);
-    right: -20%;
+    padding-block: clamp(3rem, 2rem + 6vw, 7.5rem) var(--section-y);
   }
 
   .hero__grid {
@@ -146,7 +136,6 @@ const facts = [
 
   .hero__portrait {
     position: relative;
-    isolation: isolate; /* keeps the aura (z-index -1) behind the photo, above the hero */
     justify-self: center;
     width: min(26rem, 78vw);
   }
