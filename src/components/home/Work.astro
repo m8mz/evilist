@@ -1,19 +1,18 @@
 ---
-// Case studies laid out like a manga page: one wide establishing panel, then two side by side.
+// What Marcus has built: three case cards, the repos he shares, and the topology he runs.
+import KeyValue from "../ui/KeyValue.astro";
 import Panel from "../ui/Panel.astro";
+import Topology from "./Topology.astro";
 import { sharedRepos, work } from "../../data/work";
 ---
 
 <div class="work">
-  {work.map((item, i) => (
-    <Panel class:list={["work__panel", { "work__panel--wide": i === 0 }]}>
+  {work.map((item) => (
+    <Panel variant="case" class="work__card">
       <h3 class="work__title">{item.title}</h3>
       <p class="work__summary">{item.summary}</p>
       <p class="work__outcome">{item.outcome}</p>
-      <p class="work__stack">
-        <span class="visually-hidden">Built with: </span>
-        {item.stack.join(", ")}
-      </p>
+      <KeyValue rows={[{ key: "stack", value: item.stack.join(", ") }]} class="work__stack" />
     </Panel>
   ))}
 </div>
@@ -24,12 +23,20 @@ import { sharedRepos, work } from "../../data/work";
     {sharedRepos.map((repo) => (
       <li>
         <a href={repo.href} rel="me noopener" target="_blank">
+          <span aria-hidden="true">→ </span>
           {repo.name}
         </a>
         <span class="shared__desc">{repo.description}</span>
       </li>
     ))}
   </ul>
+</div>
+
+<div class="work__infra">
+  <figure class="work__topology">
+    <Topology />
+    <figcaption class="work__caption">two datacenters, BGP failover, HAProxy in front</figcaption>
+  </figure>
 </div>
 
 <style>
@@ -39,18 +46,14 @@ import { sharedRepos, work } from "../../data/work";
     margin-top: 2rem;
   }
 
-  @media (min-width: 48rem) {
+  @media (min-width: 64rem) {
     .work {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .work :global(.work__panel--wide) {
-      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 
   .work__title {
-    font-size: var(--text-xl);
+    font-size: var(--text-heading-sm);
   }
 
   .work__summary {
@@ -59,14 +62,12 @@ import { sharedRepos, work } from "../../data/work";
 
   .work__outcome {
     margin-top: 0.75rem;
-    padding-left: 0.9rem;
-    border-left: 3px solid var(--color-hanko);
+    color: var(--color-fog);
   }
 
-  .work__stack {
+  .work :global(.work__stack) {
     margin-top: 1rem;
-    color: var(--color-ash);
-    font-size: var(--text-sm);
+    font-size: var(--text-caption);
   }
 
   .shared {
@@ -74,7 +75,7 @@ import { sharedRepos, work } from "../../data/work";
   }
 
   .shared__title {
-    font-size: var(--text-lg);
+    font-size: var(--text-heading-sm);
   }
 
   .shared ul {
@@ -93,10 +94,29 @@ import { sharedRepos, work } from "../../data/work";
   }
 
   .shared a {
-    font-weight: 700;
+    text-decoration: none;
   }
 
   .shared__desc {
+    color: var(--color-fog);
+  }
+
+  .work__infra {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+
+  @media (min-width: 60rem) {
+    .work__infra {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+    }
+  }
+
+  .work__caption {
+    margin-top: 0.75rem;
     color: var(--color-ash);
+    font-size: var(--text-caption);
   }
 </style>
