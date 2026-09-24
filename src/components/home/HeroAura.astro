@@ -1,0 +1,45 @@
+---
+// Aura behind the hero portrait. A CSS glow is always present; on capable devices, after the
+// first interaction, scripts/hero-aura.ts lazy-loads a Three.js particle layer that fades in on top.
+---
+
+<div class="hero-aura" data-hero-aura aria-hidden="true"></div>
+
+<script>
+  import { initHeroAura } from "../../scripts/hero-aura";
+  initHeroAura();
+</script>
+
+<style>
+  .hero-aura {
+    position: absolute;
+    inset: -30% -32% -22%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--color-hanko) 42%, transparent),
+      color-mix(in oklab, var(--color-hanko) 14%, transparent) 55%,
+      transparent 75%
+    );
+  }
+
+  @media (max-width: 59.99rem) {
+    .hero-aura {
+      inset: -10% -12% -16%;
+    }
+  }
+
+  .hero-aura :global(.aura-canvas) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 900ms ease-out;
+  }
+
+  .hero-aura:global(.is-live) :global(.aura-canvas) {
+    opacity: 1;
+  }
+</style>

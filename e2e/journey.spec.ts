@@ -55,12 +55,14 @@ test.describe("animated journey", () => {
     await expect(page.getByRole("heading", { level: 3, name: "T1 Tech Support" })).toHaveCount(1);
   });
 
-  test("offers a way to skip past it", async ({ page }) => {
+  test("offers a way to skip past it, visible only on focus", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Skip the career journey" })).toHaveAttribute(
-      "href",
-      "#skills",
-    );
+    const skip = page.getByRole("link", { name: "Skip the career journey" });
+    await expect(skip).toHaveAttribute("href", "#skills");
+    const box = await skip.boundingBox();
+    expect(box!.width).toBeLessThanOrEqual(1);
+    await skip.focus();
+    expect((await skip.boundingBox())!.width).toBeGreaterThan(40);
   });
 });
 

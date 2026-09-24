@@ -3,6 +3,7 @@ import { Image } from "astro:assets";
 import Button from "../ui/Button.astro";
 import RankBadge from "../ui/RankBadge.astro";
 import SpeedLines from "../ui/SpeedLines.astro";
+import HeroAura from "./HeroAura.astro";
 import authorPic from "../../images/author-pic.webp";
 import { site } from "../../data/site";
 import { yearsOfExperience } from "../../data/career";
@@ -41,6 +42,7 @@ const facts = [
     </div>
 
     <figure class="hero__portrait">
+      <HeroAura />
       <Image
         src={authorPic}
         alt={`Portrait of ${site.name}`}
@@ -144,6 +146,7 @@ const facts = [
 
   .hero__portrait {
     position: relative;
+    isolation: isolate; /* keeps the aura (z-index -1) behind the photo, above the hero */
     justify-self: center;
     width: min(26rem, 78vw);
   }

@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Check bundle-size budgets
+        run: pnpm size
+
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level=high
 
