@@ -29,6 +29,9 @@ const MIGRATED = [
   "src/components/home/Skills.astro",
   "src/components/home/Topology.astro",
   "src/components/home/Work.astro",
+  "src/components/home/About.astro",
+  "src/components/home/CTA.astro",
+  "src/pages/index.astro",
 ];
 
 describe("token migration", () => {
