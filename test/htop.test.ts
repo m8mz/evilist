@@ -48,6 +48,10 @@ describe("htop snapshot", () => {
     expect(text).not.toMatch(/\.(com|net|org|io|co|local|internal)\b/);
     for (const p of htop.processes) expect(["web", "root", "chrony"]).toContain(p.user);
   });
+
+  it("has enough processes to fill the hero's terminal pane", () => {
+    expect(htop.processes.length).toBeGreaterThanOrEqual(24);
+  });
 });
 
 describe("driftSorted", () => {

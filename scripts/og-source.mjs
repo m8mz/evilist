@@ -5,6 +5,7 @@ import { fingerprint } from "./fingerprint.mjs";
 export const OG_SOURCES = [
   "src/pages/og-card.astro",
   "src/components/home/Htop.astro",
+  "src/components/home/HtopScreen.astro",
   "src/components/ui/Prompt.astro",
   "src/components/ui/TerminalFrame.astro",
   "src/data/htop.ts",

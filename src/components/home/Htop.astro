@@ -1,90 +1,20 @@
 ---
-// The htop band under the hero (spec §6.1a): a simulated htop of the stack this site runs on,
-// drawn in code with the site's own type and tokens so it reads as part of the page, never as a
-// picture. The terminal is aria-hidden; the caption says what it is. scripts/htop.ts animates it.
+// The framed htop (spec §4.2): TerminalFrame + HtopScreen + the caption that says it is simulated.
+// Only the social card renders it now; the home page's hero uses HtopScreen bare.
 import TerminalFrame from "../ui/TerminalFrame.astro";
-import { htop as siteSnapshot, type HtopSnapshot } from "../../data/htop";
-import { HOT, METER_WIDTH, meter, pct } from "../../scripts/htop";
+import HtopScreen from "./HtopScreen.astro";
+import type { HtopSnapshot } from "../../data/htop";
 
 interface Props {
-  /** Defaults to the site's snapshot; tests pass their own. */
   snapshot?: HtopSnapshot;
 }
 
-const { snapshot: htop = siteSnapshot } = Astro.props;
-const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.total.toFixed(2)}G`;
+const { snapshot } = Astro.props;
 ---
 
-<figure class="htop" data-htop>
+<figure class="htop">
   <TerminalFrame title="htop · evilist">
-    <div class="htop__screen" aria-hidden="true">
-      <div class="htop__meters">
-        <div>
-          {htop.cores.map((p, i) => (
-            <p class:list={["htop__line", { "is-hot": p >= HOT }]} data-core={p}>
-              <span class="htop__label">{i}</span>[
-              <span class="htop__bar">{meter(p / 100, pct(p), METER_WIDTH)}</span>]
-            </p>
-          ))}
-        </div>
-        <div>
-          <p class="htop__line">
-            <span class="htop__label">Mem</span>[
-            <span class="htop__bar">
-              {meter(htop.memory.used / htop.memory.total, gib(htop.memory), METER_WIDTH)}
-            </span>
-            ]
-          </p>
-          <p class="htop__line">
-            <span class="htop__label">Swp</span>[
-            <span class="htop__bar">
-              {meter(htop.swap.used / htop.swap.total, gib(htop.swap), METER_WIDTH)}
-            </span>
-            ]
-          </p>
-          <p class="htop__line">
-            <span class="htop__key">Tasks:</span> {htop.tasks}
-          </p>
-          <p class="htop__line">
-            <span class="htop__key">Load average:</span>{" "}
-            {htop.load.map((l) => l.toFixed(2)).join(" ")}
-          </p>
-          <p class="htop__line">
-            <span class="htop__key">Uptime:</span> {htop.uptime}
-          </p>
-        </div>
-      </div>
-      <table class="htop__procs">
-        <thead>
-          <tr>
-            <th class="num">PID</th>
-            <th>USER</th>
-            <th class="num">CPU%</th>
-            <th class="num">MEM%</th>
-            <th class="num htop__time">TIME+</th>
-            <th>Command</th>
-          </tr>
-        </thead>
-        <tbody>
-          {htop.processes.map((p, i) => (
-            <tr class:list={{ "is-selected": i === 0 }}>
-              <td class="num">{p.pid}</td>
-              <td>{p.user}</td>
-              <td class="num" data-cpu={p.cpu}>
-                {p.cpu.toFixed(1)}
-              </td>
-              <td class="num">{p.mem.toFixed(1)}</td>
-              <td class="num htop__time">{p.time}</td>
-              <td class="htop__cmd">{p.command}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p class="htop__keys">
-        <span>F1</span>Help <span>F2</span>Setup <span>F3</span>Search <span>F5</span>Tree{" "}
-        <span>F6</span>SortBy <span>F10</span>Quit
-      </p>
-    </div>
+    <HtopScreen snapshot={snapshot} />
   </TerminalFrame>
   <figcaption class="htop__caption">
     A simulated htop of the stack behind this site: Linux, Podman, HAProxy and Node.
@@ -101,104 +31,9 @@ const gib = (m: { used: number; total: number }) => `${m.used.toFixed(2)}G/${m.t
     margin: 0;
   }
 
-  .htop__screen {
-    padding: 1rem 1.25rem 1.25rem;
-    overflow: hidden;
-    color: var(--color-fog);
-    font-size: var(--text-caption);
-    line-height: 1.6;
-  }
-
-  .htop__meters {
-    display: grid;
-    gap: 0 3rem;
-  }
-
-  @media (min-width: 48rem) {
-    .htop__meters {
-      grid-template-columns: repeat(2, max-content);
-    }
-  }
-
-  .htop__line {
-    max-width: none;
-    white-space: pre;
-  }
-
-  .htop__label {
-    display: inline-block;
-    width: 3ch;
-    color: var(--color-ash);
-  }
-
-  .htop__line.is-hot .htop__bar {
-    color: var(--color-ember);
-  }
-
-  .htop__key {
-    color: var(--color-ash);
-  }
-
-  .htop__procs {
-    width: 100%;
-    margin-top: 1rem;
-    border-collapse: collapse;
-    white-space: nowrap;
-  }
-
-  .htop__procs th {
-    padding: 0 1ch;
-    background: var(--color-graphite);
-    color: var(--color-paper);
-    font-weight: 400;
-    text-align: left;
-  }
-
-  .htop__procs td {
-    padding: 0 1ch;
-  }
-
-  .htop__procs .num {
-    text-align: right;
-  }
-
-  /* The command column takes the remaining width and truncates. */
-  .htop__cmd {
-    width: 100%;
-    max-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .htop__procs tr.is-selected td {
-    background: var(--color-ember);
-    color: var(--color-void);
-  }
-
-  .htop__keys {
-    margin-top: 1rem;
-    max-width: none;
-    color: var(--color-ash);
-    white-space: pre;
-  }
-
-  .htop__keys span {
-    margin-left: 1ch;
-    padding: 0 0.25ch;
-    background: var(--color-fog);
-    color: var(--color-void);
-  }
-
   .htop__caption {
     margin-top: 0.75rem;
     color: var(--color-ash);
     font-size: var(--text-caption);
-  }
-
-  @media (max-width: 47.99rem) {
-    .htop__time,
-    .htop__keys {
-      display: none;
-    }
   }
 </style>
