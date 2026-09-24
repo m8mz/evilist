@@ -205,3 +205,63 @@ test.describe("off the clock", () => {
     await expect(block.getByRole("link", { name: "more on /now" })).toHaveAttribute("href", "/now");
   });
 });
+
+test.describe("stack network", () => {
+  /** A labelled node whose dot is inside the visible network pane, in page coordinates. */
+  const visibleNode = (page: import("@playwright/test").Page) =>
+    page.evaluate(() => {
+      const pane = document.querySelector(".hero__pane--net")!.getBoundingClientRect();
+      for (const g of document.querySelectorAll<SVGGElement>(".net__node--labelled")) {
+        const r = g.querySelector("circle")!.getBoundingClientRect();
+        const x = r.x + r.width / 2;
+        const y = r.y + r.height / 2;
+        const inside =
+          x > pane.left + 12 &&
+          x < pane.right - 12 &&
+          y > pane.top + 12 &&
+          y < Math.min(pane.bottom, innerHeight) - 12;
+        if (inside) return { id: g.dataset.netNode!, x, y };
+      }
+      throw new Error("no labelled node on screen");
+    });
+
+  test.describe("under a mouse", () => {
+    test.beforeEach(({}, info) => {
+      test.skip(!["desktop", "reduced-motion"].includes(info.project.name), "needs a mouse");
+    });
+
+    test("lights the node under the cursor with its neighbours, and clears when it leaves", async ({
+      page,
+    }) => {
+      await page.goto("/");
+      const node = await visibleNode(page);
+      await page.mouse.move(node.x, node.y, { steps: 3 });
+      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+      expect(await page.locator(".net__node.is-lit").count()).toBeGreaterThan(1);
+      expect(await page.locator(".net__edge.is-lit").count()).toBeGreaterThan(0);
+      await page.mouse.move(node.x, 10); // onto the header
+      await expect(page.locator(".net__node.is-lit")).toHaveCount(0);
+    });
+
+    test("still finds the node after a resize", async ({ page }) => {
+      await page.goto("/");
+      await page.setViewportSize({ width: 1180, height: 820 });
+      const node = await visibleNode(page);
+      await page.mouse.move(node.x, node.y, { steps: 3 });
+      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+    });
+  });
+
+  test("pulses on its own when left alone, but never under reduced motion", async ({
+    page,
+  }, info) => {
+    await page.goto("/");
+    const lit = page.locator(".net__node.is-source");
+    if (info.project.name === "reduced-motion") {
+      await page.waitForTimeout(6000);
+      await expect(lit).toHaveCount(0);
+    } else {
+      await expect(lit).toHaveCount(1, { timeout: 7000 });
+    }
+  });
+});
