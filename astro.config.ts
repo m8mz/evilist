@@ -13,7 +13,8 @@ const isDevServer = process.argv.includes("dev");
 export default defineConfig({
   site: "https://evilist.io",
   adapter: node({ mode: "standalone", staticHeaders: true }),
-  integrations: [mdx(), sitemap()],
+  // og-card is an internal render target for the social card, not a page.
+  integrations: [mdx(), sitemap({ filter: (page) => !page.includes("/og-card") })],
   devToolbar: { enabled: false },
   // Keep all CSS external: inlined component styles are not covered by the CSP hashes.
   build: { inlineStylesheets: "never" },

@@ -103,6 +103,39 @@ test.describe("machine-readable files", () => {
     expect(await (await request.get("/.well-known/security.txt")).text()).toContain("Contact:");
   });
 
+  test("every page shares the 1200×630 social card", async ({ page, request }) => {
+    for (const path of ["/", "/now", "/resume"]) {
+      await page.goto(path);
+      await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+        "content",
+        "https://evilist.io/og-default.png",
+      );
+      await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute(
+        "content",
+        "1200",
+      );
+      await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute(
+        "content",
+        "630",
+      );
+      await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+        "content",
+        "summary_large_image",
+      );
+    }
+    const res = await request.get("/og-default.png");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toContain("image/png");
+  });
+
+  test("the social card's source page stays out of search", async ({ page, request }) => {
+    const sitemap = await (await request.get("/sitemap-0.xml")).text();
+    expect(sitemap).not.toContain("og-card");
+    // A 404 is noindex too, so first prove the real card page answered.
+    expect((await page.goto("/og-card/"))?.status()).toBe(200);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex");
+  });
+
   test("home page has Person structured data", async ({ page }) => {
     await page.goto("/");
     const json = await page.locator('script[type="application/ld+json"]').textContent();

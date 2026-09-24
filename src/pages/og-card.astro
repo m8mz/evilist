@@ -1,0 +1,99 @@
+---
+// The 1200×630 social card. Not a real page: scripts/build-og.mjs renders it once into
+// public/og-default.png. noindex, and excluded from the sitemap in astro.config.ts. The copy
+// sits on clear void and the site's own htop band (spec §6.1a) runs off the bottom edge under a
+// scrim, so the card looks like the site and no text sits on text.
+import "../styles/global.css";
+import { Font } from "astro:assets";
+import Htop from "../components/home/Htop.astro";
+import Prompt from "../components/ui/Prompt.astro";
+import { site } from "../data/site";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1200" />
+    <meta name="robots" content="noindex" />
+    <title>Social card</title>
+    <Font cssVariable="--font-jetbrains" preload />
+  </head>
+  <body class="og">
+    <div class="og__top">
+      <Prompt path="marcus" cursor class="og__prompt" />
+      <p class="og__url">evilist.io</p>
+    </div>
+    <p class="og__name">{site.name}</p>
+    <p class="og__role">
+      {site.role} · {site.location}
+    </p>
+    <div class="og__bg">
+      <Htop />
+    </div>
+  </body>
+</html>
+
+<style>
+  .og {
+    position: relative;
+    width: 1200px;
+    height: 630px;
+    min-height: 0;
+    padding: 56px 72px 0;
+    overflow: hidden;
+    background: var(--color-void);
+  }
+
+  .og__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .og :global(.og__prompt) {
+    font-size: 24px;
+  }
+
+  .og__url {
+    font-size: 24px;
+    color: var(--color-fog);
+  }
+
+  .og__name {
+    margin-top: 20px;
+    font-size: 64px;
+    line-height: 1.1;
+    color: var(--color-paper);
+  }
+
+  .og__role {
+    margin-top: 12px;
+    font-size: 26px;
+    color: var(--color-fog);
+  }
+
+  /* The site's own htop band, running off the bottom edge like a product shot. */
+  .og__bg {
+    position: absolute;
+    top: 288px;
+    left: 72px;
+    right: 72px;
+  }
+
+  .og__bg :global(.htop__caption) {
+    display: none;
+  }
+
+  .og__bg :global(.htop__screen) {
+    font-size: 15px;
+  }
+
+  /* Flat void scrim keeps the band behind the name. */
+  .og__bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--color-void);
+    opacity: 0.35;
+  }
+</style>
