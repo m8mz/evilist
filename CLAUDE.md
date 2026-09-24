@@ -7,7 +7,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 >
 > **Axiom redesign done** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. All four phases are done (tokens and shell; home, journey avatar and topology; `/now`, stills, htop band and social card; resume, notes, contact, PDF and ADR 0002). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 >
-> **Hero and journey redesign in progress.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-24-hero-v2-*.md; ADR 0003. Phase 1 (header and hero) is done.
+> **Hero and journey redesign in progress.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-24-hero-v2-*.md; ADR 0003. Phase 1 (header and hero) is implemented; Phase 2 (content and rack parallax) and Phase 3 (journey) follow.
 
 ## Commands
 
@@ -51,7 +51,7 @@ Marcus prefers step-by-step delivery:
 ## Where things live
 
 - `src/data/career.ts` is the single source of truth for the timeline, resume, journey, JSON-LD and PDF. `src/data/site.ts` holds name, socials and the pitch.
-- `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the hero's terminal pane (and the social card). `src/data/network.ts` + `src/scripts/network.ts` are the hero's seeded stack network (`StackNetwork.astro`); `src/scripts/hero.ts` wires the hero's live parts (htop drift, title rotation, portrait tilt, network).
+- `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the hero's terminal pane (and the social card). `src/data/network.ts` + `src/scripts/network.ts` are the hero's seeded stack network (`StackNetwork.astro`) and `src/scripts/stack-network.ts` lights it (hover and idle pulses); `src/scripts/hero.ts` wires the hero's live parts (htop drift, title rotation, portrait tilt, network).
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
 - `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").

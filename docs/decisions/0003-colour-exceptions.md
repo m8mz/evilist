@@ -19,7 +19,7 @@ and Solo Leveling.
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Logo        | `src/images/evil_logo.webp` appears in the header in its original yellow. Yellow exists only inside that image: never a token, a CSS colour or a second accent.    |
 | Journey art | The journey's Higgsfield stills and clips are anime illustration, with violet shadow energy that grows with rank. Violet exists only inside that art, never in UI. |
-| Ember       | Its list gains the hero network's lit nodes, edges and echoes, and loses the topology pulse and the journey SVG scene (both deleted).                              |
+| Ember       | Its list gains the hero network's lit nodes, edges and echoes, and loses the topology pulse (removed in Phase 2) and the journey SVG scene (removed in Phase 3).   |
 | Tokens      | Unchanged. `test/tokens.test.ts` and `test/migration.test.ts` stay as they are.                                                                                    |
 
 ## Consequences
