@@ -17,4 +17,8 @@ describe("JourneyTimeline", () => {
     const html = await render(JourneyTimeline);
     expect(html.match(/class="tag timeline__dates/g)).toHaveLength(career.length);
   });
+
+  it("keeps list semantics on the timeline", async () => {
+    expect(await render(JourneyTimeline)).toMatch(/<ol class="timeline" role="list"/);
+  });
 });

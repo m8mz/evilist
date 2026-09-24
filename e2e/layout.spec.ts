@@ -76,6 +76,12 @@ test.describe("collapsed navigation (phones)", () => {
     const toggle = await page.locator("[data-menu-toggle]").boundingBox();
     expect(Math.abs((brand?.y ?? 0) - (toggle?.y ?? 100))).toBeLessThan(20);
   });
+
+  test("the open menu is a carbon sheet", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("[data-menu-toggle]").click();
+    await expect(page.locator("#site-nav")).toHaveCSS("background-color", "rgb(17, 17, 17)");
+  });
 });
 
 test("production build sends a hashed Content-Security-Policy", async ({ request }) => {
@@ -150,4 +156,13 @@ test.describe("internal links", () => {
       }
     }
   });
+});
+
+test("footer links are 44px tap targets", async ({ page }) => {
+  await page.goto("/");
+  const heights = await page
+    .locator(".site-footer__links a")
+    .evaluateAll((links) => links.map((a) => a.getBoundingClientRect().height));
+  expect(heights.length).toBeGreaterThan(0);
+  for (const h of heights) expect(h).toBeGreaterThanOrEqual(44);
 });

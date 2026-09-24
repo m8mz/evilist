@@ -21,7 +21,7 @@ import { sharedRepos, work } from "../../data/work";
 
 <div class="shared">
   <h3 class="shared__title">Shared on GitHub</h3>
-  <ul>
+  <ul role="list">
     {sharedRepos.map((repo) => (
       <li>
         <a href={repo.href} rel="me noopener" target="_blank">
@@ -36,7 +36,7 @@ import { sharedRepos, work } from "../../data/work";
 
 <div class="work__infra">
   <figure class="work__topology">
-    <Topology />
+    <Topology decorative />
     <figcaption class="work__caption">two datacenters, BGP failover, HAProxy in front</figcaption>
   </figure>
   <Still

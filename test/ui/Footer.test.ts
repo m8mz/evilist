@@ -21,4 +21,8 @@ describe("Footer", () => {
     const html = await render(Footer);
     expect(html).toContain("self-hosted on Linux behind HAProxy · built with Astro");
   });
+
+  it("keeps list semantics on its links", async () => {
+    expect(await render(Footer)).toMatch(/<ul class="site-footer__links" role="list"/);
+  });
 });

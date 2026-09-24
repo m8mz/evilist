@@ -30,4 +30,9 @@ describe("OffTheClock", () => {
       /href="\/now"[^>]*><span aria-hidden="true"[^>]*>→ <\/span>more on \/now</,
     );
   });
+
+  it("keeps list semantics on the playing and watching lists", async () => {
+    const html = await render(OffTheClock);
+    expect(html.match(/class="now-col__body now-col__list" role="list"/g)).toHaveLength(2);
+  });
 });

@@ -16,4 +16,11 @@ describe("Topology", () => {
   it("stays small: under 4 KB of markup", async () => {
     expect((await render(Topology)).length).toBeLessThan(4096);
   });
+
+  it("hides itself from assistive tech when its caller captions it", async () => {
+    const html = await render(Topology, { props: { decorative: true } });
+    expect(html).toMatch(/<svg class="topo"[^>]*aria-hidden="true"/);
+    expect(html).not.toContain('role="img"');
+    expect(html).not.toContain("aria-label=");
+  });
 });

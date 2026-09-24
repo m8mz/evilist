@@ -20,7 +20,7 @@ import { now } from "../../data/now";
       <Icon name="controller" />
       <Tag>playing</Tag>
     </h3>
-    <ul class="now-col__body now-col__list">
+    <ul class="now-col__body now-col__list" role="list">
       {now.playing.map((game) => (
         <li>{game}</li>
       ))}
@@ -31,7 +31,7 @@ import { now } from "../../data/now";
       <Icon name="play" />
       <Tag>watching</Tag>
     </h3>
-    <ul class="now-col__body now-col__list">
+    <ul class="now-col__body now-col__list" role="list">
       {now.watching.map((show) => (
         <li>{show}</li>
       ))}

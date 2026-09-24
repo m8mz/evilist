@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { HEADER_PX } from "./constants";
 
 // Visual regression baselines. Tagged @visual: run locally with `pnpm test:visual`
 // (baselines are macOS renders; CI on Linux renders fonts differently, so CI skips these).
@@ -45,11 +46,11 @@ test.describe("visual regression @visual", () => {
 
   test("journey mid-way (rank C)", async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => {
+    await page.evaluate((header) => {
       const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - 64;
-      scrollTo(0, top + (el.offsetHeight - innerHeight + 64) * (3.5 / 7));
-    });
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (3.5 / 7));
+    }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "escalation");
     await expect(page).toHaveScreenshot("journey-rank-c.png", {
       animations: "disabled",
@@ -60,11 +61,11 @@ test.describe("visual regression @visual", () => {
 
   test("journey start (rank E, headset)", async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => {
+    await page.evaluate((header) => {
       const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - 56;
-      scrollTo(0, top + (el.offsetHeight - innerHeight + 56) * (0.5 / 7));
-    });
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (0.5 / 7));
+    }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "headset");
     await expect(page).toHaveScreenshot("journey-rank-e.png", {
       animations: "disabled",

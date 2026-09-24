@@ -164,8 +164,13 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
       transform: translateY(-6px) rotate(-45deg);
     }
 
+    /* The mobile menu is a carbon sheet under the bar, edge to edge (spec §5). */
     .site-nav {
       flex-basis: 100%;
+      margin-inline: calc(-1 * var(--gutter));
+      padding-inline: var(--gutter);
+      background: var(--color-carbon);
+      border-top: 1px solid var(--color-iron);
     }
 
     /* Narrow phones: icon-only toggle so the brand and toggle share one row. */

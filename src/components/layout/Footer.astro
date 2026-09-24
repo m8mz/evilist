@@ -14,7 +14,7 @@ const year = new Date().getFullYear();
 
 <footer class="site-footer">
   <div class="wrap site-footer__inner">
-    <ul class="site-footer__links">
+    <ul class="site-footer__links" role="list">
       {links.map(({ href, label }) => (
         <li>
           <a
@@ -60,8 +60,9 @@ const year = new Date().getFullYear();
   }
 
   .site-footer__links a {
-    display: inline-block;
-    padding-block: 0.6rem; /* 44px tap target with line-height */
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem; /* 44px tap target */
     color: var(--color-paper);
     text-decoration: none;
   }

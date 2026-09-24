@@ -24,10 +24,13 @@ describe("Work", () => {
     }
   });
 
-  it("shows the topology diagram", async () => {
-    expect(await render(Work)).toContain(
-      'aria-label="Two datacenters with BGP failover behind HAProxy"',
+  it("describes the topology once, through its caption, and keeps list semantics", async () => {
+    const html = await render(Work);
+    expect(html).toMatch(/<svg class="topo"[^>]*aria-hidden="true"/);
+    expect(html).toMatch(
+      /<figcaption class="work__caption"[^>]*>two datacenters, BGP failover, HAProxy in front</,
     );
+    expect(html).toContain('<ul role="list"');
   });
 
   it("shows the rack illustration next to the topology", async () => {

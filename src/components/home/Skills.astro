@@ -5,14 +5,14 @@ import Tag from "../ui/Tag.astro";
 import { skillDomains } from "../../data/skills";
 ---
 
-<ul class="skills">
+<ul class="skills" role="list">
   {skillDomains.map((domain) => (
     <li>
       <Panel class="skills__panel">
         <h3 class="skills__name">
           <Tag>{domain.name}</Tag>
         </h3>
-        <ul class="skills__items">
+        <ul class="skills__items" role="list">
           {domain.items.map((item) => (
             <li>{item}</li>
           ))}

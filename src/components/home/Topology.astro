@@ -2,14 +2,19 @@
 // The shape of the infrastructure Marcus runs: internet → HAProxy → two datacenters joined by a
 // BGP link. One ember pulse crosses the link and back (translateX only; frozen with reduced
 // motion). Public-safe detail only: no hostnames, vendors or customers.
+// `decorative`: the caller captions the diagram itself, so the SVG stays out of the accessibility
+// tree instead of announcing the same sentence twice.
+interface Props {
+  decorative?: boolean;
+}
+
+const { decorative = false } = Astro.props;
+const a11y = decorative
+  ? ({ "aria-hidden": "true" } as const)
+  : ({ role: "img", "aria-label": "Two datacenters with BGP failover behind HAProxy" } as const);
 ---
 
-<svg
-  class="topo"
-  viewBox="0 0 480 220"
-  role="img"
-  aria-label="Two datacenters with BGP failover behind HAProxy"
->
+<svg class="topo" viewBox="0 0 480 220" {...a11y}>
   <text x="240" y="16" text-anchor="middle" class="topo__label">
     internet
   </text>

@@ -21,4 +21,10 @@ describe("Skills", () => {
       expect(html).toMatch(new RegExp(`<li[^>]*>${escapeRegExp(item)}</li>`));
     }
   });
+
+  it("keeps list semantics on its unbulleted lists", async () => {
+    const html = await render(Skills);
+    expect(html).toMatch(/<ul class="skills" role="list"/);
+    expect(html.match(/<ul class="skills__items" role="list"/g)).toHaveLength(skillDomains.length);
+  });
 });

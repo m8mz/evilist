@@ -6,7 +6,7 @@ import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
 ---
 
-<ol class="timeline">
+<ol class="timeline" role="list">
   {career.map((stage) => (
     <li class="timeline__stage" data-stage={stage.id}>
       <RankChip rank={stage.rankLabel} size="md" />

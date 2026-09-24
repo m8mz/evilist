@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { HEADER_PX } from "./constants";
 
 const ORDER = [
   ["headset", "T1 Tech Support"],
@@ -12,13 +13,15 @@ const ORDER = [
 
 /** Scrolls so the journey is at the middle of stage `i` (of 7). */
 async function scrollToStage(page: Page, i: number) {
-  await page.evaluate((stage) => {
-    const el = document.querySelector<HTMLElement>("[data-journey]")!;
-    const header = 64;
-    const top = el.getBoundingClientRect().top + scrollY - header;
-    const span = el.offsetHeight - (innerHeight - header);
-    scrollTo(0, top + span * ((stage + 0.5) / 7));
-  }, i);
+  await page.evaluate(
+    ({ stage, header }) => {
+      const el = document.querySelector<HTMLElement>("[data-journey]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      const span = el.offsetHeight - (innerHeight - header);
+      scrollTo(0, top + span * ((stage + 0.5) / 7));
+    },
+    { stage: i, header: HEADER_PX },
+  );
 }
 
 test.describe("animated journey", () => {
@@ -49,7 +52,10 @@ test.describe("animated journey", () => {
   });
 
   test("keeps the active card inside the viewport at every stage", async ({ page }, info) => {
-    test.skip(!["iphone-15", "pixel-7"].includes(info.project.name), "phone heights only");
+    test.skip(
+      !["iphone-15", "pixel-7", "ipad"].includes(info.project.name),
+      "phone and tablet heights",
+    );
     await page.goto("/");
     const viewport = page.viewportSize()!.height;
     const stageTop = () =>
@@ -59,7 +65,7 @@ test.describe("animated journey", () => {
       await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", activity);
       // Stage 0's activity is already set on load, so also wait for the smooth scroll to pin
       // the stage under the header before measuring.
-      await expect.poll(stageTop).toBeLessThanOrEqual(64);
+      await expect.poll(stageTop).toBeLessThanOrEqual(HEADER_PX);
       const box = (await page.locator(".journey__card.is-active").boundingBox())!;
       expect(box.y + box.height, `stage ${i}`).toBeLessThanOrEqual(viewport);
     }
@@ -80,6 +86,15 @@ test.describe("animated journey", () => {
     expect(box!.width).toBeLessThanOrEqual(1);
     await skip.focus();
     expect((await skip.boundingBox())!.width).toBeGreaterThan(40);
+  });
+
+  test("keeps card summaries at body size on tablets", async ({ page }, info) => {
+    test.skip(info.project.name !== "ipad", "tablet only");
+    await page.goto("/");
+    await expect(page.locator(".journey__card.is-active p:not(.journey__meta)").first()).toHaveCSS(
+      "font-size",
+      "15px",
+    );
   });
 });
 

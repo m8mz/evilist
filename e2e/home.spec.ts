@@ -62,11 +62,14 @@ test.describe("hero", () => {
 });
 
 test.describe("infrastructure diagram", () => {
-  test("describes the topology to assistive tech", async ({ page }) => {
+  test("describes the topology once, through its caption", async ({ page }) => {
     await page.goto("/");
-    await expect(
-      page.getByRole("img", { name: "Two datacenters with BGP failover behind HAProxy" }),
-    ).toBeVisible();
+    const figure = page.locator("figure.work__topology");
+    await expect(figure.locator("figcaption")).toHaveText(
+      "two datacenters, BGP failover, HAProxy in front",
+    );
+    await expect(figure.locator("svg.topo")).toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByRole("img", { name: /BGP failover/ })).toHaveCount(0);
   });
 
   test("keeps the topology labels readable on every screen", async ({ page }) => {
