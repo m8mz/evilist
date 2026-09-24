@@ -250,6 +250,17 @@ test.describe("stack network", () => {
       await page.mouse.move(node.x, node.y, { steps: 3 });
       await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
     });
+
+    test("keeps a hovered node lit when an idle pulse was running", async ({ page }, info) => {
+      test.skip(info.project.name === "reduced-motion", "no pulses under reduced motion");
+      await page.goto("/");
+      await expect(page.locator(".net__node.is-source")).toHaveCount(1, { timeout: 7000 });
+      const node = await visibleNode(page);
+      await page.mouse.move(node.x, node.y, { steps: 3 });
+      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+      await page.waitForTimeout(1800); // longer than PULSE_HOLD_MS (1400ms)
+      await expect(page.locator(`[data-net-node="${node.id}"]`)).toHaveClass(/is-source/);
+    });
   });
 
   test("pulses on its own when left alone, but never under reduced motion", async ({

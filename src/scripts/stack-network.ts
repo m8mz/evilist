@@ -35,10 +35,12 @@ export function initStackNetwork(hero: HTMLElement): void {
   let current: number | null = null;
   let byPointer = false;
   let echoTimer = 0;
+  let holdTimer = 0;
   let lastMove = 0;
 
   const clear = () => {
     window.clearTimeout(echoTimer);
+    window.clearTimeout(holdTimer);
     for (const el of [...nodes.values(), ...edges.values()])
       el.classList.remove("is-source", "is-lit", "is-echo");
     current = null;
@@ -46,6 +48,12 @@ export function initStackNetwork(hero: HTMLElement): void {
   };
 
   const light = (source: number, fromPointer: boolean) => {
+    if (fromPointer) {
+      // A pointer landing on a node that's already lit — even mid-pulse — takes ownership,
+      // so the pulse's hold timer never blanks the node out from under the cursor.
+      window.clearTimeout(holdTimer);
+      byPointer = true;
+    }
     if (source === current) return;
     clear();
     current = source;
@@ -86,16 +94,15 @@ export function initStackNetwork(hero: HTMLElement): void {
   if (reduced) return;
   const labelled = network.nodes.filter((n) => n.label).map((n) => n.id);
   inView(hero, () => {
-    let hold = 0;
     const timer = window.setInterval(() => {
       if (document.hidden || byPointer || Date.now() - lastMove < IDLE_MS) return;
       light(labelled[Math.floor(Math.random() * labelled.length)]!, false);
-      window.clearTimeout(hold);
-      hold = window.setTimeout(clear, PULSE_HOLD_MS);
+      window.clearTimeout(holdTimer);
+      holdTimer = window.setTimeout(clear, PULSE_HOLD_MS);
     }, PULSE_EVERY_MS);
     return () => {
       window.clearInterval(timer);
-      window.clearTimeout(hold);
+      window.clearTimeout(holdTimer);
       clear();
     };
   });
