@@ -4,14 +4,15 @@
 // The parent must be `position: relative; overflow: hidden`.
 interface Props {
   rows?: number;
+  /** Arrows per row. One strip must be at least as wide as the area it fills, or a gap shows. */
+  cols?: number;
   class?: string;
 }
 
-const { rows = 8, class: className } = Astro.props;
-const COLS = 40;
+const { rows = 8, cols = 40, class: className } = Astro.props;
 const strip = Array.from(
   { length: rows },
-  (_, r) => `${" ".repeat(r % 4)}${"> ".repeat(COLS).trimEnd()}`,
+  (_, r) => `${" ".repeat(r % 4)}${"> ".repeat(cols).trimEnd()}`,
 ).join("\n");
 ---
 

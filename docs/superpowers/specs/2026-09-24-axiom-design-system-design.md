@@ -170,7 +170,7 @@ Two columns from 60rem (copy 1.35fr, portrait 1fr), stacked below.
   in the chrome's right slot; inside, the existing `author-pic.webp` via `astro:assets`
   (`loading="eager"`, `fetchpriority="high"`, `filter: saturate(0.85)`), square, 2px
   radius.
-- `ArrowField` behind the copy column, clipped by the section.
+- `ArrowField` fills the hero's negative space, clipped by the section: the right side (behind the portrait frame) from 60rem, the lower half on phones. Never behind body copy.
 - No aura, no speed lines, no stamped seal.
 
 ### 6.2 Journey
