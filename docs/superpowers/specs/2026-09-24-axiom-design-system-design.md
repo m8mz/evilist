@@ -305,7 +305,7 @@ All SVG uses palette tokens via classes (no inline `style=`), animates only
   `role="img"`, `aria-label="Two datacenters with BGP failover behind HAProxy"`.
   Target ≤ 4 KB.
 - **Icon set** (`src/components/ui/Icon.astro`, prop `name`): `tower`, `controller`,
-  `play`, `dumbbell`, `arrow`. 16×16, 1.5px slate strokes, round caps. Decorative.
+  `play`, `dumbbell`, `arrow`. 16×16, 1.5px steel strokes (slate is 1.6:1 on graphite panels and disappears), round caps. Decorative.
 
 ### 8.2 Higgsfield stills
 

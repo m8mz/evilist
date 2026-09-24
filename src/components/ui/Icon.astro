@@ -1,0 +1,45 @@
+---
+// 16×16 line icons (spec §8.1): 1.5px steel strokes, round caps, no fill. Decorative only, so
+// always aria-hidden. The paths are static strings in this file, which makes set:html safe.
+const PATHS = {
+  tower:
+    '<rect x="4" y="1.5" width="8" height="13" rx="1"/><path d="M6.5 4.5h3M6.5 7h3"/><circle cx="8" cy="11" r="1.25"/>',
+  controller:
+    '<path d="M4 5.5h8a3 3 0 0 1 3 3v.5a2.5 2.5 0 0 1-4.3 1.7L9.5 9.5h-3l-1.2 1.2A2.5 2.5 0 0 1 1 9v-.5a3 3 0 0 1 3-3z"/><path d="M4.5 7.5v2M3.5 8.5h2M11 8h.01M12.5 9h.01"/>',
+  play: '<rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="M6.5 6v4l3.5-2z"/>',
+  dumbbell: '<path d="M1.5 6.5v3M3.5 4.5v7M12.5 4.5v7M14.5 6.5v3M3.5 8h9"/>',
+  arrow: '<path d="M2 8h11M9 4l4 4-4 4"/>',
+} as const;
+
+export type IconName = keyof typeof PATHS;
+
+interface Props {
+  name: IconName;
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+---
+
+<svg
+  class:list={["icon", className]}
+  viewBox="0 0 16 16"
+  width="16"
+  height="16"
+  aria-hidden="true"
+  focusable="false"
+  set:html={PATHS[name]}
+/>
+
+<style>
+  /* Children come from set:html and carry no scope attribute; they inherit fill and stroke. */
+  .icon {
+    display: inline-block;
+    flex: none;
+    fill: none;
+    stroke: var(--color-steel);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

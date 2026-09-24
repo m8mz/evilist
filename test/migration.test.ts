@@ -33,6 +33,7 @@ const MIGRATED = [
   "src/components/home/CTA.astro",
   "src/pages/index.astro",
   "src/pages/404.astro",
+  "src/components/ui/Icon.astro",
 ];
 
 describe("token migration", () => {
