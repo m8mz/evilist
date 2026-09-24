@@ -1,20 +1,34 @@
 ---
-// A manga panel: square corners, heavy seam border. Content framing, not decoration.
+// Elevated surface: graphite, hairline iron border, 2px corners.
+// `variant="case"` adds the 2px ember left border that marks editorial and case cards.
 import type { HTMLAttributes } from "astro/types";
 
-type Props = HTMLAttributes<"div">;
+interface Props extends HTMLAttributes<"div"> {
+  variant?: "default" | "case";
+}
 
-const { class: className, ...rest } = Astro.props;
+const { variant = "default", class: className, ...rest } = Astro.props;
 ---
 
-<div class:list={["panel", className]} {...rest}>
+<div class:list={["panel", { "panel--case": variant === "case" }, className]} {...rest}>
   <slot />
 </div>
 
 <style>
   .panel {
-    border: 2px solid var(--color-seam);
-    background: var(--color-night);
-    padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+    padding: 1.5rem;
+    border: 1px solid var(--color-iron);
+    border-radius: var(--radius);
+    background: var(--color-graphite);
+  }
+
+  @media (min-width: 48rem) {
+    .panel {
+      padding: 2rem;
+    }
+  }
+
+  .panel--case {
+    border-left: 2px solid var(--color-ember);
   }
 </style>
