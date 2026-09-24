@@ -3,12 +3,13 @@
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
 Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–4 are done, including the scroll-driven journey. Phase 5 (the Three.js hero) is next.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–5 are done (through the Three.js hero aura). Phase 6 (test harness and performance budgets in CI) is next.
 
 ## Commands
 
 - `pnpm dev` / `pnpm build` / `pnpm preview` (runs `node ./dist/server/entry.mjs`)
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
+- `pnpm size` checks JS budgets against `dist/` (it runs in CI).
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
 - E2E runs against the production build on port 4399 (never reuses `astro dev` on 4321): `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
 - Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
