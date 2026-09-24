@@ -15,7 +15,7 @@ const years = yearsOfExperience();
 <BaseLayout>
   <Hero />
 
-  <Section tone="slate" cut id="journey" aria-labelledby="journey-title">
+  <Section tone="carbon" prompt="journey" id="journey" aria-labelledby="journey-title">
     <h2 id="journey-title">From E-rank to S-rank</h2>
     <p class="lede">
       {years} years, seven ranks: from answering support calls to architecting two datacenters.
@@ -23,24 +23,24 @@ const years = yearsOfExperience();
     <Journey />
   </Section>
 
-  <Section id="skills" aria-labelledby="skills-title">
+  <Section prompt="stack" id="skills" aria-labelledby="skills-title">
     <h2 id="skills-title">What I run</h2>
     <p class="lede">The stack I operate and automate every day.</p>
     <Skills />
   </Section>
 
-  <Section tone="slate" id="work" aria-labelledby="work-title">
+  <Section tone="carbon" prompt="built" id="work" aria-labelledby="work-title">
     <h2 id="work-title">What I build</h2>
     <p class="lede">Tools I've built to make infrastructure boring, in the good way.</p>
     <Work />
   </Section>
 
-  <Section id="about" aria-labelledby="about-title">
+  <Section prompt="how-i-work" id="about" aria-labelledby="about-title">
     <h2 id="about-title">How I work</h2>
     <About />
   </Section>
 
-  <Section tone="slate" cut id="contact" aria-labelledby="cta-title">
+  <Section tone="carbon" prompt="contact" id="contact" aria-labelledby="cta-title">
     <CTA />
   </Section>
 </BaseLayout>

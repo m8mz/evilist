@@ -1,18 +1,20 @@
 ---
-// Page band. `tone="slate"` raises the band onto the surface color; `cut` slants its
-// top edge like the gutter between manga panels. Use the cut sparingly (once or twice a page).
+// Page band: a 1px iron rule on top, an optional `~/prompt` eyebrow, then the content column.
+// `tone="carbon"` lifts the band one surface step. There are no diagonal cuts any more.
 import type { HTMLAttributes } from "astro/types";
+import Prompt from "./Prompt.astro";
 
 interface Props extends HTMLAttributes<"section"> {
-  tone?: "night" | "slate";
-  cut?: boolean;
+  tone?: "void" | "carbon";
+  prompt?: string;
 }
 
-const { tone = "night", cut = false, class: className, ...rest } = Astro.props;
+const { tone = "void", prompt, class: className, ...rest } = Astro.props;
 ---
 
-<section class:list={["band", `band--${tone}`, { "band--cut": cut }, className]} {...rest}>
+<section class:list={["band", `band--${tone}`, className]} {...rest}>
   <div class="wrap">
+    {prompt && <Prompt path={prompt} class="band__prompt" />}
     <slot />
   </div>
 </section>
@@ -21,15 +23,18 @@ const { tone = "night", cut = false, class: className, ...rest } = Astro.props;
   .band {
     position: relative;
     padding-block: var(--section-y);
+    border-top: 1px solid var(--color-iron);
   }
 
-  .band--slate {
+  .band--void {
+    background: var(--color-void);
+  }
+
+  .band--carbon {
     background: var(--color-carbon);
   }
 
-  .band--cut {
-    padding-top: calc(var(--section-y) + var(--cut));
-    clip-path: polygon(0 var(--cut), 100% 0, 100% 100%, 0 100%);
-    margin-top: calc(var(--cut) * -1);
+  .band :global(.band__prompt) {
+    margin-bottom: 1rem;
   }
 </style>

@@ -77,7 +77,6 @@ describe("design tokens", () => {
       "--font-body",
       "--text-lg",
       "--text-3xl",
-      "--cut",
     ]) {
       expect(tokens.has(old), old).toBe(true);
     }

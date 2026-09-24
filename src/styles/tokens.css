@@ -67,6 +67,4 @@
   --text-xl: var(--text-heading);
   --text-2xl: var(--text-heading-lg);
   --text-3xl: var(--text-display);
-
-  --cut: 0px; /* diagonal cuts are gone; removed in Task 9 with Section */
 }
