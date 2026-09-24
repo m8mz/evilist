@@ -1,26 +1,46 @@
 {
-  "name": "",
+  "name": "evilist",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "node ./dist/server/entry.mjs",
+    "astro": "astro",
+    "check": "astro check",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "lhci": "lhci autorun"
   },
   "dependencies": {
-    "@astrojs/react": "^4.3.0",
-    "@sendgrid/mail": "^8.1.5",
-    "@tailwindcss/vite": "^4.1.7",
-    "@types/react": "^19.1.5",
-    "@types/react-dom": "^19.1.5",
-    "astro": "^5.8.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.7"
+    "@astrojs/mdx": "8.0.2",
+    "@astrojs/node": "11.1.6",
+    "@astrojs/rss": "4.0.19",
+    "@astrojs/sitemap": "3.7.4",
+    "@sendgrid/mail": "8.1.6",
+    "@tailwindcss/vite": "4.3.3",
+    "astro": "7.3.4",
+    "motion": "13.4.1",
+    "sharp": "0.35.4",
+    "tailwindcss": "4.3.3",
+    "three": "0.186.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
-    "prettier": "^3.5.3",
-    "prettier-plugin-astro": "^0.14.1"
+    "@astrojs/check": "0.9.10",
+    "@playwright/test": "1.63.0",
+    "@types/three": "0.186.0",
+    "prettier": "3.9.9",
+    "prettier-plugin-astro": "1.0.1",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
   }
 }

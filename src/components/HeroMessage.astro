@@ -57,16 +57,12 @@ import profilePic from "../images/author-pic.webp";
     <h2>
       Hi, I’m <span class="font-bold text-brand-500"> Marcus </span>
     </h2>
-    <Image
-      id="avatar"
-      class="rounded-full"
-      width={200}
-      src={profilePic}
-      alt="profile"
-    />
+    <Image id="avatar" class="rounded-full" width={200} src={profilePic} alt="profile" />
   </div>
   <h2 class="w-full text-nowrap">
-    <span id="job-title" class="job-title">Systems Architect</span>
+    <span id="job-title" class="job-title">
+      Systems Architect
+    </span>
   </h2>
   <p id="sub">Of course I'm not evil</p>
 </div>
@@ -89,10 +85,9 @@ import profilePic from "../images/author-pic.webp";
   const el = document.getElementById("job-title");
   let idx = 0;
 
-  el.textContent = titles[0];
-
   // only if user hasn’t requested reduced motion
-  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (el && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = titles[0];
     // fire once per CSS animation loop
     el.addEventListener("animationiteration", () => {
       idx = (idx + 1) % titles.length;

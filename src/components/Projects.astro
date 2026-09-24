@@ -1,11 +1,5 @@
 ---
-import { Image } from "astro:assets";
-
-const featureProjects = [
-  "m8mz/discord-evil-bot",
-  "m8mz/dotfiles",
-  "m8mz/evilist",
-];
+const featureProjects = ["m8mz/discord-evil-bot", "m8mz/dotfiles", "m8mz/evilist"];
 
 const res = await fetch("https://api.github.com/users/m8mz/repos", {
   method: "GET",
@@ -142,39 +136,27 @@ for (const repo of repos) {
 <section id="work" class="projects section-pad">
   <h2 class="text-2xl text-center">projects</h2>
   <div class="projects-grid">
-    {
-      featuredRepos.map((repo, key) => {
-        return (
-          <article id={"featured-item-" + key} class="project-card w-full">
-            <h3>{repo.full_name}</h3>
-            <p>{repo.description}</p>
-            <a
-              href={repo.html_url}
-              target="_blank"
-              class="btn sm w-[125px] text-center"
-            >
-              View repo
-            </a>
-          </article>
-        );
-      })
-    }
-    {
-      repositories.map((repo, key) => {
-        return (
-          <article id={"project" + key} class="project-card w-full">
-            <h3>{repo.full_name}</h3>
-            <p>{repo.description}</p>
-            <a
-              href={repo.html_url}
-              target="_blank"
-              class="btn sm w-[125px] text-center"
-            >
-              View repo
-            </a>
-          </article>
-        );
-      })
-    }
+    {featuredRepos.map((repo, key) => {
+      return (
+        <article id={"featured-item-" + key} class="project-card w-full">
+          <h3>{repo.full_name}</h3>
+          <p>{repo.description}</p>
+          <a href={repo.html_url} target="_blank" class="btn sm w-[125px] text-center">
+            View repo
+          </a>
+        </article>
+      );
+    })}
+    {repositories.map((repo, key) => {
+      return (
+        <article id={"project" + key} class="project-card w-full">
+          <h3>{repo.full_name}</h3>
+          <p>{repo.description}</p>
+          <a href={repo.html_url} target="_blank" class="btn sm w-[125px] text-center">
+            View repo
+          </a>
+        </article>
+      );
+    })}
   </div>
 </section>

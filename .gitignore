@@ -35,3 +35,6 @@ playwright-report/
 # infra secrets (real values live only on the VPS / your machine)
 infra/ansible/inventory.ini
 infra/compose/.env
+
+# local Claude Code settings
+.claude/settings.local.json

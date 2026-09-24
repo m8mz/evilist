@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 const pageTitle = "Contact Page";
-import { actions } from "astro:actions";
 ---
 
 <BaseLayout pageTitle={pageTitle}>
@@ -10,8 +9,12 @@ import { actions } from "astro:actions";
 
     <!-- Tab Navigation -->
     <div class="tab-navigation">
-      <button class="tab-btn active" data-type="personal"> 💬 Personal </button>
-      <button class="tab-btn" data-type="business"> 💼 Business </button>
+      <button class="tab-btn active" data-type="personal">
+        💬 Personal
+      </button>
+      <button class="tab-btn" data-type="business">
+        💼 Business
+      </button>
     </div>
 
     <form id="personal-form" class="form-section">
@@ -25,24 +28,18 @@ import { actions } from "astro:actions";
       <input type="text" name="name" placeholder="Your Name" required />
       <input type="email" name="email" placeholder="Your Email" required />
       <input type="text" name="company" placeholder="Company Name" required />
-      <input
-        type="number"
-        name="budget"
-        placeholder="Project Budget (USD)"
-        required
-      />
-      <textarea name="details" placeholder="Project Details" required
-      ></textarea>
+      <input type="number" name="budget" placeholder="Project Budget (USD)" required />
+      <textarea name="details" placeholder="Project Details" required></textarea>
       <button type="submit">Send Business Inquiry</button>
     </form>
   </section>
 </BaseLayout>
 
 <script>
-  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabBtns = document.querySelectorAll<HTMLElement>(".tab-btn");
   const sections = document.querySelectorAll(".form-section");
 
-  function switchTab(targetType) {
+  function switchTab(targetType: string | undefined) {
     // Update tab buttons
     tabBtns.forEach((btn) => {
       btn.classList.remove("active");

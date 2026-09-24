@@ -44,38 +44,32 @@ import HeroMessage from "./HeroMessage.astro";
   <HeroMessage />
   <div>
     <!-- add icons -->
-    <Image
-      id="avatar"
-      class="rounded-full"
-      width={250}
-      src={profilePic}
-      alt="profile"
-    />
+    <Image id="avatar" class="rounded-full" width={250} src={profilePic} alt="profile" />
   </div>
   <div id="currentRole" class="bg-brand-500 text-white lg:rounded-sm">
     <h4 class="font-bold italic text-2xl">Current Role:</h4>
     <p class="text-lg">
       <strong>Director of IT Operations | Systems Architect</strong> overseeing infrastructure,
-      operations, security, and automation across two datacenters, multiple Proxmox
-      clusters, ~150 VMs, 220+ Docker app containers, multi-primary Galera database
-      clusters, HAProxy Enterprise load balancers, Fortigate NGFWs, and a comprehensive
-      telemetry/SIEM stack. I design, automate, harden, monitor, and document the
-      full technology stack—from 10 GbE network switching and robust backup strategies
-      to CI/CD pipelines and customer-facing SaaS—achieving 99.99% uptime for hundreds
-      of regulated banking websites. I leverage Ansible, Jenkins, GitHub Actions,
-      and custom in-house Bash/Python/Go tooling to streamline operations and ensure
-      continuous security and compliance.
+      operations, security, and automation across two datacenters, multiple Proxmox clusters, ~150
+      VMs, 220+ Docker app containers, multi-primary Galera database clusters, HAProxy Enterprise
+      load balancers, Fortigate NGFWs, and a comprehensive telemetry/SIEM stack. I design, automate,
+      harden, monitor, and document the full technology stack—from 10 GbE network switching and
+      robust backup strategies to CI/CD pipelines and customer-facing SaaS—achieving 99.99% uptime
+      for hundreds of regulated banking websites. I leverage Ansible, Jenkins, GitHub Actions, and
+      custom in-house Bash/Python/Go tooling to streamline operations and ensure continuous security
+      and compliance.
     </p>
   </div>
   <div class="flex flex-col gap-y-10 items-center">
     <h3 class="text-2xl text-brand-50 uppercase">
-      Nearly a <div
-        class="bg-brand-500 text-white inline-block w-[110px] text-center font-semibold rounded-md"
-      >
+      Nearly a
+      <div class="bg-brand-500 text-white inline-block w-[110px] text-center font-semibold rounded-md">
         decade
-      </div> of professional experience in the tech industry.
+      </div>
+      of professional experience in the tech industry.
     </h3>
-    <a href="/resume" class="btn w-[185px] text-center text-lg">See my resume</a
-    >
+    <a href="/resume" class="btn w-[185px] text-center text-lg">
+      See my resume
+    </a>
   </div>
 </section>

@@ -46,7 +46,7 @@ html {
 /* 4 | Make body fill the viewport */
 body {
   margin: 0;
-  font-family: "Raleway", sans-serif;
+  font-family: var(--font-raleway), sans-serif;
   line-height: 1.55;
   display: flex;
   flex-direction: column;

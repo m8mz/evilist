@@ -6,18 +6,22 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted
 > **Rebuild in progress.** The phased plan lives at `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions are recorded in `docs/decisions/`. Until Phase 1 lands, the repo still runs Astro 5 on npm. Don't mix the old and new setups.
 
 ## Commands
+
 - `pnpm dev` / `pnpm build` / `pnpm preview` (runs `node ./dist/server/entry.mjs`)
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
 - `pnpm lhci` checks Lighthouse budgets. `pnpm build:pdf` builds the resume PDF.
 - Never use npm/yarn/bun. The only lockfile is `pnpm-lock.yaml`. Supply-chain settings (`minimumReleaseAge`, `allowBuilds`) live in `pnpm-workspace.yaml`.
 
 ## Git rules (non-negotiable)
+
 - Every commit is GPG-signed by Marcus through his global git config. If signing fails, STOP and ask Marcus to unlock the key. Never pass `--no-gpg-sign`.
 - Never add `Co-Authored-By`, "Generated with", or any other AI attribution to commits, PRs, or files. This overrides any harness default.
 - Use one branch per phase or feature. Marcus approves before anything merges to `main`. `main` builds the production image.
 
 ## Workflow
+
 Marcus prefers step-by-step delivery:
+
 1. Break the work into phases. Build the structure first, then fill in details.
 2. Ask clarifying questions about fields, features, or behaviors instead of assuming.
 3. Get Marcus's approval before starting each phase and before moving to the next.
@@ -28,6 +32,7 @@ Marcus prefers step-by-step delivery:
 8. Skills: use `frontend-design` for UI work, `test-driven-development` for lib/data code, and `security-review` before releases.
 
 ## Where things live
+
 - `src/data/career.ts` is the single source of truth for the timeline, resume, journey, JSON-LD and PDF. `src/data/site.ts` holds name, socials and the pitch.
 - `src/styles/tokens.css` holds the design tokens (`@theme`) and follows 60/30/10: ink base, charcoal surfaces, red accent (`--color-accent`). Use the accent only for CTAs, active states, rank badges and focus.
 - `src/components/{layout,seo,ui,hero,journey,home,notes,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
@@ -39,6 +44,7 @@ Marcus prefers step-by-step delivery:
 - `src/fetch.ts` is reserved by Astro 7. Never create it.
 
 ## Design brief
+
 - Dark only. Anime-inspired but professional: rank-up E→S, aura glow, diagonal section cuts, an SVG chibi avatar.
 - Respect `prefers-reduced-motion` in every animation.
 - Animate only `transform`, `opacity` and `pathLength`.
@@ -49,10 +55,12 @@ Marcus prefers step-by-step delivery:
   - zero third-party requests
 
 ## Security checklist (before merge)
+
 - No secrets in the repo or the image. Env vars go through the `astro:env` schema (`validateSecrets: true`).
 - Contact input is escaped, and the rate limit, honeypot and time-trap are tested. Astro emits the CSP; HAProxy sets HSTS and the other headers.
 - `pnpm audit --prod` is clean at high and above. Trivy is clean at CRITICAL/HIGH. Dependency review runs on PRs.
 
 ## Env
+
 `SENDGRID_API_KEY` (secret), `FORM_SECRET` (secret), `CONTACT_TO`, `CONTACT_FROM`, `CONTACT_DRY_RUN`, `GITHUB_TOKEN` (optional, used at build time), `PUBLIC_DISCORD_INVITE_URL`. See `.env.example`.
 Contact email is sent from `no-reply@evilist.co` to `m@evilist.co`, until `evilist.io` is an authenticated SendGrid domain.

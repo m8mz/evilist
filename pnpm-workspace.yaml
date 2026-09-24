@@ -1,0 +1,11 @@
+# pnpm supply-chain hardening (pnpm 12 rejects unknown keys here)
+minimumReleaseAge: 1440 # skip versions published < 24 h ago (hijack window)
+trustPolicy: no-downgrade # refuse versions whose publish trust level dropped
+# Lifecycle scripts are blocked unless listed true here. Explicit false = reviewed and denied.
+allowBuilds:
+  esbuild: false # postinstall only validates the binary; @esbuild/<platform> ships it prebuilt
+# Reviewed exceptions to trustPolicy. Keep them version-pinned and note why.
+trustPolicyExclude:
+  # Same maintainer (paulmillr) as 4.0.1, published Dec 2024 without provenance.
+  # Needed by @astrojs/check (^4.0.3). Reviewed 2026-09-24.
+  - chokidar@4.0.3
