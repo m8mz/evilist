@@ -6,6 +6,8 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 > **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–6 are done, including the quality gates.
 >
 > **Axiom redesign done** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. All four phases are done (tokens and shell; home, journey avatar and topology; `/now`, stills, htop band and social card; resume, notes, contact, PDF and ADR 0002). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
+>
+> **Hero and journey redesign in progress.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-24-hero-v2-*.md; ADR 0003. Phase 1 (header and hero) is done.
 
 ## Commands
 
@@ -49,10 +51,10 @@ Marcus prefers step-by-step delivery:
 ## Where things live
 
 - `src/data/career.ts` is the single source of truth for the timeline, resume, journey, JSON-LD and PDF. `src/data/site.ts` holds name, socials and the pitch.
-- `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the home page's htop band.
+- `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the hero's terminal pane (and the social card). `src/data/network.ts` + `src/scripts/network.ts` are the hero's seeded stack network (`StackNetwork.astro`); `src/scripts/hero.ts` wires the hero's live parts (htop drift, title rotation, portrait tilt, network).
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
-- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `ArrowField`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
+- `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
 - `infra/` holds Dockerfile support, the Quadlet/compose files, `haproxy/haproxy.cfg` (ACME, HTTP/3, rate limits, headers) and `ansible/`.
@@ -63,7 +65,8 @@ Marcus prefers step-by-step delivery:
 ## Design brief
 
 - Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow.
-- One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, link hover, focus rings, selection, and the S `RankChip`. Nowhere else.
+- One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, the hero network's lit nodes, link hover, focus rings, selection, and the S `RankChip`. Nowhere else. Two exceptions live only inside images (ADR 0003): the yellow evil_logo in the header, and violet in the journey art.
+- Header: 64px (--header-h), full width, evil_logo.webp as the home link (alt="", the link carries the name), 18px nav links.
 - Errors and status never use ember: paper text with an ash `error:` prefix, and a 1px paper border on the invalid field.
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
 - Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
