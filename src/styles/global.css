@@ -19,18 +19,18 @@
 
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 5rem; /* sticky header */
+    scroll-padding-top: 4.5rem; /* sticky header + breathing room */
   }
 
   body {
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
-    background: var(--color-night);
-    color: var(--color-washi);
-    font-family: var(--font-body);
-    font-size: var(--text-base);
-    line-height: 1.65;
+    background: var(--color-void);
+    color: var(--color-paper);
+    font-family: var(--font-mono);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
@@ -39,22 +39,23 @@
     flex: 1;
   }
 
+  /* Hierarchy comes from size, not weight: headings are the same 400 as prose. */
   h1,
   h2,
   h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-weight: 400;
-    line-height: 1.12;
-    letter-spacing: 0.01em;
+    line-height: var(--leading-display);
+    letter-spacing: 0;
     text-wrap: balance;
   }
 
   h2 {
-    font-size: var(--text-3xl);
+    font-size: var(--text-heading-lg);
   }
 
   h3 {
-    font-size: var(--text-xl);
+    font-size: var(--text-heading);
   }
 
   p {
@@ -64,13 +65,13 @@
 
   a {
     color: inherit;
-    text-decoration-color: var(--color-hanko-hot);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 0.25em;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
   }
 
   a:hover {
-    color: var(--color-hanko-hot);
+    color: var(--color-ember);
   }
 
   img,
@@ -89,12 +90,12 @@
   }
 
   ::selection {
-    background: var(--color-hanko-ink);
-    color: var(--color-washi);
+    background: var(--color-ember);
+    color: var(--color-void);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-hanko-hot);
+    outline: 2px solid var(--color-ember);
     outline-offset: 3px;
   }
 

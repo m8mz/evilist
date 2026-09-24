@@ -22,24 +22,14 @@ export default defineConfig({
   // Fonts are downloaded at build time and self-hosted (no third-party requests; CSP-safe).
   fonts: [
     {
-      // Display: heavy Japanese poster gothic (manga title-card feel). Headings + rank seals only.
+      // One monospaced face for everything: headlines, body, nav, buttons, code (spec §3.3).
       provider: fontProviders.fontsource(),
-      name: "Dela Gothic One",
-      cssVariable: "--font-dela",
-      weights: [400],
-      styles: ["normal"],
-      subsets: ["latin"],
-      fallbacks: ["Impact", "sans-serif"],
-    },
-    {
-      // Body: Zen Kaku Gothic New, same Japanese type tradition, readable at text sizes.
-      provider: fontProviders.fontsource(),
-      name: "Zen Kaku Gothic New",
-      cssVariable: "--font-zen",
+      name: "JetBrains Mono",
+      cssVariable: "--font-jetbrains",
       weights: [400, 700],
       styles: ["normal"],
       subsets: ["latin"],
-      fallbacks: ["system-ui", "sans-serif"],
+      fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
     },
   ],
   env: {

@@ -1,43 +1,72 @@
 /*
- * Design tokens: "manga panel at night, stamped with a hanko seal".
- * 60/30/10: Night base (60%), Slate surfaces + Washi text (30%), Hanko crimson (10%).
- * Crimson is reserved for CTAs, active states, focus, and rank seals.
+ * Design tokens: "terminal window at midnight" (derived from the Axiom style reference).
+ * Surfaces step void → carbon → graphite → iron. One accent (ember) does all the colour work and
+ * appears only on: primary button fills, the prompt cursor, case-card left borders, log bars /
+ * pulse dots / LEDs, link hover, focus rings and selection. Nowhere else.
+ * Spec: docs/superpowers/specs/2026-09-24-axiom-design-system-design.md
  */
 @theme {
-  /* 60% base */
-  --color-night: #0f1320;
-  --color-night-deep: #0a0d17;
+  /* Surfaces */
+  --color-void: #000000;
+  --color-carbon: #111111;
+  --color-graphite: #191919;
+  --color-iron: #202020;
+  --color-slate: #3a3a3a; /* muted borders, icon strokes, decorative glyphs */
 
-  /* 30% surfaces and text */
-  --color-slate: #1b2133;
-  --color-seam: #2a3149; /* panel borders / dividers */
-  --color-washi: #ede8df; /* body text, 15:1 on night */
-  --color-ash: #9aa0b4; /* muted text, 7:1 on night */
+  /* Text. Contrast on void in brackets. Steel is 3.3:1: never use it for text. */
+  --color-steel: #606060;
+  --color-ash: #7e7e7e; /* annotations, tags, key labels (5.2:1) */
+  --color-fog: #b4b4b4; /* secondary text (10:1) */
+  --color-paper: #eeeeee; /* primary text (17:1) */
 
-  /* 10% accent */
-  --color-hanko: #d7263d; /* graphics + seals (3.7:1, large/non-text only) */
-  --color-hanko-ink: #c21f36; /* fills that carry washi text (4.9:1) */
-  --color-hanko-hot: #ff5a6b; /* red text, links, focus (6.1:1) */
+  /* Accent: 5.6:1 on void. Fills carry void text (paper on ember is 3.3:1). */
+  --color-ember: #da5c2c;
 
-  /* Mascot gold: S-rank seal ring only */
-  --color-gold: #e3b55b;
+  /* Type: one monospaced face for everything. --font-jetbrains is set by <Font> in Head.astro. */
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Type */
-  --font-display: var(--font-dela), Impact, sans-serif;
-  --font-body: var(--font-zen), system-ui, sans-serif;
+  --text-caption: 12px;
+  --text-body: 15px;
+  --text-heading-sm: 18px;
+  --text-heading: 20px;
+  --text-heading-lg: 24px;
+  --text-display: 32px;
+  --text-hero: clamp(2rem, 1.2rem + 3.5vw, 3.75rem);
 
-  /* Classical scale (Bringhurst), fluid at the top end */
-  --text-sm: 0.875rem;
-  --text-base: 1.0625rem;
-  --text-lg: 1.3125rem;
-  --text-xl: 1.5rem;
-  --text-2xl: clamp(1.75rem, 1.4rem + 1.4vw, 2.25rem);
-  --text-3xl: clamp(2.1rem, 1.6rem + 2.2vw, 3rem);
-  --text-hero: clamp(1.9rem, 0.9rem + 5.6vw, 4.5rem);
+  --leading-body: 1.7;
+  --leading-display: 1.25;
 
-  /* Layout */
+  /* Shape and layout */
+  --radius: 2px;
   --measure: 68ch;
   --gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
-  --section-y: clamp(3.5rem, 2rem + 6vw, 7rem);
-  --cut: clamp(1.5rem, 4vw, 4rem); /* height of the slanted panel gutter */
+  --section-y: clamp(4rem, 2.5rem + 4vw, 6rem);
+}
+
+/*
+ * Compatibility aliases for the retired "manga panel" token names. Components that still use them
+ * render in the new palette without being edited. Phase 4 deletes each alias once its last usage
+ * is migrated. Do not add new usages of these names.
+ */
+:root {
+  --color-night: var(--color-void);
+  --color-night-deep: var(--color-void);
+  --color-seam: var(--color-iron);
+  --color-washi: var(--color-paper);
+  --color-hanko: var(--color-ember);
+  --color-hanko-ink: var(--color-ember);
+  --color-hanko-hot: var(--color-ember);
+  --color-gold: var(--color-fog);
+
+  --font-display: var(--font-mono);
+  --font-body: var(--font-mono);
+
+  --text-sm: var(--text-caption);
+  --text-base: var(--text-body);
+  --text-lg: var(--text-heading-sm);
+  --text-xl: var(--text-heading);
+  --text-2xl: var(--text-heading-lg);
+  --text-3xl: var(--text-display);
+
+  --cut: 0px; /* diagonal cuts are gone; removed in Task 9 with Section */
 }

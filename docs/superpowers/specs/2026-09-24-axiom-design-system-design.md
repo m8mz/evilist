@@ -39,23 +39,23 @@ JS budgets, zero third-party requests, self-hosting.
 
 ### 3.1 Colour
 
-| Token              | Value     | Role                                                     |
-| ------------------ | --------- | -------------------------------------------------------- |
-| `--color-void`     | `#000000` | Page background, header, terminal canvas                 |
-| `--color-carbon`   | `#111111` | Primary surface, hero canvas, footer, code blocks        |
-| `--color-graphite` | `#191919` | Elevated panels, case cards                              |
-| `--color-iron`     | `#202020` | Hairline borders, dividers                               |
-| `--color-slate`    | `#3a3a3a` | Muted borders, icon strokes, arrow-field glyphs          |
-| `--color-steel`    | `#606060` | Tertiary text, tags, inactive labels, `~/` prompt prefix |
-| `--color-ash`      | `#7e7e7e` | Annotations, helper text                                 |
-| `--color-fog`      | `#b4b4b4` | Secondary text, pitch, metadata                          |
-| `--color-paper`    | `#eeeeee` | Primary text, headings, nav, wordmark                    |
-| `--color-ember`    | `#da5c2c` | The one accent (§3.2)                                    |
+| Token              | Value     | Role                                                          |
+| ------------------ | --------- | ------------------------------------------------------------- |
+| `--color-void`     | `#000000` | Page background, header, terminal canvas                      |
+| `--color-carbon`   | `#111111` | Primary surface, hero canvas, footer, code blocks             |
+| `--color-graphite` | `#191919` | Elevated panels, case cards                                   |
+| `--color-iron`     | `#202020` | Hairline borders, dividers                                    |
+| `--color-slate`    | `#3a3a3a` | Muted borders, icon strokes, arrow-field glyphs               |
+| `--color-steel`    | `#606060` | Borders, icon strokes, arrow-field glyphs; never text (3.3:1) |
+| `--color-ash`      | `#7e7e7e` | Annotations, tags, key labels, prompt prefix                  |
+| `--color-fog`      | `#b4b4b4` | Secondary text, pitch, metadata                               |
+| `--color-paper`    | `#eeeeee` | Primary text, headings, nav, wordmark                         |
+| `--color-ember`    | `#da5c2c` | The one accent (§3.2)                                         |
 
 Measured contrast: ember on void **5.55:1** (passes AA for text); paper on an ember
 fill **3.3:1** (fails AA at body size). Therefore **filled controls carry void text**,
 a deliberate deviation from Axiom for the Lighthouse accessibility gate. Paper on
-void is 17.4:1; fog on void 9.0:1; steel on void 3.1:1 (large/decorative only).
+void is 18.1:1; fog 10.1:1; ash 5.2:1; steel 3.3:1 (borders and decoration only, never text).
 
 Elevation is expressed only by stepping surfaces (`void → carbon → graphite → iron`).
 No `box-shadow`, no gradients, no `filter: blur()`, no glow.
@@ -126,11 +126,11 @@ forbids glow, and dropping it removes 170 KB of lazy JS.
 | `Panel`         | `Panel`              | Props `variant: "default" \| "case"`. Graphite surface, 1px iron border, 2px radius, 24/32 padding. `case` adds a 2px ember left border.                                                                                           |
 | `Button`        | `Button` (angled)    | Props `href`, `variant: "primary" \| "ghost"`. Primary: ember fill, void text, 700, `→` appended. Ghost: transparent, 1px slate border, paper text, `→` appended. Hover changes colour only.                                       |
 | `RankChip`      | `RankBadge`          | Props `rank: "E" \| "E+" \| "D" \| "C" \| "B" \| "A" \| "S"`, `size: "sm" \| "md"`, `label?`. Renders `[ S ]` in mono on graphite with a 1px slate border. S only: ember fill, void text. `aria-label` from `label` or `"Rank S"`. |
-| `Prompt`        | —                    | Props `path`, `cursor?: boolean`. `<p>` with `~/` in steel, `path` in paper, optional blinking block cursor in ember. Used as every section eyebrow.                                                                               |
+| `Prompt`        | —                    | Props `path`, `cursor?: boolean`. `<p>` with `~/` in ash, `path` in paper, optional blinking block cursor in ember. Used as every section eyebrow.                                                                                 |
 | `ArrowField`    | `SpeedLines`         | Decorative `aria-hidden` block of repeated `>` glyphs in slate, 12px, laid out on a diagonal by CSS; drifts slowly. Contained by the parent's `overflow: hidden`.                                                                  |
 | `LogBars`       | —                    | Props `values: number[]` (0–1), `label`. Inline SVG of 4px-wide ember bars, 2px gaps, heights from `values`. `role="img"` with `aria-label`.                                                                                       |
-| `Tag`           | —                    | Uppercase 12px steel text, no fill, no border.                                                                                                                                                                                     |
-| `KeyValue`      | —                    | Props `rows: { key: string; value: string \| { href: string; label: string } }[]`. `<dl>` rendered as `key: value` mono rows; keys in steel, values in paper; link values get `→`.                                                 |
+| `Tag`           | —                    | Uppercase 12px ash text, no fill, no border.                                                                                                                                                                                       |
+| `KeyValue`      | —                    | Props `rows: { key: string; value: string \| { href: string; label: string } }[]`. `<dl>` rendered as `key: value` mono rows; keys in ash, values in paper; link values get `→`.                                                   |
 | `TerminalFrame` | —                    | Wraps a slot in a terminal window: carbon chrome bar (three 8px slate dots, a title in 12px fog, an optional right-hand slot), 1px iron border, 2px radius. Used for the hero portrait and the 404.                                |
 
 Deleted: `SpeedLines.astro`, `SealInkFilter.astro`, `RankBadge.astro` (after every
@@ -139,7 +139,7 @@ usage moves to `RankChip`).
 ## 5. Layout shell
 
 - **Header**: 56px void bar, 1px iron bottom rule. Wordmark is text: `~evilist` with
-  `~` in steel and `evilist` in paper 700 (the webp logo is dropped from the header; it
+  `~` in ash and `evilist` in paper 700 (the webp logo is dropped from the header; it
   remains the favicon and the OG mark). Nav: Resume · Now · Notes · Contact, 14px,
   `aria-current="page"` shown as a 1px paper underline. Mobile menu keeps
   `scripts/menu.ts` behaviour (button with `aria-expanded`, Escape and outside-click
