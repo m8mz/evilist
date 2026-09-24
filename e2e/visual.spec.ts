@@ -6,6 +6,7 @@ import { test, expect } from "@playwright/test";
 
 const pages = [
   { name: "home", path: "/", fullPage: false },
+  { name: "now", path: "/now", fullPage: true },
   { name: "resume", path: "/resume", fullPage: true },
   { name: "contact", path: "/contact", fullPage: false },
   { name: "notes", path: "/notes", fullPage: false },
@@ -14,14 +15,25 @@ const pages = [
 ];
 
 test.describe("visual regression @visual", () => {
-  test.beforeEach(({}, info) => {
+  test.beforeEach(async ({ page }, info) => {
     test.skip(!["desktop", "iphone-15"].includes(info.project.name), "two baselines per page");
+    // The htop band drifts at random (its only setInterval); freeze it at the static snapshot.
+    await page.addInitScript(() => {
+      window.setInterval = (() => 0) as unknown as typeof window.setInterval;
+    });
   });
 
   for (const { name, path, fullPage } of pages) {
     test(name, async ({ page }) => {
       await page.goto(path);
       await page.evaluate(() => document.fonts.ready);
+      // LogBars stream in on scroll; show every row settled, then return to the top.
+      for (const bars of await page.locator("[data-log-bars]:visible").all()) {
+        await bars.scrollIntoViewIfNeeded();
+        await expect(bars.locator(".log-bars__bar:not(.is-live)")).toHaveCount(0);
+      }
+      await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+      await expect.poll(() => page.evaluate(() => scrollY)).toBe(0);
       await expect(page).toHaveScreenshot(`${name}.png`, {
         fullPage,
         animations: "disabled",
