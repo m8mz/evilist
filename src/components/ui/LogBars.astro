@@ -1,0 +1,62 @@
+---
+// A row of ember bars whose heights come from `values` (0–1): reads as an event-volume histogram.
+// With scripting and motion, the bars stream in when scrolled into view (scripts/log-bars.ts).
+import { barHeight } from "../../scripts/log-bars";
+
+interface Props {
+  values: readonly number[];
+  label: string;
+  class?: string;
+}
+
+const { values, label, class: className } = Astro.props;
+const W = 4;
+const GAP = 2;
+const H = 24;
+const width = Math.max(W, values.length * (W + GAP) - GAP);
+---
+
+<svg
+  class:list={["log-bars", className]}
+  viewBox={`0 0 ${width} ${H}`}
+  width={width}
+  height={H}
+  role="img"
+  aria-label={label}
+  data-log-bars
+>
+  {values.map((v, i) => {
+    const h = barHeight(v, H);
+    return <rect x={i * (W + GAP)} y={H - h} width={W} height={h} class="log-bars__bar" />;
+  })}
+</svg>
+
+<script>
+  import { initLogBars } from "../../scripts/log-bars";
+  initLogBars();
+</script>
+
+<style>
+  .log-bars {
+    display: block;
+    overflow: visible;
+  }
+
+  .log-bars__bar {
+    fill: var(--color-ember);
+    transform-box: fill-box;
+    transform-origin: bottom;
+  }
+
+  /* Only when scripts/log-bars.ts opted in (it checks reduced motion first). */
+  @media (prefers-reduced-motion: no-preference) {
+    .log-bars[data-animate] .log-bars__bar {
+      transform: scaleY(0);
+      transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .log-bars[data-animate] .log-bars__bar.is-live {
+      transform: scaleY(1);
+    }
+  }
+</style>
