@@ -42,3 +42,21 @@ test.describe("hero", () => {
     await expect(img).toHaveAttribute("height", /^\d+$/);
   });
 });
+
+test.describe("infrastructure diagram", () => {
+  test("describes the topology to assistive tech", async ({ page }) => {
+    await page.goto("/");
+    await expect(
+      page.getByRole("img", { name: "Two datacenters with BGP failover behind HAProxy" }),
+    ).toBeVisible();
+  });
+
+  test("moves the pulse only when motion is allowed", async ({ page }, info) => {
+    await page.goto("/");
+    const name = await page
+      .locator(".topo__pulse")
+      .evaluate((el) => getComputedStyle(el).animationName);
+    if (info.project.name === "reduced-motion") expect(name).toBe("none");
+    else expect(name).not.toBe("none");
+  });
+});

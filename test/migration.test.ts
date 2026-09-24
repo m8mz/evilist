@@ -27,6 +27,7 @@ const MIGRATED = [
   "src/components/journey/JourneyTimeline.astro",
   "src/components/journey/JourneyScene.astro",
   "src/components/home/Skills.astro",
+  "src/components/home/Topology.astro",
 ];
 
 describe("token migration", () => {

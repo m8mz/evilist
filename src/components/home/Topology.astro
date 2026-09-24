@@ -1,0 +1,85 @@
+---
+// The shape of the infrastructure Marcus runs: internet → HAProxy → two datacenters joined by a
+// BGP link. One ember pulse crosses the link and back (translateX only; frozen with reduced
+// motion). Public-safe detail only: no hostnames, vendors or customers.
+---
+
+<svg
+  class="topo"
+  viewBox="0 0 480 220"
+  role="img"
+  aria-label="Two datacenters with BGP failover behind HAProxy"
+>
+  <text x="240" y="16" text-anchor="middle" class="topo__label">
+    internet
+  </text>
+  <path d="M240 24 V50" class="topo__line"></path>
+  <rect x="170" y="50" width="140" height="36" rx="2" class="topo__box"></rect>
+  <text x="240" y="73" text-anchor="middle" class="topo__label">
+    haproxy
+  </text>
+  <path d="M240 86 V110 H110 V140 M240 110 H370 V140" class="topo__line"></path>
+  <rect x="40" y="140" width="140" height="56" rx="2" class="topo__box"></rect>
+  <text x="110" y="173" text-anchor="middle" class="topo__label">
+    primary
+  </text>
+  <rect x="300" y="140" width="140" height="56" rx="2" class="topo__box"></rect>
+  <text x="370" y="173" text-anchor="middle" class="topo__label">
+    dr
+  </text>
+  <path d="M180 168 H300" class="topo__link"></path>
+  <text x="240" y="160" text-anchor="middle" class="topo__label">
+    bgp
+  </text>
+  <circle cx="180" cy="168" r="4" class="topo__pulse"></circle>
+</svg>
+
+<style>
+  .topo {
+    width: 100%;
+    max-width: 36rem;
+    height: auto;
+  }
+
+  .topo__box {
+    fill: var(--color-graphite);
+    stroke: var(--color-slate);
+    stroke-width: 1.5;
+  }
+
+  .topo__line {
+    fill: none;
+    stroke: var(--color-slate);
+    stroke-width: 1.5;
+  }
+
+  .topo__link {
+    fill: none;
+    stroke: var(--color-steel);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+  }
+
+  .topo__label {
+    fill: var(--color-fog);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .topo__pulse {
+    fill: var(--color-ember);
+  }
+
+  /* 3 s each way = the spec's 6 s loop. In SVG, CSS px in a transform are user units. */
+  @media (prefers-reduced-motion: no-preference) {
+    .topo__pulse {
+      animation: topo-pulse 3s ease-in-out infinite alternate;
+    }
+  }
+
+  @keyframes topo-pulse {
+    to {
+      transform: translateX(120px);
+    }
+  }
+</style>
