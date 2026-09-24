@@ -66,6 +66,13 @@
     font-size: 12px;
   }
 
+  /* Below 40rem the diagram renders at ~0.7 scale; 17 user units keeps labels ~12 px on screen. */
+  @media (max-width: 39.99rem) {
+    .topo__label {
+      font-size: 17px;
+    }
+  }
+
   .topo__pulse {
     fill: var(--color-ember);
   }

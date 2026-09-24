@@ -1,7 +1,7 @@
 ---
 // Decorative `>` glyph texture: Axiom's "streaming data" background. Two identical strips drift
 // left inside a track so the loop is seamless; global reduced-motion rules freeze it.
-// The parent must be `position: relative; overflow: hidden`.
+// Its box is exactly the area it covers; the parent must be `position: relative`.
 interface Props {
   rows?: number;
   /** Arrows per row. One strip must be at least as wide as the area it fills, or a gap shows. */
@@ -17,9 +17,11 @@ const strip = Array.from(
 ---
 
 <div class:list={["arrows", className]} aria-hidden="true">
-  <div class="arrows__track">
-    <pre class="arrows__strip">{strip}</pre>
-    <pre class="arrows__strip">{strip}</pre>
+  <div class="arrows__skew">
+    <div class="arrows__track">
+      <pre class="arrows__strip">{strip}</pre>
+      <pre class="arrows__strip">{strip}</pre>
+    </div>
   </div>
 </div>
 
@@ -32,6 +34,10 @@ const strip = Array.from(
     color: var(--color-slate);
     font-size: var(--text-caption);
     line-height: 1.6;
+  }
+
+  /* Skewed inside the clip box, so the component's own box is exactly the area it covers. */
+  .arrows__skew {
     transform: skewY(-8deg);
   }
 

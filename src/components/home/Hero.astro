@@ -12,6 +12,10 @@ import authorPic from "../../images/author-pic.webp";
 import { site } from "../../data/site";
 import { yearsOfExperience } from "../../data/career";
 
+// Split so the surname can stay on one line: "Marcus" / "Hancock-Gaillard", never "Hancock-" / "Gaillard".
+const [firstName, ...rest] = site.name.split(" ");
+const surname = rest.join(" ");
+
 const facts = [
   { key: "years", value: String(yearsOfExperience()) },
   { key: "datacenters", value: "2" },
@@ -21,12 +25,11 @@ const facts = [
 ---
 
 <section class="hero" aria-labelledby="hero-title">
-  <ArrowField rows={16} cols={80} class="hero__arrows" />
   <div class="wrap hero__grid">
     <div class="hero__copy">
       <Prompt path="marcus" cursor />
       <h1 id="hero-title" class="hero__name">
-        {site.name}
+        {firstName} <span class="hero__surname">{surname}</span>
       </h1>
       <p class="hero__role">
         {site.role} · {site.location}
@@ -42,6 +45,7 @@ const facts = [
     </div>
 
     <figure class="hero__portrait">
+      <ArrowField rows={40} cols={80} class="hero__arrows" />
       <TerminalFrame title="marcus@evilist:~">
         <RankChip slot="aside" rank="S" size="sm" label="S-rank: Sr. Systems Architect" />
         <Image
@@ -65,15 +69,17 @@ const facts = [
     padding-block: clamp(3rem, 2rem + 6vw, 7rem) var(--section-y);
   }
 
-  /* The > texture fills the negative space: the right side on desktop, the lower half on phones.
-     cols={80} makes one strip ~1150 px wide, wider than the right 55% of a 1920 px screen. */
+  /* The > texture fills the negative space around the portrait and never reaches the copy:
+     a band 2rem above and below the frame on phones (the grid gap is at least 2.5rem), and
+     from 2rem left of the frame to the screen edge on desktop. The hero clips the overflow.
+     cols={80} makes one strip ~1150 px wide, wider than any visible part. */
   .hero :global(.hero__arrows) {
-    inset: 0 0 0 45%;
+    inset: -2rem -50vw;
   }
 
-  @media (max-width: 59.99rem) {
+  @media (min-width: 60rem) {
     .hero :global(.hero__arrows) {
-      inset: 55% 0 0 0;
+      inset: -8rem -50vw -8rem -2rem;
     }
   }
 
@@ -95,6 +101,17 @@ const facts = [
     font-size: var(--text-hero);
     line-height: 1.1;
     max-width: 16ch;
+  }
+
+  /* Break after the first name only. Below 22rem the surname cannot fit on one line. */
+  .hero__surname {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 21.99rem) {
+    .hero__surname {
+      white-space: normal;
+    }
   }
 
   .hero__role {
@@ -120,8 +137,14 @@ const facts = [
   }
 
   .hero__portrait {
+    position: relative;
     justify-self: center;
     width: min(26rem, 100%);
+  }
+
+  /* Positioned so the frame paints over the texture. */
+  .hero__portrait :global(.term) {
+    position: relative;
   }
 
   .hero :global(.hero__photo) {

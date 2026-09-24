@@ -33,6 +33,24 @@ test.describe("hero", () => {
     await expect(page.locator(".hero .seal")).toHaveCount(0);
   });
 
+  test("keeps the arrow texture out from behind the copy", async ({ page }) => {
+    await page.goto("/");
+    const arrows = (await page.locator(".hero__arrows").boundingBox())!;
+    const copy = (await page.locator(".hero__copy").boundingBox())!;
+    const overlaps =
+      arrows.x < copy.x + copy.width &&
+      copy.x < arrows.x + arrows.width &&
+      arrows.y < copy.y + copy.height &&
+      copy.y < arrows.y + arrows.height;
+    expect(overlaps).toBe(false);
+  });
+
+  test("keeps the surname on one line", async ({ page }) => {
+    await page.goto("/");
+    const lines = await page.locator(".hero__surname").evaluate((el) => el.getClientRects().length);
+    expect(lines).toBe(1);
+  });
+
   test("keeps the portrait's LCP hints and intrinsic size", async ({ page }) => {
     await page.goto("/");
     const img = page.locator(".hero img");
@@ -49,6 +67,19 @@ test.describe("infrastructure diagram", () => {
     await expect(
       page.getByRole("img", { name: "Two datacenters with BGP failover behind HAProxy" }),
     ).toBeVisible();
+  });
+
+  test("keeps the topology labels readable on every screen", async ({ page }) => {
+    await page.goto("/");
+    const px = await page
+      .locator(".topo__label")
+      .first()
+      .evaluate((el) => {
+        const svg = (el as SVGTextElement).ownerSVGElement!;
+        const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+        return parseFloat(getComputedStyle(el).fontSize) * scale;
+      });
+    expect(px).toBeGreaterThanOrEqual(11);
   });
 
   test("moves the pulse only when motion is allowed", async ({ page }, info) => {
