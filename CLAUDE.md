@@ -3,7 +3,7 @@
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
 Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–2 are done (tooling, Astro 7, design system). Contact/resume pages still carry legacy markup until Phase 3.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phases 0–3 are done: tooling, Astro 7, the design system, and real content with the hardened contact form. Phase 4 (the animated journey) is next.
 
 ## Commands
 
@@ -13,6 +13,9 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted
 - E2E runs against the production build on port 4399 (never reuses `astro dev` on 4321): `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
 - Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
 - `minimumReleaseAge` rejects any release younger than 24 h. When that happens, pin the previous version; don't add an exclusion.
+- After editing `src/data/{career,skills,site}.ts` or `src/pages/resume.astro`, run `pnpm build:pdf` and commit the regenerated PDF. `test/resumePdf.test.ts` fails if the PDF is stale.
+- `astro dev` may already be running on 4321 (Marcus uses it). For your own preview or review server, use another port (e.g. 4396), or you'll be testing dev instead of the build.
+- `astro:env` inlines **public** server variables at build time. Any server setting that must be read at runtime (e.g. `CONTACT_DRY_RUN`) has to be declared `access: "secret"`.
 - Never use npm/yarn/bun. The only lockfile is `pnpm-lock.yaml`. Supply-chain settings (`minimumReleaseAge`, `allowBuilds`) live in `pnpm-workspace.yaml`.
 
 ## Git rules (non-negotiable)

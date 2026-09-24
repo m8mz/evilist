@@ -47,6 +47,16 @@ describe("contactSchema", () => {
     expect(contactSchema.safeParse({ ...client, company: null }).success).toBe(true);
   });
 
+  it("rejects emails that could inject headers (CR/LF, angle brackets)", () => {
+    for (const email of [
+      "ada@example.com\r\nBcc: x@evil.test",
+      "Ada <ada@example.com>",
+      "ada@example.com\n",
+    ]) {
+      expect(contactSchema.safeParse({ ...recruiter, email }).success).toBe(false);
+    }
+  });
+
   it("rejects an invalid email", () => {
     expect(contactSchema.safeParse({ ...recruiter, email: "not-an-email" }).success).toBe(false);
   });

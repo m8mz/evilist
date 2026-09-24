@@ -112,3 +112,19 @@ test("rate-limits a single client to 3 messages per 10 minutes", async ({
   for (let i = 0; i < 4; i++) statuses.push((await send()).status());
   expect(statuses).toEqual([200, 200, 200, 429]);
 });
+
+test("rejects cross-origin posts to the action (CSRF)", async ({ request }, info) => {
+  test.skip(info.project.name !== "desktop", "server-side behavior; one project is enough");
+  const res = await request.post("/_actions/contact", {
+    headers: { origin: "https://evil.example", "x-forwarded-for": uniqueIp() },
+    multipart: {
+      type: "recruiter",
+      name: "x",
+      email: "x@example.com",
+      company: "x",
+      message: "x",
+      ts: "1.x",
+    },
+  });
+  expect(res.status()).toBe(403);
+});
