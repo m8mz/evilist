@@ -65,7 +65,8 @@ No `box-shadow`, no gradients, no `filter: blur()`, no glow.
 1. Primary button fill (`Button` primary).
 2. The blinking cursor in `Prompt`.
 3. The 2px left border on `Panel case` (work items, notes, journey stage cards).
-4. `LogBars` bars, the topology pulse dot, and LEDs inside the journey SVG scene.
+4. `LogBars` bars, the topology pulse dot, LEDs and the parcel tape inside the journey SVG
+   scene, and the avatar's eyes (§6.2).
 5. Links on hover, `:focus-visible` outline, `::selection` background.
 
 Nowhere else: not headings, not icons, not borders, not status, not the rank chips
@@ -180,9 +181,24 @@ Mechanics untouched: pinned stage, `scripts/journey.ts` scroll mapping,
 - Rail: 1px iron track; nodes are `RankChip size="sm"`; the progress fill is ember.
 - Stage cards: `Panel variant="case"`; `Tag` for the date range; `RankChip size="md"`;
   title, org, summary, first highlight unchanged.
-- `JourneyScene.astro`: recolour classes only. Metal, hoodie, skin, floor, buildings
-  in `carbon → slate → fog` steps; grid and dashes in iron/slate; LEDs, the pulse dot
-  and the parcel tape are the only ember. The chibi keeps its geometry.
+- `JourneyScene.astro` props: recolour classes only. Metal, floor and buildings in
+  `carbon → slate → fog` steps; grid and dashes in iron/slate; LEDs, the pulse dot and
+  the parcel tape are the only ember props. No hard-coded colours remain; every fill
+  and stroke is a token. Keyframes animate only `transform` and `opacity`.
+- **The avatar** (changed 2026-09-24, Marcus's direction "option C"): the chibi is no
+  longer a likeness of Marcus but an original dark-rival character, "a cool dark
+  presence to match the evilist domain", drawing on the Sasuke and Sukuna archetypes
+  without copying either. Same body geometry and pose, so every stage prop still fits:
+  - hair: void fill with a 2.5px steel rim; long face-framing bangs, a jagged fringe,
+    and spikes swept up and back toward the upper right; two iron highlight strands
+  - face: paper skin; sharp brows angled down to the centre; angular eyes with ember
+    irises, void slit pupils and a paper glint; an original mark under each eye (a
+    curved band with a downward hook, never whisker stripes); a smirk with one fang
+  - clothes: a slate coat with an open void V and centre seam, a steel high collar
+    behind the jaw, slate pants and sleeves, void shoes, paper hands
+  - never: a clan crest, Sharingan/tomoe pattern, Sukuna's four-eye or exact marking
+    layout, or any other existing character's signature mark
+    The hero portrait stays the real photo (§6.1); only the journey avatar changes.
 - Section prompt `~/journey`; the h2 "From E-rank to S-rank" and lede stay.
 
 ### 6.3 Skills
@@ -284,7 +300,8 @@ All SVG uses palette tokens via classes (no inline `style=`), animates only
 - **Topology diagram** (`src/components/home/Topology.astro`): two datacenter blocks
   labelled `primary` and `dr`, a BGP link between them, an `haproxy` block in front,
   `internet` at the top. Slate 1.5px strokes, 12px mono labels in fog, one ember dot
-  travelling the BGP link on a 6 s `offset-path` loop (static under reduced motion).
+  travelling the straight BGP link on a 6 s `translateX` loop (static under reduced
+  motion; not `offset-path`, because only transform/opacity/pathLength may animate).
   `role="img"`, `aria-label="Two datacenters with BGP failover behind HAProxy"`.
   Target ≤ 4 KB.
 - **Icon set** (`src/components/ui/Icon.astro`, prop `name`): `tower`, `controller`,
