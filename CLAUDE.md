@@ -3,13 +3,16 @@
 Personal-brand site for Marcus Hancock-Gaillard (m8mz). Audience: employers first, clients second.
 Astro 7 · TypeScript · Tailwind 4 · Motion · Three.js · pnpm · self-hosted (rootless Podman + HAProxy on Marcus's VPS).
 
-> **Rebuild in progress.** The phased plan lives at `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions are recorded in `docs/decisions/`. Until Phase 1 lands, the repo still runs Astro 5 on npm. Don't mix the old and new setups.
+> **Rebuild in progress.** Phased plan: `~/.claude/plans/i-was-designing-a-shimmering-swan.md`. Decisions: `docs/decisions/`. Phase 1 (pnpm + Astro 7 skeleton) is done; legacy components remain until Phases 2–3 replace them.
 
 ## Commands
 
 - `pnpm dev` / `pnpm build` / `pnpm preview` (runs `node ./dist/server/entry.mjs`)
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
-- `pnpm lhci` checks Lighthouse budgets. `pnpm build:pdf` builds the resume PDF.
+- `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
+- E2E runs against the production build: `pnpm build && pnpm test:e2e`. Playwright launches `node ./dist/server/entry.mjs` directly, because going through the pnpm wrapper orphans the server.
+- Version pins to know about: TypeScript 6.x, because `@astrojs/check` doesn't support TS 7 yet.
+- `minimumReleaseAge` rejects any release younger than 24 h. When that happens, pin the previous version; don't add an exclusion.
 - Never use npm/yarn/bun. The only lockfile is `pnpm-lock.yaml`. Supply-chain settings (`minimumReleaseAge`, `allowBuilds`) live in `pnpm-workspace.yaml`.
 
 ## Git rules (non-negotiable)
