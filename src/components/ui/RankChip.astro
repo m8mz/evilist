@@ -1,0 +1,53 @@
+---
+// Rank as a terminal tag: `[ S ]`. Only S carries the accent (ember fill, void text); every other
+// rank is paper on graphite. State is shown by the glyph, not by colour.
+export type Rank = "E" | "E+" | "D" | "C" | "B" | "A" | "S";
+
+interface Props {
+  rank: Rank;
+  size?: "sm" | "md";
+  label?: string;
+  class?: string;
+}
+
+const { rank, size = "md", label = `Rank ${rank}`, class: className } = Astro.props;
+---
+
+<span
+  class:list={["rank-chip", `rank-chip--${size}`, { "rank-chip--s": rank === "S" }, className]}
+  data-rank={rank}
+  role="img"
+  aria-label={label}
+>
+  <span aria-hidden="true">{`[ ${rank} ]`}</span>
+</span>
+
+<style>
+  .rank-chip {
+    display: inline-block;
+    flex: none;
+    border: 1px solid var(--color-slate);
+    border-radius: var(--radius);
+    background: var(--color-graphite);
+    color: var(--color-paper);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .rank-chip--sm {
+    padding: 0.25rem 0.4rem;
+    font-size: var(--text-caption);
+  }
+
+  .rank-chip--md {
+    padding: 0.4rem 0.6rem;
+    font-size: var(--text-body);
+  }
+
+  .rank-chip--s {
+    border-color: var(--color-ember);
+    background: var(--color-ember);
+    color: var(--color-void);
+  }
+</style>
