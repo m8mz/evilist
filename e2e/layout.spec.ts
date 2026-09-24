@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const routes = ["/", "/resume", "/notes", "/contact"];
+const routes = ["/", "/now", "/resume", "/notes", "/contact"];
 // Matches the 45rem breakpoint in Header.astro (below it, the nav collapses behind a toggle).
 const COLLAPSED_NAV_MAX = 720;
 
@@ -29,6 +29,19 @@ test("current page is marked in the nav", async ({ page }) => {
   await page.goto("/notes");
   if (page.viewportSize()!.width < COLLAPSED_NAV_MAX) await page.click("[data-menu-toggle]");
   await expect(page.locator('#site-nav a[href="/notes"]')).toHaveAttribute("aria-current", "page");
+});
+
+test("the nav shows Now and keeps one row from tablet up", async ({ page }) => {
+  await page.goto("/now");
+  if (page.viewportSize()!.width < COLLAPSED_NAV_MAX) await page.click("[data-menu-toggle]");
+  const link = page.locator('#site-nav a[href="/now"]');
+  await expect(link).toHaveAttribute("aria-current", "page");
+  if (page.viewportSize()!.width >= COLLAPSED_NAV_MAX) {
+    const tops = await page
+      .locator("#site-nav a")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+  }
 });
 
 test("skip link moves focus to main content", async ({ page, browserName }) => {

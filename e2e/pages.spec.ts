@@ -55,6 +55,30 @@ test("404 shows a terminal session and a way home", async ({ page }) => {
   await expect(page.getByRole("link", { name: "home", exact: true })).toHaveAttribute("href", "/");
 });
 
+test("/now lists the rig, the games, the anime and what Marcus is building", async ({ page }) => {
+  await page.goto("/now");
+  await expect(page).toHaveTitle("Now · Marcus Hancock-Gaillard");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Now");
+  await expect(page.locator(".now__updated")).toHaveText("updated: 2026-09");
+  await expect(page.getByRole("heading", { level: 3 })).toHaveText(["rig", "playing", "watching"]);
+  for (const text of ["AMD Ryzen 7 7800X3D", "League of Legends", "Demon Slayer"]) {
+    await expect(page.locator("main")).toContainText(text);
+  }
+  for (const key of ["training:", "learning:", "building:"]) {
+    await expect(page.locator("main .kv__key", { hasText: key })).toHaveCount(1);
+  }
+});
+
+test("/now leads with the rig still as its eager hero", async ({ page }) => {
+  await page.goto("/now");
+  const img = page.locator(".now__hero .still img");
+  await expect(img).toHaveAttribute("alt", /^Illustration: /);
+  await expect(img).toHaveAttribute("loading", "eager");
+  await expect(img).toHaveAttribute("fetchpriority", "high");
+  await expect(img).toHaveAttribute("width", /^\d+$/);
+  await expect(img).toHaveAttribute("height", /^\d+$/);
+});
+
 test.describe("machine-readable files", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name !== "desktop", "one project is enough");
@@ -72,6 +96,7 @@ test.describe("machine-readable files", () => {
     const sitemap = await (await request.get("/sitemap-0.xml")).text();
     expect(sitemap).toContain("https://evilist.io/notes/ten-years-t1-to-architect/");
     expect(sitemap).toContain("https://evilist.io/resume/");
+    expect(sitemap).toContain("https://evilist.io/now/");
     expect(await (await request.get("/robots.txt")).text()).toContain(
       "Sitemap: https://evilist.io/sitemap-index.xml",
     );

@@ -19,4 +19,12 @@ describe("Header", () => {
     expect(html).toMatch(/href="\/notes" aria-current="page"/);
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
   });
+
+  it("lists Resume, Now, Notes and Contact, in that order", async () => {
+    const html = await render(Header, at("/"));
+    const labels = [...html.matchAll(/<a href="\/(resume|now|notes|contact)"[^>]*>([^<]+)</g)].map(
+      (m) => m[2]!.trim(),
+    );
+    expect(labels).toEqual(["Resume", "Now", "Notes", "Contact"]);
+  });
 });

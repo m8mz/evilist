@@ -1,0 +1,106 @@
+---
+// /now (spec §7.1): what Marcus is running, playing, watching and building right now.
+// Everything comes from src/data/now.ts. The rig still is this page's hero, so it loads eagerly.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Section from "../components/ui/Section.astro";
+import Panel from "../components/ui/Panel.astro";
+import Prompt from "../components/ui/Prompt.astro";
+import KeyValue from "../components/ui/KeyValue.astro";
+import LogBars from "../components/ui/LogBars.astro";
+import Still from "../components/ui/Still.astro";
+import NowColumns from "../components/home/NowColumns.astro";
+import rig from "../images/rig.webp";
+import { now } from "../data/now";
+
+const rows = [
+  { key: "training", value: now.training.line },
+  { key: "learning", value: now.learning.join(", ") },
+  { key: "building", value: now.building.join(", ") },
+];
+---
+
+<BaseLayout
+  title="Now"
+  description="What Marcus is running, playing, watching and building right now."
+>
+  <Section>
+    <div class="now__hero">
+      <Still
+        src={rig}
+        subject="a dual-chamber gaming PC on a dark desk, lit by one orange strip"
+        sizes="(min-width: 72rem) 67rem, 94vw"
+        eager
+      />
+      <div class="now__intro">
+        <Prompt path="now" cursor />
+        <h1 class="now__title">Now</h1>
+        <p class="now__updated">
+          <span class="now__key">updated:</span> {now.updated}
+        </p>
+      </div>
+    </div>
+
+    <div class="now__body">
+      <Panel>
+        <NowColumns />
+      </Panel>
+      <Panel>
+        <KeyValue rows={rows} />
+        <LogBars
+          values={now.training.weeks}
+          label="Illustrative training rhythm"
+          class="now__bars"
+        />
+      </Panel>
+    </div>
+  </Section>
+</BaseLayout>
+
+<style>
+  /* Phones: the 21:9 still is short, so the intro sits under it. From 48rem it overlays the
+     still's empty left third (the prompt asked for dark desk there). */
+  .now__hero {
+    position: relative;
+  }
+
+  .now__intro {
+    margin-top: 1.5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .now__intro {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 34%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin: 0;
+      padding-left: clamp(1.25rem, 3vw, 2.5rem);
+    }
+  }
+
+  .now__title {
+    margin-top: 0.75rem;
+    font-size: var(--text-display);
+  }
+
+  .now__updated {
+    margin-top: 0.5rem;
+    color: var(--color-paper);
+  }
+
+  .now__key {
+    color: var(--color-ash);
+  }
+
+  .now__body {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+
+  .now__body :global(.now__bars) {
+    margin-top: 1.25rem;
+  }
+</style>

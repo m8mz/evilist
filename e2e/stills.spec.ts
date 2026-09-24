@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /** Pages that show stills. Task 7 adds "/now". */
-const PAGES = ["/"];
+const PAGES = ["/", "/now"];
 
 test.beforeEach(({}, info) => {
   test.skip(info.project.name !== "desktop", "rendition sizes do not depend on the device");
