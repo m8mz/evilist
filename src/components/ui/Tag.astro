@@ -1,0 +1,22 @@
+---
+// Typographic category label: uppercase caption in ash. No fill, no border.
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<span class:list={["tag", className]}>
+  <slot />
+</span>
+
+<style>
+  .tag {
+    display: inline-block;
+    font-size: var(--text-caption);
+    line-height: 1.5;
+    text-transform: uppercase;
+    color: var(--color-ash);
+  }
+</style>

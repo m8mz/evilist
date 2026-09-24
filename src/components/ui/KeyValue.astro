@@ -1,0 +1,58 @@
+---
+// `key: value` rows in a definition list. Keys in ash, values in paper; link values get an arrow.
+export interface KeyValueRow {
+  key: string;
+  value: string | { href: string; label: string };
+}
+
+interface Props {
+  rows: readonly KeyValueRow[];
+  class?: string;
+}
+
+const { rows, class: className } = Astro.props;
+const isExternal = (href: string) => /^https?:\/\//.test(href);
+---
+
+<dl class:list={["kv", className]}>
+  {rows.map(({ key, value }) => (
+    <div class="kv__row">
+      <dt class="kv__key">{key}:</dt>
+      <dd class="kv__value">
+        {typeof value === "string" ? (
+          value
+        ) : (
+          <a
+            href={value.href}
+            {...(isExternal(value.href) ? { rel: "noopener", target: "_blank" } : {})}
+          >
+            {value.label}
+            <span aria-hidden="true"> →</span>
+          </a>
+        )}
+      </dd>
+    </div>
+  ))}
+</dl>
+
+<style>
+  .kv {
+    display: grid;
+    gap: 0.25rem;
+    font-size: var(--text-body);
+  }
+
+  .kv__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5ch;
+  }
+
+  .kv__key {
+    color: var(--color-ash);
+  }
+
+  .kv__value {
+    color: var(--color-paper);
+  }
+</style>
