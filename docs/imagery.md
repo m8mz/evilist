@@ -66,3 +66,50 @@ it. Rejected jobs: `1b902d64`, `7781c95b` (round 1); `3d993304`, `72d3ac6a`, `0c
 
 Rejected rack jobs: `b318e2a9`, `7a90abbe` (round 1); `1e99d06a`, `ffabe4a7` (round 2). Rig
 alternatives: `c4315162`, `0012e60c`. Spend: 26 credits for 13 renders.
+
+## Journey (hero and journey redesign, spec §7)
+
+Anime illustration, not photography: the monochrome suffixes above do not apply. Violet lives only
+inside this art (ADR 0003). The character is original: never a likeness of Marcus or of any
+existing character.
+
+### Step 1 — character sheet (2026-09-24)
+
+Three concepts, `nano_banana_pro`, 2k, 16:9, one batch. The job metadata reports
+`nano_banana_2`, as for the stills above. Spend: 6 credits (2,984 → 2,978).
+
+**Chosen: concept A**, job `191aca87-8cd1-4f98-96b6-ed73c931e243`. It is the reference image for
+every stage still. Its prompt:
+
+> Three-panel character sheet on one wide canvas: left panel a full-body front view of the
+> character standing upright with arms relaxed at his sides, head to toe with both feet visible;
+> centre panel a full-body three-quarter view of the same character standing; right panel a tight
+> chest-up close-up portrait of the same character. Identical original male character in all three
+> panels, exactly one figure per panel, plain flat charcoal grey seamless background, professional
+> anime model-sheet presentation. A young adult man in his mid-twenties with a mature adult face:
+> defined jawline, high cheekbones, straight nose, thin calm mouth, calm composed expression, a
+> dark and mysterious presence. Narrow sharp cool steel-grey eyes with small crisp highlights and
+> no glow, straight dark brows. Messy medium-length jet-black hair with loose strands falling
+> across the forehead and just over the eyes, shorter tapered sides, matte finish with a faint
+> blue-black sheen. Tall, lean athletic build like a sprinter or climber: broad shoulders, narrow
+> waist, defined but not bulky muscles, natural anatomy. Wearing a long black high-collar coat
+> reaching mid-calf, worn open, with thin burnt-orange (#da5c2c) piping only at the cuffs, a fitted
+> black technical long-sleeve shirt, dark charcoal tapered trousers, a slim black belt, black
+> leather combat boots, no jewelry. Faint deep-violet shadow energy curls like smoke from his right
+> hand; violet and the small burnt-orange accents are the only saturated colours. Modern shonen TV
+> anime key-visual style: crisp clean lineart, cel shading with hard-edged shadow shapes and subtle
+> soft gradients in the shadows, dark desaturated palette of black, charcoal and cool grey, a
+> dramatic cool rim light from behind and an even soft front fill so the design reads clearly.
+> High-quality anime key visual, sharp, 4K. No text, no watermark, no logos, no frame borders, no
+> panel labels, no other characters, no duplicate figures, no props, no weapons, no red eyes, no
+> glowing eyes, no fangs, no sharp teeth, no face markings, no tattoos, no scars, no blindfold, no
+> eyepatch, no blood, no babyface. An original character who does not resemble any existing anime
+> or manga character or any real person.
+
+Alternatives (same prompt with the hair, outfit and energy swapped):
+
+- B, `12574efd-0600-4a05-82a8-392bee3f393f`: swept-back hair, cropped high-collar tech jacket
+  with an ember zip stripe, cargo trousers, high-tops, a silver ear cuff; violet smoke at the feet.
+- C, `c6e0c748-6d17-4edf-a2b7-90b125560a09`: shaggy layered hair; asked for a coat draped like a
+  cape over a sleeveless turtleneck, rendered as a long sleeved coat with fingerless gloves and
+  ember stitching; violet on both forearms. Close to A.
