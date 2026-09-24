@@ -39,6 +39,12 @@ describe("Hero", () => {
     expect(html).not.toContain("<figcaption");
   });
 
+  it("makes both panes inert, so contrast checks skip the dimmed backdrop", async () => {
+    const html = await render(Hero);
+    expect(html).toMatch(/class="hero__pane hero__pane--term"[^>]*\sinert(?:=""|[\s>])/);
+    expect(html).toMatch(/class="hero__pane hero__pane--net"[^>]*\sinert(?:=""|[\s>])/);
+  });
+
   it("keeps the framed portrait with the S chip, ready to tilt", async () => {
     const html = await render(Hero);
     expect(html).toContain("marcus@evilist:~");
