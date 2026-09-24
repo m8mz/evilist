@@ -217,15 +217,15 @@ const described = (field: string) => (err(field) ? `${id(field)}-error` : undefi
     justify-self: start;
     min-height: 2.75rem;
     padding: 0.55rem 1.75rem;
-    background: var(--color-hanko-ink);
-    color: var(--color-washi);
+    background: var(--color-ember);
+    color: var(--color-void); /* paper on ember is 3.3:1 */
     font-weight: 700;
     border: 0;
     cursor: pointer;
   }
 
   .submit:hover {
-    background: var(--color-hanko);
+    background: var(--color-paper);
   }
 
   .submit[disabled] {

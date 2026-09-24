@@ -39,23 +39,23 @@ JS budgets, zero third-party requests, self-hosting.
 
 ### 3.1 Colour
 
-| Token              | Value     | Role                                                          |
-| ------------------ | --------- | ------------------------------------------------------------- |
-| `--color-void`     | `#000000` | Page background, header, terminal canvas                      |
-| `--color-carbon`   | `#111111` | Primary surface, hero canvas, footer, code blocks             |
-| `--color-graphite` | `#191919` | Elevated panels, case cards                                   |
-| `--color-iron`     | `#202020` | Hairline borders, dividers                                    |
-| `--color-slate`    | `#3a3a3a` | Muted borders, icon strokes, arrow-field glyphs               |
-| `--color-steel`    | `#606060` | Borders, icon strokes, arrow-field glyphs; never text (3.3:1) |
-| `--color-ash`      | `#7e7e7e` | Annotations, tags, key labels, prompt prefix                  |
-| `--color-fog`      | `#b4b4b4` | Secondary text, pitch, metadata                               |
-| `--color-paper`    | `#eeeeee` | Primary text, headings, nav, wordmark                         |
-| `--color-ember`    | `#da5c2c` | The one accent (§3.2)                                         |
+| Token              | Value     | Role                                                            |
+| ------------------ | --------- | --------------------------------------------------------------- |
+| `--color-void`     | `#000000` | Page background, header, terminal canvas                        |
+| `--color-carbon`   | `#111111` | Primary surface, hero canvas, footer, code blocks               |
+| `--color-graphite` | `#191919` | Elevated panels, case cards                                     |
+| `--color-iron`     | `#202020` | Hairline borders, dividers                                      |
+| `--color-slate`    | `#3a3a3a` | Muted borders, icon strokes, arrow-field glyphs                 |
+| `--color-steel`    | `#606060` | Borders, icon strokes, arrow-field glyphs; never text (3.3:1)   |
+| `--color-ash`      | `#848484` | Annotations, tags, key labels, prompt prefix (Axiom: `#7e7e7e`) |
+| `--color-fog`      | `#b4b4b4` | Secondary text, pitch, metadata                                 |
+| `--color-paper`    | `#eeeeee` | Primary text, headings, nav, wordmark                           |
+| `--color-ember`    | `#da5c2c` | The one accent (§3.2)                                           |
 
 Measured contrast: ember on void **5.55:1** (passes AA for text); paper on an ember
 fill **3.3:1** (fails AA at body size). Therefore **filled controls carry void text**,
 a deliberate deviation from Axiom for the Lighthouse accessibility gate. Paper on
-void is 18.1:1; fog 10.1:1; ash 5.2:1; steel 3.3:1 (borders and decoration only, never text).
+void is 18.1:1; fog 10.1:1; ash 5.6:1; steel 3.3:1 (borders and decoration only, never text). Ash is lifted from Axiom's `#7e7e7e` (4.3:1 on graphite) to `#848484` (4.7:1 on graphite), because tags and key labels sit inside graphite panels. Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it.
 
 Elevation is expressed only by stepping surfaces (`void → carbon → graphite → iron`).
 No `box-shadow`, no gradients, no `filter: blur()`, no glow.

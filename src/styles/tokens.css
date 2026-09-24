@@ -15,9 +15,9 @@
 
   /* Text. Contrast on void in brackets. Steel is 3.3:1: never use it for text. */
   --color-steel: #606060;
-  --color-ash: #7e7e7e; /* annotations, tags, key labels (5.2:1) */
+  --color-ash: #848484; /* annotations, tags, key labels (5.6:1; 4.7:1 on graphite panels) */
   --color-fog: #b4b4b4; /* secondary text (10:1) */
-  --color-paper: #eeeeee; /* primary text (17:1) */
+  --color-paper: #eeeeee; /* primary text (18:1) */
 
   /* Accent: 5.6:1 on void. Fills carry void text (paper on ember is 3.3:1). */
   --color-ember: #da5c2c;
@@ -54,7 +54,6 @@
   --color-seam: var(--color-iron);
   --color-washi: var(--color-paper);
   --color-hanko: var(--color-ember);
-  --color-hanko-ink: var(--color-ember);
   --color-hanko-hot: var(--color-ember);
   --color-gold: var(--color-fog);
 

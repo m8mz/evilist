@@ -61,6 +61,16 @@ describe("design tokens", () => {
     expect(contrast(color("ember"), color("void"))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("keeps every text colour AA on every surface text sits on", () => {
+    // Tags and key labels (ash) sit inside graphite panels, the lightest text surface.
+    for (const surface of ["void", "carbon", "graphite"]) {
+      for (const text of ["paper", "fog", "ash", "ember"]) {
+        const ratio = contrast(color(text), color(surface));
+        expect(ratio, `${text} on ${surface}: ${ratio.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   it("puts void text on ember fills, because paper on ember fails AA", () => {
     expect(contrast(color("void"), color("ember"))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(color("paper"), color("ember"))).toBeLessThan(4.5);
