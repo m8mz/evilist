@@ -164,6 +164,30 @@ test.describe("rotating title", () => {
   });
 });
 
+test.describe("portrait tilt", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(!["desktop", "reduced-motion"].includes(info.project.name), "fine pointers only");
+  });
+
+  test("tilts toward the cursor, springs back when it leaves, and never under reduced motion", async ({
+    page,
+  }, info) => {
+    await page.goto("/");
+    const portrait = page.locator("[data-tilt]");
+    const transform = () => portrait.evaluate((el) => getComputedStyle(el).transform);
+    const hero = (await page.locator(".hero").boundingBox())!;
+    await page.mouse.move(hero.x + 40, hero.y + 40, { steps: 4 });
+    if (info.project.name === "reduced-motion") {
+      await page.waitForTimeout(800);
+      expect(await transform()).toBe("none");
+      return;
+    }
+    await expect.poll(transform).toMatch(/^matrix3d\(/);
+    await page.mouse.move(hero.x + 10, 10); // onto the header: the pointer leaves the hero
+    await expect.poll(transform).toMatch(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/);
+  });
+});
+
 test.describe("off the clock", () => {
   test("shows the rig, what's playing and what's on, with a link to /now", async ({ page }) => {
     await page.goto("/");
