@@ -74,8 +74,9 @@ Hancock-Gaillard, home"`. No filter, no recolour.
 - The htop **screen** (meters, process table, F-key bar) is extracted from `Htop.astro` into
   `HtopScreen.astro`. `Htop.astro` becomes `TerminalFrame` + `HtopScreen` + caption and is used by
   `og-card.astro` only. The hero uses `HtopScreen` bare: no window chrome, no caption.
-- In the pane the screen is anchored top-left at 12px (`--text-caption`), with extra process rows
-  (a `rows` prop) so it fills the pane's height; overflow is clipped.
+- In the pane the screen is anchored top-left at 13px. The snapshot grows to 24 processes (generic
+  system daemons) so the table fills the pane; overflow is clipped, and the F-key bar is pinned to
+  the pane's bottom row.
 - The whole layer sits at ~22% opacity (a single `--hero-backdrop-opacity` custom property, tuned
   in the browser: visible at a glance, never competing with the copy). The copy keeps its normal
   colours on top; with the backdrop that dim, every text colour keeps its 4.5:1.
@@ -127,7 +128,8 @@ starts a sentence:
   twin at opacity 0; lighting is an opacity cross-fade of the twin, nothing else.
 - **Hover** (`scripts/stack-network.ts`, pointer events on the hero, rAF-throttled): the labelled
   node nearest the cursor within 120 CSS px lights (`is-lit`: ember twin to 1, label to 1, in
-  ash 12px), with its edges and direct neighbours. After ~120ms the next hop lights at ~45%
+  ash, 12–15px on screen; labels are hidden below 60rem, where the scaled-down SVG would make
+  them unreadable), with its edges and direct neighbours. After ~120ms the next hop lights at ~45%
   (`is-echo`). Moving away fades everything over ~600ms, so sweeping the cursor leaves a trail and
   the pattern keeps changing.
 - **Idle and touch.** While the hero is on screen, the tab is visible and the pointer has been
@@ -340,8 +342,9 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
   under reduced motion; hovering the network lights a node; no `/journey/` request before
   scrolling near the journey; the active clip plays and the others are paused; the CSP header is on
   every sitemap URL; no console errors.
-- **Visual baselines** regenerated per phase under reduced motion (so the title, tilt, pulses and
-  clips are frozen), and shown to Marcus.
+- **Visual baselines** regenerated per phase with the existing freeze (`setInterval` stubbed,
+  `animations: "disabled"`, no pointer), which holds the htop, title, tilt, pulses and clips still, and
+  shown to Marcus.
 - **Budgets:** `/` ≤ 600 KB transferred and ≤ 100 KB JS (clips load only near the journey); the
   new scripts add ~4 KB (Motion is already loaded). `pnpm size` gains a clip check against §7.5's
   per-file limits. Lighthouse thresholds unchanged (perf ≥ 0.9, a11y 1, CLS ≤ 0.05).
