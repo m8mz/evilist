@@ -122,7 +122,20 @@ Alternatives (same prompt with the hair, outfit and energy swapped):
 
 `nano_banana_pro`, 2k (2752×1536), 16:9, concept A (`191aca87…`) as the only `image_references`
 input. Two variants per stage, batches of at most 5. Spend: 34 credits (2,978 → 2,944): 14
-stills plus 3 targeted re-rolls. **Picks: pending (Marcus).**
+stills plus 3 targeted re-rolls.
+
+**Picks (Marcus, 2026-09-25, on the recommendations)**, imported with `scripts/import-still.mjs` to
+`src/images/journey/<stage-id>.webp` (2400×1340 WebP):
+
+| Rank | Stage id                | Job                                    | Why this one                                     |
+| ---- | ----------------------- | -------------------------------------- | ------------------------------------------------ |
+| E    | `t1-support`            | `0cabdca9-1529-4507-bde8-5277aa303a4a` | centred; the other sat where the desktop card is |
+| D    | `web-concierge`         | `60662bec-678b-4183-aadb-12f154eb48c7` | clean wireframe, clear of the card               |
+| C    | `professional-services` | `de7af12e-3695-4958-8ba3-0148eaa4cdeb` | centred, a little more violet                    |
+| B    | `t3-support`            | `831e47ab-1c71-4b64-918a-c7a810aa3bd2` | centred against the alert wall                   |
+| A    | `sysadmin`              | `8b9881c7-b881-4293-a624-634af954bbe2` | on brief (no S+ cuff piping)                     |
+| S    | `linux-engineer`        | `a8cdd5d6-f59d-4c51-9de1-a945e5a0032c` | centred, the long coat closed                    |
+| S+   | `systems-architect`     | `0fd768ff-6c8f-4582-a2b2-c7f02b3db58f` | the towering violet shadow racks                 |
 
 Every prompt is the character block, then the stage's scene, then the style suffix.
 
