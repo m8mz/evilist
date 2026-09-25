@@ -8,27 +8,33 @@ import sharp from "sharp";
 
 const require = createRequire(import.meta.url);
 
-// Point-in-polygon test using bounding box (works for convex polygons)
+// Point-in-polygon test using ray casting (even-odd rule)
 function isInsidePolygon(point, polygon) {
   const [x, y] = point;
-  const xs = polygon.map((p) => p[0]);
-  const ys = polygon.map((p) => p[1]);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  let inside = false;
 
-  // For convex polygons, bounding box is sufficient
-  // Include boundary pixels
-  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [xi, yi] = polygon[i];
+    const [xj, yj] = polygon[j];
+
+    const isYinEdgeRange = yi > y !== yj > y;
+    if (isYinEdgeRange) {
+      const xEdge = ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+      if (x < xEdge) {
+        inside = !inside;
+      }
+    }
+  }
+
+  return inside;
 }
 
 export async function previewRig(basePath, rig, outPath) {
   const { width, height } = rig.canvas;
 
-  // Create overlay buffer - start with transparent white for compositing
+  // Create overlay buffer - start with transparent
   const overlay = Buffer.alloc(width * height * 4); // RGBA
-  overlay.fill(0); // Transparent
+  overlay.fill(0);
 
   // Draw polygons with 40% opacity ember fill
   const emberR = 0xda;
@@ -44,7 +50,7 @@ export async function previewRig(basePath, rig, outPath) {
           overlay[idx + 0] = emberR;
           overlay[idx + 1] = emberG;
           overlay[idx + 2] = emberB;
-          overlay[idx + 3] = Math.round(opacity * 255); // Alpha
+          overlay[idx + 3] = Math.round(opacity * 255);
         }
       }
     }
@@ -73,7 +79,7 @@ export async function previewRig(basePath, rig, outPath) {
           overlay[idx + 0] = violetR;
           overlay[idx + 1] = violetG;
           overlay[idx + 2] = violetB;
-          overlay[idx + 3] = 255; // Fully opaque
+          overlay[idx + 3] = 255;
         }
       }
     }
@@ -88,7 +94,7 @@ export async function previewRig(basePath, rig, outPath) {
   const baseData = Buffer.from(baseImage.data);
   const baseChannels = baseImage.info.channels;
 
-  // Manually blend overlay pixels onto base
+  // Manually blend overlay pixels onto base using alpha blending
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const overlayIdx = (y * width + x) * 4;
