@@ -37,6 +37,7 @@ describe("the deck painters' palette", () => {
       "deck-params.ts",
       "deck-tier.ts",
       "deck-util.ts",
+      "deck-rail.ts",
     ]) {
       const text = readFileSync(`src/scripts/deck/${file}`, "utf8");
       for (const hex of text.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
