@@ -200,3 +200,50 @@ Rejected, then re-rolled with an extra negative:
 - S+ `f42c70ee…`: the shadow army came out as human silhouettes. Re-roll described "giant server
   racks made of translucent deep-violet shadow smoke … machines, not people: no human figures, no
   silhouettes".
+
+### Step 3 — clips (2026-09-25)
+
+`seedance_2_0`, 5 s, 1080p, 16:9, `generate_audio: false`, the picked still as both `start_image`
+and `end_image` so the loop closes. 45 credits each. Encoded with `scripts/encode-clip.mjs` to
+`public/journey/<stage-id>-{1280,640}.{webm,mp4}`.
+
+**Pilot (S+, `2c887ba7-f5d4-4a8f-8759-618bf1a7d777`):** the loop closed and the encodes fit, but
+the "very slight push in" came out as a ~1.3× zoom mid-loop, a pulse behind the card. Marcus chose
+to re-roll all seven with the camera locked (315 credits); the pilot is not used.
+
+Every prompt is the motion line, then the rank's own motion:
+
+> Subtle, seamless looping motion only; the shot starts and ends on exactly the given frame. The
+> camera stays completely locked off: no zoom, no push, no pan, no tilt, no camera movement at
+> all. He holds his pose: his hair and clothes stir slightly as if in a gentle draft, he breathes,
+> and the small burnt-orange lights blink softly. No cuts, no large movements, no new objects or
+> people, no text, no change of lighting or colour, no audio.
+
+| Rank | Stage id                | Rank's motion                                                       | Job                                    |
+| ---- | ----------------------- | ------------------------------------------------------------------- | -------------------------------------- |
+| E    | `t1-support`            | the monitors' orange glow flickers faintly across his face          | `923f9c62-f568-40eb-b097-b10f2b08adee` |
+| D    | `web-concierge`         | the wireframe panels drift a few pixels and settle back             | `5ef30c71-adb3-4291-b479-d78fc1c04bfc` |
+| C    | `professional-services` | the data cube pulses gently; the violet wisps curl from his fingers | `8f20f16d-b85b-4ff0-a4f5-2549cbc29caf` |
+| B    | `t3-support`            | the alert lights blink in slow waves; the shadows roll like smoke   | `54c88741-8d1d-4769-ac51-428d877f45b8` |
+| A    | `sysadmin`              | the violet smoke curls round his legs; the rack's LEDs blink        | `dd4d9d18-1874-44d7-b3a4-9abe78e75cb5` |
+| S    | `linux-engineer`        | the modules drift along the pipeline; the shadow hands turn them    | `1682f2df-9dd2-4c4a-a8b3-779f4e0b7077` |
+| S+   | `systems-architect`     | his coat stirs; the violet shadow racks waver like smoke            | `4d981057-ba00-43e5-a560-7a0f4ffc5524` |
+
+The first submission of B returned a Higgsfield preset recommendation ("IN THE DARK") instead of a
+job; it was resubmitted with the preset declined.
+
+All seven held the locked camera: the motion is hair, cloth, smoke, the cube, the panels and the
+lights; the first and last frames match, so each loop closes. Every encode fit at the first CRF
+(AV1 34, H.264 24). Sizes in KB (1280 WebM / 1280 MP4 / 640 WebM / 640 MP4):
+
+| Rank | Stage id                | Encodes (KB)          |
+| ---- | ----------------------- | --------------------- |
+| E    | `t1-support`            | 173 / 219 / 67 / 71   |
+| D    | `web-concierge`         | 172 / 272 / 70 / 98   |
+| C    | `professional-services` | 227 / 229 / 87 / 75   |
+| B    | `t3-support`            | 394 / 618 / 169 / 230 |
+| A    | `sysadmin`              | 324 / 398 / 105 / 122 |
+| S    | `linux-engineer`        | 314 / 385 / 119 / 141 |
+| S+   | `systems-architect`     | 397 / 601 / 174 / 254 |
+
+Spend: 360 credits (2,944 → 2,584): the pilot (45) and the seven locked-camera clips (315).
