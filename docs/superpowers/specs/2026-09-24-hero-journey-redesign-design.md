@@ -48,7 +48,7 @@ Audience and goals are unchanged: employers first, clients second.
 - **Height** 56 → 64px. A new token `--header-h: 4rem` in `tokens.css` replaces every hard-coded
   `3.5rem` header offset (the journey's `--header`, any `scroll-padding-top`).
 - **Logo.** `evil_logo.webp` (1037×252, transparent) through `astro:assets` `<Image>`, rendered
-  36px tall (≈148px wide) from 45rem and 28px tall (≈115px) below, with 1× and 2× widths. It is
+  52px tall (≈214px wide) from 45rem and 48px tall (≈198px) below, so its lettering reads at ~15px (Marcus, 2026-09-24), with 1× and 2× widths. It is
   decorative inside the link (`alt=""`); the link keeps `aria-label="evilist, Marcus
 Hancock-Gaillard, home"`. No filter, no recolour.
 - **Links** 15 → 18px (`--text-heading-sm`), gap `clamp(1.5rem, 1rem + 2vw, 2.5rem)`. Colours,

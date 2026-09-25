@@ -13,7 +13,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
 <header class="site-header">
   <div class="site-header__inner">
     <a href="/" class="brand" aria-label={`evilist, ${site.name}, home`}>
-      <Image src={logo} alt="" height={36} densities={[1, 2]} loading="eager" class="brand__logo" />
+      <Image src={logo} alt="" height={52} densities={[1, 2]} loading="eager" class="brand__logo" />
     </a>
 
     <button
@@ -69,10 +69,11 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     align-items: center;
   }
 
+  /* The lettering fills 29% of the image's height: 52px (48px on phones) keeps it ~15px tall. */
   .brand :global(.brand__logo) {
     display: block;
     width: auto;
-    height: 36px;
+    height: 52px;
   }
 
   .site-nav ul {
@@ -107,7 +108,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   /* Mobile: nav collapses behind a toggle. Without scripting, the nav stays visible instead. */
   @media (max-width: 44.99rem) {
     .brand :global(.brand__logo) {
-      height: 28px;
+      height: 48px;
     }
 
     .site-header__inner {

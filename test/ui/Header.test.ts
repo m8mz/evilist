@@ -14,7 +14,7 @@ describe("Header", () => {
     // Astro serializes an empty-string attribute as bare `alt` (runtime/server/render/util.js),
     // the HTML equivalent of alt="": no alt text, decorative image.
     expect(img).toMatch(/\salt(?:=""|[\s>])/);
-    expect(img).toContain('height="36"');
+    expect(img).toContain('height="52"');
     expect(html).not.toContain("brand__tilde");
   });
 

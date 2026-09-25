@@ -176,7 +176,7 @@ test("the header spans the full width, with the logo left and 18px links", async
   const header = (await page.locator(".site-header").boundingBox())!;
   expect(Math.round(header.height)).toBe(HEADER_PX + 1); // + the 1px bottom rule
   const logo = (await page.locator(".brand__logo").boundingBox())!;
-  expect(Math.round(logo.height)).toBe(width >= 720 ? 36 : 28);
+  expect(Math.round(logo.height)).toBe(width >= 720 ? 52 : 48);
   expect(logo.x).toBeLessThanOrEqual(41); // the gutter is at most 2.5rem
   await expect(page.locator(".site-nav a").first()).toHaveCSS("font-size", "18px");
 });
