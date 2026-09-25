@@ -26,7 +26,9 @@ describe("traceMark", () => {
     const result = await traceMark(join(d, "disc.png"), join(d, "mark.svg"));
     expect(result).toMatchObject({ width: 120, height: 120 });
     const svg = readFileSync(join(d, "mark.svg"), "utf8");
-    expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 120 120">/);
+    expect(svg).toMatch(
+      /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="120" height="120" viewBox="0 0 120 120">/,
+    );
     expect(svg.match(/<path /g)).toHaveLength(1);
     expect(svg).toContain('fill="#3a3a3a"');
     expect(svg).not.toContain("style=");
@@ -51,7 +53,7 @@ describe("traceMark", () => {
 describe("the committed devil mark", () => {
   it("is one slate path traced from logo-devil.webp", () => {
     const svg = readFileSync("src/images/devil-mark.svg", "utf8");
-    expect(svg).toContain('viewBox="0 0 226 242"');
+    expect(svg).toContain('width="226" height="242" viewBox="0 0 226 242"');
     expect(svg.match(/<path /g)).toHaveLength(1);
     expect(svg).toContain('fill="#3a3a3a"');
     expect(svg.length).toBeLessThan(20_000);

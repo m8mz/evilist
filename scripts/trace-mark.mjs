@@ -24,7 +24,7 @@ export async function traceMark(input, output) {
     .png()
     .toBuffer();
   const d = await tracePath(png, { turdSize: 4, decimals: 1 });
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><path fill="${MARK_FILL}" d="${d}"/></svg>\n`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><path fill="${MARK_FILL}" d="${d}"/></svg>\n`;
   writeFileSync(output, svg);
   return { width, height, d };
 }
