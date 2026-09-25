@@ -25,7 +25,8 @@ export interface CareerStage {
   skills: string[];
   /** What the avatar is doing in the journey scene for this stage. */
   activity: Activity;
-  /** One line the journey card prints under `$ log`. Drawn from the highlights; under 80 chars. */
+  /** One line the journey card prints as the quote in the portrait window. Drawn from the
+   * highlights; under 80 chars. */
   log: string;
 }
 
