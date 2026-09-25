@@ -24,6 +24,36 @@ async function scrollToStage(page: Page, i: number) {
   );
 }
 
+const STAGE_IDS = [
+  "t1-support",
+  "web-concierge",
+  "professional-services",
+  "t3-support",
+  "sysadmin",
+  "linux-engineer",
+  "systems-architect",
+];
+
+/** Records which ranks' clips (/journey/<id>-…) and stills (/_astro/<id>.…) the page requests. */
+function trackArt(page: Page) {
+  const clips = new Set<string>();
+  const stills = new Set<string>();
+  page.on("request", (request) => {
+    const url = request.url();
+    for (const id of STAGE_IDS) {
+      if (url.includes(`/journey/${id}-`)) clips.add(id);
+      if (url.includes(`/_astro/${id}.`)) stills.add(id);
+    }
+  });
+  return { clips, stills };
+}
+
+/** Which clips are playing, in rank order. */
+const playing = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<HTMLVideoElement>("[data-clip] video")].map((v) => !v.paused),
+  );
+
 test.describe("animated journey", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name === "reduced-motion", "covered below");
@@ -182,6 +212,87 @@ test.describe("animated journey", () => {
   });
 });
 
+test.describe("journey clips", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(info.project.name === "reduced-motion", "covered below");
+  });
+
+  test("fetches no clip or still before the journey reaches the screen", async ({ page }) => {
+    const art = trackArt(page);
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    expect([...art.clips, ...art.stills]).toEqual([]);
+    await scrollToStage(page, 0);
+    await expect.poll(() => art.stills.has("t1-support")).toBe(true);
+  });
+
+  test("plays the active clip, fades it in, and pauses the rest", async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "Playwright's WebKit has no AV1 or H.264 to play");
+    await page.goto("/");
+    await scrollToStage(page, 2);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "migration");
+    await expect
+      .poll(() => playing(page))
+      .toEqual([false, false, true, false, false, false, false]);
+    const active = page.locator("[data-clip].is-active");
+    await expect(active).toHaveClass(/is-playing/);
+    await expect(active.locator("video")).toHaveCSS("opacity", "1");
+  });
+
+  test("pauses every clip once the journey leaves the screen", async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "Playwright's WebKit has no AV1 or H.264 to play");
+    await page.goto("/");
+    await scrollToStage(page, 3);
+    await expect.poll(async () => (await playing(page)).some(Boolean)).toBe(true);
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+    await expect.poll(async () => (await playing(page)).some(Boolean)).toBe(false);
+  });
+
+  test("a refused play leaves the rank's still showing, with no errors", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.addInitScript(() => {
+      HTMLMediaElement.prototype.play = () =>
+        Promise.reject(new DOMException("autoplay refused", "NotAllowedError"));
+    });
+    await page.goto("/");
+    await scrollToStage(page, 1);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "wordpress");
+    const active = page.locator("[data-clip].is-active");
+    await expect
+      .poll(() =>
+        active
+          .locator("img")
+          .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true);
+    await expect(active).not.toHaveClass(/is-playing/);
+    await expect(active.locator("video")).toHaveCSS("opacity", "0");
+    expect(errors).toEqual([]);
+  });
+
+  test("a jump straight to the last rank loads only it and its neighbours", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "one project is enough");
+    const art = trackArt(page);
+    await page.goto("/");
+    await page.evaluate((header) => {
+      const el = document.querySelector<HTMLElement>("[data-journey]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      const span = el.offsetHeight - (innerHeight - header);
+      scrollTo({ top: top + span * (6.5 / 7), behavior: "instant" });
+    }, HEADER_PX);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
+    await page.waitForLoadState("networkidle");
+    for (const id of ["professional-services", "t3-support", "sysadmin"]) {
+      expect(art.stills.has(id), id).toBe(false);
+      expect(art.clips.has(id), id).toBe(false);
+    }
+    expect(art.stills.has("systems-architect")).toBe(true);
+  });
+});
+
 test.describe("reduced motion", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name !== "reduced-motion", "reduced-motion project only");
@@ -192,6 +303,14 @@ test.describe("reduced motion", () => {
     await expect(page.locator("[data-journey]")).toBeHidden();
     await expect(page.locator(".journey-fallback .timeline")).toBeVisible();
     await expect(page.locator(".journey-fallback .timeline__title")).toHaveCount(7);
+  });
+
+  test("never requests a clip, even scrolled to the end", async ({ page }) => {
+    const art = trackArt(page);
+    await page.goto("/");
+    await page.evaluate(() => scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+    await page.waitForLoadState("networkidle");
+    expect([...art.clips]).toEqual([]);
   });
 
   test("shows each rank's still beside its timeline entry", async ({ page }) => {

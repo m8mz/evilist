@@ -95,6 +95,7 @@ Marcus prefers step-by-step delivery:
   - fonts: ≤ 120 KB
   - no Three.js (removed in the Axiom redesign)
   - zero third-party requests
+  - the journey's clips and stills load only once the journey is on screen (none at page load)
 
 ## Security checklist (before merge)
 
