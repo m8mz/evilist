@@ -8,6 +8,8 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 > **Axiom redesign done** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. All four phases are done (tokens and shell; home, journey avatar and topology; `/now`, stills, htop band and social card; resume, notes, contact, PDF and ADR 0002). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 >
 > **Hero and journey redesign done.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-2{4,5}-hero-v2-*.md; ADR 0003. All three phases are implemented (header and hero; the E → S+ ladder, LinkedIn content and rack parallax; the anime journey). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline), on hold until Marcus says development is done.
+>
+> **Vector journey done.** Spec: docs/superpowers/specs/2026-09-25-vector-journey-design.md; plan: docs/superpowers/plans/2026-09-25-vector-journey.md. The journey's clips are replaced by one traced-and-rigged SVG scene that ranks the character up with the scroll.
 
 ## Commands
 
@@ -54,6 +56,7 @@ Marcus prefers step-by-step delivery:
 - `src/data/now.ts` is the single source for the off-the-clock block and `/now` (rig, games, anime, learning, building, training). No lift numbers or bodyweight, ever. `src/data/htop.ts` is the simulated snapshot behind the hero's terminal pane (and the social card). `src/data/network.ts` + `src/scripts/network.ts` are the hero's seeded stack network (`StackNetwork.astro`) and `src/scripts/stack-network.ts` lights it (hover and idle pulses); `src/scripts/hero.ts` wires the hero's live parts (htop drift, title rotation, portrait tilt, network). `ParallaxBand.astro` + `src/scripts/parallax.ts` are the full-bleed rack band between Work and About (Motion `scroll()` sets `--parallax`; reduced motion leaves it centred).
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
+- `art/journey/` holds the registered flat-vector sources (lossless WebP) the scene is built from; `scripts/build-scene.mjs` traces them into `public/journey/scene.svg` and the inline silhouette.
 - `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
@@ -71,7 +74,7 @@ Marcus prefers step-by-step delivery:
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
 - Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
 - Sections open with a `~/path` `Prompt` eyebrow and are separated by 1px iron rules.
-- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them, and the journey's clips (`seedance_2_0`); prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim), and the journey's posters, which are raw `<Picture>` layers in `Journey.astro` under the clips (same alt rule, no scrim); import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
+- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them, and, for the journey, flat-vector renders traced into `public/journey/scene.svg`; prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim), and the journey's timeline pictures, composites rendered from the scene by `scripts/render-rank-stills.mjs`; import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
 - CSP gotchas:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
@@ -80,22 +83,22 @@ Marcus prefers step-by-step delivery:
   - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
 - Journey (`src/components/journey/`):
-  - `Journey.astro` holds the pinned, full-width stage (in `Section`'s `bleed` slot): one layer per rank with its still as a lazy poster and its clip as a `<video>` whose sources wait in `data-src`. `src/data/journeyArt.ts` maps each stage to its still, alt subject and `clipSources`; `scripts/journey.ts` maps scroll to the rank and runs the clips (primes the active rank and its neighbours once the journey is on screen, plays the active clip, pauses off screen).
-  - Clips: `node scripts/encode-clip.mjs <source.mp4> <stage-id>` writes `public/journey/<id>-{1280,640}.{webm,mp4}` within the limits in `scripts/clip-variants.mjs`; `pnpm size` checks them.
+  - `Journey.astro` holds the pinned, full-width stage (in `Section`'s `bleed` slot): one `[data-scene]` box carrying the inline silhouette until `scripts/journey.ts` fetches `public/journey/scene.svg` (only once the journey is on screen and the page has scrolled). `src/scripts/avatar.ts` maps scroll progress to the scene state (rank, blend, props sequence, pose, energy; pure, unit-tested); `src/scripts/scene.ts` writes it as SVG attributes by id. Idle life is CSS on the scene's `#part-*-idle` groups.
+  - The art pipeline is pnpm only: `scripts/import-art.mjs` → `scripts/register-outfit.mjs` (2% residual gate) → `scripts/build-scene.mjs` (`sharp` + `potrace`, palette in `scripts/trace-vector.mjs`, rig in `src/data/avatar-rig.json`) → `scripts/render-rank-stills.mjs` for the timeline's pictures. `pnpm size` checks the scene (≤ 300 KB gz) and rejects any other file in `dist/client/journey`.
   - Switch stages with visibility/opacity, never `display`, or the layout shifts.
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
 - Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield stills animated into loops). No aura, no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
-- Animate only `transform` and `opacity`.
+- Animate only `transform` and `opacity`, plus `stroke-dashoffset` for vector outline draw-ins (the journey's props).
 - Budgets:
   - initial JS on `/`: ≤ 100 KB gz
   - Motion: ≤ 30 KB gz
   - fonts: ≤ 120 KB
   - no Three.js (removed in the Axiom redesign)
   - zero third-party requests
-  - the journey's clips and stills load only once the journey is on screen (none at page load)
+  - the journey's scene and stills load only once the journey is on screen and the page has scrolled (none at page load, on any window size); `scene.svg` ≤ 300 KB gz
 
 ## Security checklist (before merge)
 

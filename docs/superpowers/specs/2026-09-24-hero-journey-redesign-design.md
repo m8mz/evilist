@@ -315,6 +315,10 @@ Original, never a likeness of Marcus or of any existing character.
 
 ### 7.3 Shots (16:9, character centred so a portrait crop keeps him)
 
+> **Superseded 2026-09-25:** §7.3–§7.5 (the clips and their delivery) are replaced by
+> `2026-09-25-vector-journey-design.md`: one traced-and-rigged SVG scene instead of seven clips.
+> §7.1, §7.2 and §6.3 stand.
+
 | Rank | Activity     | Scene                                                                                   |
 | ---- | ------------ | --------------------------------------------------------------------------------------- |
 | E    | `headset`    | Night support desk, headset on, monitors glowing ember with no readable content.        |

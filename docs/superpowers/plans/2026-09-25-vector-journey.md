@@ -437,6 +437,11 @@ git commit -m "journey: the avatar rig config (parts, pivots, poses) and its pre
 - Consumes: nothing from earlier tasks.
 - Produces (all exported from `scripts/trace-vector.mjs`): `PALETTE` (name → hex), `BACKGROUND = 255`, `TRACE` (defaults), `hexToRgb(hex): [r,g,b]`, `isBackground(r,g,b): boolean`, `quantise(rgb: Buffer, count: number, palette?): Uint8Array`, `loadIndices(input, { width?, height?, palette?, blur? }): Promise<{ indices, width, height }>`, `polygonMask(polygon, width, height): Promise<Uint8Array>`, `maskPng(indices, width, height, test): Promise<Buffer | null>`, `roundPath(d, decimals?): string`, `tracePath(png, opts?): Promise<string>`, `traceLayers(input, { width?, height?, palette?, parts?, base?, trace? }): Promise<Layer[]>` where `Layer = { part?: string; name: string; fill: string; d: string }`, `layerGroup(layer, extraAttributes?): string`, `svgFromLayers(layers, width, height): string`.
 
+> **Amended in execution (2026-09-25):** `TRACE.blur` is 0 (the blur only manufactured edge bands
+> on flat art) and `loadIndices` runs a 3×3 majority `denoise` pass by default; the options objects
+> carry JSDoc types for `pnpm check`; the base layer's fill reads `palette[base]`, not
+> `palette["base"]`.
+
 - [ ] **Step 1: Add the dependency**
 
 Run: `pnpm add -D potrace@2.1.8`
@@ -822,6 +827,9 @@ git commit -m "journey: the vector tracer (palette-mapped layers, part cutting, 
 - Consumes: `loadIndices`, `BACKGROUND` from `scripts/trace-vector.mjs` (Task 2).
 - Produces: `importArt(input, output, width, height): Promise<sharp.Metadata>`; `measure(input, width, height): Promise<{ rows: ([l, r] | null)[], crown, feet, centre, span }>`; `registerOutfit(basePath, outfitPath, outPath, { threshold = 0.02 }): Promise<{ scale, left, top, residual, accepted }>`; `RESIDUAL_MAX = 0.02`.
 
+> **Amended in execution (2026-09-25):** `registerOutfit` returns `accepted: false` with
+> `residual: Infinity` for a render with no figure instead of crashing in sharp.
+
 - [ ] **Step 1: Write the failing tests**
 
 `test/importArt.test.ts`:
@@ -1120,6 +1128,12 @@ git commit -m "journey: art import and outfit registration (2% residual gate)"
 
 - Consumes: `traceLayers`, `tracePath`, `maskPng`, `loadIndices`, `layerGroup`, `BACKGROUND` (Task 2); the rig shape from Task 1 (passed in as a plain object; the CLI reads `src/data/avatar-rig.json`).
 - Produces (exports): `PART_ORDER` (same list as Task 1), `PIVOT_OF_PART` (same map), `sceneBox(rig): { width, height, figureX, propsX, propsSize }`, `partTransform(rig, part, pose): string` (`rotate(deg x y)` or `""`), `energyTransform(rig, scale): string`, `sceneMarkup(art, rig, { visibleRank }): string`, `silhouetteMarkup(d, rig): string`, `stillMarkup(sceneSvg, rig, rankIndex): string`, `buildScene({ artDir, outDir, silhouettePath, rig, trace? }): Promise<{ scene: string; silhouette: string }>`. `art` is `{ outfits: Record<rankId, Layer[]>, props: Record<rankId, Layer[]>, energy: Layer[] }`.
+
+> **Amended in execution (2026-09-25):** the test's cleanup hook is guarded (`dir` may be
+> undefined) and its fixture part is `torso`, not `body` (`partsOf` keeps only `PART_ORDER` parts);
+> the builder traces props and the energy at half resolution with `scale(2)` on their groups
+> (`PROPS_SCALE`) and the silhouette at a quarter with `scale(4)` (`SILHOUETTE_SCALE`), to fit the
+> 300 KB budget.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1610,6 +1624,9 @@ git commit -m "journey: the scene builder (rig parts, props, energy, silhouette)
 - Consumes: `stillMarkup`, `sceneBox` (Task 4).
 - Produces: `STILL = { width: 1920, height: 1080, quality: 82 }`, `wrap16x9(sceneSvg, rig): string` (the scene centred on a carbon 16:9 canvas), `renderRankStills({ scenePath, outDir, rig }): Promise<string[]>` (the written paths, in rank order).
 
+> **Amended in execution (2026-09-25):** `wrap16x9` trims its input first, so a scene file ending
+> in a newline still wraps.
+
 - [ ] **Step 1: Write the failing test**
 
 `test/renderRankStills.test.ts`:
@@ -2001,6 +2018,10 @@ git commit -m "journey art: seven prop sets and the energy"
 - Consumes: `buildScene` (Task 4) through its CLI; `RIG`, `PART_ORDER` (Task 1).
 - Produces: the two built files, committed, and a test that pins the contract on the real scene.
 
+> **Amended in execution (2026-09-25):** the first build came to 824 KB gzipped; the B and S+ prop
+> sets were re-rolled simpler and, with the Task 4 scaling and the brief's own fallback
+> (`optTolerance` 1.0, integer coordinates), the scene is 234 KB gzipped and the silhouette 2.8 KB.
+
 - [ ] **Step 1: Write the failing test**
 
 `test/sceneSvg.test.ts`:
@@ -2343,6 +2364,9 @@ git commit -m "journey: the scene state (rank, blend, props sequence, pose, ener
 - Consumes: `SceneState` (Task 11); `RIG`, `PART_ORDER`, `PIVOT_OF_PART`, `Rig`, `PartId` (Task 1).
 - Produces: `Attr { setAttribute(name: string, value: string): void }`, `SceneRefs { parts; outfits; props; energy }`, `bindScene(byId: (id: string) => Attr | null, rig?: Rig): SceneRefs | null`, `applyState(refs: SceneRefs, state: SceneState, rig?: Rig): void`, `FIGURE_X = 0.3` (the figure's x in the scene as a fraction of the canvas width; mirrors `sceneBox` in `scripts/build-scene.mjs`).
 
+> **Amended in execution (2026-09-25):** `applyState` remembers what it last wrote to each element
+> and skips unchanged attributes, so a frame writes only what changed.
+
 - [ ] **Step 1: Write the failing test**
 
 `test/scene.test.ts`:
@@ -2581,6 +2605,9 @@ git commit -m "journey: binding the scene and writing its state as attributes"
 
 - Consumes: `sceneState`, `stageForProgress`, `SceneState` (Task 11); `bindScene`, `applyState`, `SceneRefs` (Task 12); `RIG` (Task 1); `src/components/journey/silhouette.svg` (Task 10).
 - Produces: `SCENE_URL = "/journey/scene.svg"`, `isSceneDocument(doc): boolean` (exported from `journey.ts`), the stage markup `<div class="journey__scene" data-scene>` holding the inline silhouette, and the CSS idle animations. The clip markup, `clipSources` and the priming runtime go in Task 14; this task removes only what the new stage replaces in `Journey.astro` and `journey.ts`.
+
+> **Amended in execution (2026-09-25):** the component test's silhouette regex reads
+> `translate(300 0) scale(4)`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -2843,6 +2870,9 @@ git commit -m "journey: the vector stage, its loader and the idle life"
 
 - Consumes: `SCENE_URL` behaviour from Task 13 (the scene is requested only once the journey is on screen and the page has scrolled), the scene ids (Task 4), `stageArt` (unchanged).
 - Produces: `journeyArt.ts` exports only `StageArt` and `stageArt`; `pnpm size` fails on any file in `dist/client/journey` other than `scene.svg`; the e2e suite describes the scene.
+
+> **Amended in execution (2026-09-25):** the failed-fetch e2e ignores console errors starting with
+> "Failed to load resource" (the browser reporting the 404 the test serves).
 
 - [ ] **Step 1: Write the failing tests**
 

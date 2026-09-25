@@ -1,6 +1,6 @@
 # The vector journey
 
-- **Status:** Draft for review
+- **Status:** Implemented (2026-09-25)
 - **Date:** 2026-09-25
 - **Decider:** Marcus Hancock-Gaillard
 - **Replaces:** `2026-09-24-hero-journey-redesign-design.md` §7.3–§7.5 (the Higgsfield clips and their

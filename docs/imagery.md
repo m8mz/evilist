@@ -353,3 +353,7 @@ the builder now traces props at half resolution:
 | ---- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------- |
 | B    | two panels of large orange lights, five rows by four, upper left and upper right; broad shadows | `0a9c487b-a10f-462e-9d2a-78e125cb2466`, `f70e1639-4e56-4bcd-a982-f5fbff0a50f8` | first (broader floor shapes) |
 | S+   | three simple rack blocks a side with a few lights, tops dissolving into two or three wisps      | `cfbf690a-37f4-41fb-b167-456a602c188a`, `c247b352-8be9-4232-85a3-2b34850b8596` | first (cleaner)              |
+
+**Retired.** The seven `seedance_2_0` clips (Step 3 above) and the seven `nano_banana_pro` stage
+stills (Step 2 above) are no longer served; their prompts and job ids stay here as history. The
+timeline's pictures are now rendered from `public/journey/scene.svg`.
