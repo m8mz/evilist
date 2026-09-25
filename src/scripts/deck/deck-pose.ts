@@ -277,17 +277,61 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
   };
 }
 
-// Part 3, the intro, follows in the next task.
+/** The intro's total length at speed 1: the deal-in, the hold, then E's pull. */
+export function introDurationMs(count: number, params: DeckParams = DECK_PARAMS): number {
+  const I = params.intro;
+  return I.dealMs + (count - 1) * I.staggerMs + I.holdMs + I.pullMs;
+}
+
+/**
+ * The entrance (spec §7): the rack deals in, holds, then E pulls itself out. On phones only E and
+ * the waiting card take part. Returns `intro.done` once the scroll model should take over; the
+ * end state equals `deckPose` at p = 0, so the handover has no jump.
+ */
 function introPose(input: PoseInput, params: DeckParams): StagePose {
-  void params;
+  const I = params.intro;
+  const count = input.labels.length;
+  const t = (input.time - input.intro!.startedAt) * input.intro!.speed;
+  const dealEnd = I.dealMs + (count - 1) * I.staggerMs;
+  const pullStart = dealEnd + I.holdMs;
+  const end = pullStart + I.pullMs;
+  const phone = input.layout.mode === "phone";
+  const direction = phone ? 1 : -1;
+  const offset = direction * I.entryOffset * input.layout.cardW;
+
+  const cards = input.labels.map((_, i) => {
+    // Before the pull, E rests in its slot; on a phone it arrives at `next` like every other
+    // card (never at the exit), and card 1 waits behind it as the visible next.
+    const rest =
+      phone && i === 0
+        ? { ...input.layout.next!, rotY: params.layout.phoneNextRotY, opacity: 1 }
+        : restPose(i, 0, 0, input.layout, params);
+    if (phone && i > 1) return interpolate({ ...rest, opacity: 0 }, 0, input.layout, params);
+    if (i === 0 && t >= pullStart) {
+      const pull = easeInOutCubic(clamp01((t - pullStart) / I.pullMs));
+      const pose = interpolate(rest, pull, input.layout, params);
+      if (pull > 0 && !pose.landed) pose.phase = "pulling";
+      return pose;
+    }
+    const local = clamp01((t - i * I.staggerMs) / I.dealMs);
+    const e = easeOutCubic(local);
+    const pose = interpolate(rest, 0, input.layout, params);
+    pose.x = rest.x + offset * (1 - e);
+    return pose;
+  });
+
   return {
-    cards: [],
+    cards,
     active: 0,
     within: 0,
     energy: 0,
     kind: null,
     energyIndex: null,
-    intro: { done: true, floor: 1, rail: 1 },
+    intro: {
+      done: t >= end,
+      floor: clamp01(t / I.floorMs),
+      rail: clamp01(t / dealEnd),
+    },
   };
 }
 

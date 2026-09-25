@@ -7,6 +7,7 @@ import {
   deckPose,
   easeInOutCubic,
   energyFor,
+  introDurationMs,
   pullsFor,
   type PoseInput,
 } from "../src/scripts/deck/deck-pose";
@@ -299,5 +300,89 @@ describe("deckPose on phones", () => {
   it("ignores hover on phones", () => {
     const s = deckPose(input({ p: at(2, 0.5), layout: phoneLayout, hover: [0, 0, 0, 1, 0, 0, 0] }));
     expect(s.cards[3]!.z).toBe(0);
+  });
+});
+
+describe("the intro", () => {
+  const intro = { startedAt: 1000, speed: 1 };
+  const dealEnd = 420 + 6 * 55; // 750
+  const pullStart = dealEnd + 200; // 950
+  const end = pullStart + 700; // 1650
+
+  it("lasts 1650 ms for seven cards at speed 1", () => {
+    expect(introDurationMs(7)).toBe(end);
+  });
+
+  it("starts with every card 2.2 widths off to the left, nothing drawn", () => {
+    const s = deckPose(input({ intro, time: 1000 }));
+    expect(s.intro).toEqual({ done: false, floor: 0, rail: 0 });
+    for (const [i, c] of s.cards.entries()) {
+      expect(c.x).toBeCloseTo(desktopLayout.slots[i]!.x - 2.2 * desktopLayout.cardW, 6);
+      expect(c.rotY).toBe(103);
+      expect(c.phase).toBe("racked");
+      expect(c.opacity).toBe(1);
+    }
+  });
+
+  it("deals the cards in one by one, 55 ms apart, cubic out over 420 ms", () => {
+    const s = deckPose(input({ intro, time: 1000 + 210 }));
+    const e0 = 1 - (1 - 210 / 420) ** 3;
+    expect(s.cards[0]!.x).toBeCloseTo(
+      desktopLayout.slots[0]!.x - 2.2 * desktopLayout.cardW * (1 - e0),
+      6,
+    );
+    const e1 = 1 - (1 - (210 - 55) / 420) ** 3;
+    expect(s.cards[1]!.x).toBeCloseTo(
+      desktopLayout.slots[1]!.x - 2.2 * desktopLayout.cardW * (1 - e1),
+      6,
+    );
+    expect(s.cards[6]!.x).toBeCloseTo(desktopLayout.slots[6]!.x - 2.2 * desktopLayout.cardW, 6);
+    expect(s.intro!.floor).toBeCloseTo(210 / 500, 6);
+    expect(s.intro!.rail).toBeCloseTo(210 / dealEnd, 6);
+  });
+
+  it("holds the full rack, then pulls E out along the normal curve", () => {
+    const held = deckPose(input({ intro, time: 1000 + dealEnd + 100 }));
+    for (const [i, c] of held.cards.entries())
+      expect(c.x).toBeCloseTo(desktopLayout.slots[i]!.x, 6);
+    expect(held.intro!.floor).toBe(1);
+    const half = deckPose(input({ intro, time: 1000 + pullStart + 350 }));
+    const pull = easeInOutCubic(0.5);
+    expect(half.cards[0]!.pull).toBeCloseTo(pull, 6);
+    expect(half.cards[0]!.phase).toBe("pulling");
+    expect(half.cards[0]!.x).toBeCloseTo(
+      desktopLayout.slots[0]!.x +
+        (desktopLayout.presented.x - desktopLayout.slots[0]!.x) * easeInOutCubic(pull),
+      6,
+    );
+    expect(half.cards[1]!.x).toBeCloseTo(desktopLayout.slots[1]!.x, 6);
+  });
+
+  it("ends landed on E, at the pose the scroll model gives at p = 0, and reports done", () => {
+    const last = deckPose(input({ intro, time: 1000 + end - 1 }));
+    expect(last.intro!.done).toBe(false);
+    expect(last.cards[0]!.landed).toBe(true);
+    const done = deckPose(input({ intro, time: 1000 + end }));
+    expect(done.intro).toBeNull(); // handed over to the scroll model
+    const scroll = deckPose(input({ p: 0 }));
+    expect(done.cards[0]!.x).toBeCloseTo(scroll.cards[0]!.x, 6);
+    expect(done.cards[0]!.z).toBeCloseTo(scroll.cards[0]!.z, 6);
+  });
+
+  it("runs faster when the caller raises the speed", () => {
+    const fast = deckPose(input({ intro: { startedAt: 1000, speed: 4 }, time: 1000 + end / 4 }));
+    expect(fast.intro).toBeNull();
+  });
+
+  it("on phones, deals E and the waiting card in from the right and hides the rest", () => {
+    const s = deckPose(input({ intro, time: 1000, layout: phoneLayout }));
+    expect(s.cards[0]!.x).toBeCloseTo(phoneLayout.next!.x + 2.2 * phoneLayout.cardW, 6);
+    expect(s.cards[0]!.opacity).toBe(1);
+    expect(s.cards[1]!.opacity).toBe(1);
+    expect(s.cards[2]!.opacity).toBe(0);
+    const done = deckPose(input({ intro, time: 1000 + end, layout: phoneLayout }));
+    const scroll = deckPose(input({ p: 0, layout: phoneLayout }));
+    expect(done.cards[0]!.x).toBeCloseTo(scroll.cards[0]!.x, 6);
+    expect(done.cards[1]!.x).toBeCloseTo(scroll.cards[1]!.x, 6);
   });
 });
