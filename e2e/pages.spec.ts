@@ -143,7 +143,11 @@ test("404 shows a terminal session and a way home", async ({ page }) => {
   // The session wraps instead of hiding the error behind a sideways scroll on phones.
   const log = page.locator(".nf__log");
   expect(await log.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
-  await expect(page.getByRole("link", { name: "home", exact: true })).toHaveAttribute("href", "/");
+  // Scoped to the page's own CTA: the header nav now has its own "/home" link with the same
+  // accessible name ("home"), so an unscoped getByRole would be ambiguous.
+  await expect(
+    page.locator(".actions").getByRole("link", { name: "home", exact: true }),
+  ).toHaveAttribute("href", "/");
 });
 
 test("/now lists the rig, the games, the anime and what Marcus is building", async ({ page }) => {

@@ -2,8 +2,10 @@ import { test, expect } from "@playwright/test";
 import { HEADER_PX } from "./constants";
 
 const routes = ["/", "/now", "/resume", "/notes", "/notes/ten-years-t1-to-architect", "/contact"];
-// Matches the 45rem breakpoint in Header.astro (below it, the nav collapses behind a toggle).
-const COLLAPSED_NAV_MAX = 720;
+// Matches the 56rem breakpoint in Header.astro (below it, the nav collapses behind a toggle).
+// Moved up from 45rem 2026-09-25: the wider brand mark and the fifth nav item no longer fit one
+// row with any margin below it.
+const COLLAPSED_NAV_MAX = 896;
 
 for (const route of routes) {
   test(`${route} has header, footer and no horizontal overflow`, async ({ page }) => {
@@ -32,7 +34,7 @@ test("current page is marked in the nav", async ({ page }) => {
   await expect(page.locator('#site-nav a[href="/notes"]')).toHaveAttribute("aria-current", "page");
 });
 
-test("the nav shows Now and keeps one row from tablet up", async ({ page }) => {
+test("the nav shows now and keeps one row above the collapse breakpoint", async ({ page }) => {
   await page.goto("/now");
   if (page.viewportSize()!.width < COLLAPSED_NAV_MAX) await page.click("[data-menu-toggle]");
   const link = page.locator('#site-nav a[href="/now"]');
@@ -175,8 +177,10 @@ test("the header spans the full width, with the logo left and 18px links", async
   expect(inner.width).toBeGreaterThanOrEqual(width - 1);
   const header = (await page.locator(".site-header").boundingBox())!;
   expect(Math.round(header.height)).toBe(HEADER_PX + 1); // + the 1px bottom rule
-  const logo = (await page.locator(".brand__logo").boundingBox())!;
-  expect(Math.round(logo.height)).toBe(width >= 720 ? 52 : 48);
-  expect(logo.x).toBeLessThanOrEqual(41); // the gutter is at most 2.5rem
+  const lettering = (await page.locator(".brand__lettering").boundingBox())!;
+  const devil = (await page.locator(".brand__devil").boundingBox())!;
+  expect(Math.round(lettering.height)).toBe(width >= COLLAPSED_NAV_MAX ? 27 : 25);
+  expect(Math.round(devil.height)).toBe(width >= COLLAPSED_NAV_MAX ? 50 : 46);
+  expect(lettering.x).toBeLessThanOrEqual(41); // the gutter is at most 2.5rem
   await expect(page.locator(".site-nav a").first()).toHaveCSS("font-size", "18px");
 });

@@ -55,6 +55,15 @@ Hancock-Gaillard, home"`. No filter, no recolour.
 - **Links** 15 → 18px (`--text-heading-sm`), gap `clamp(1.5rem, 1rem + 2vw, 2.5rem)`. Colours,
   hover and `aria-current` underline unchanged. The mobile menu (< 45rem) is unchanged.
 
+> **Amended 2026-09-25** (Marcus, in chat): the logo splits into two lossless crops of
+> `evil_logo.webp` — `logo-lettering.webp` at 1.5× (27px tall from the breakpoint, 25px below) and
+> `logo-devil.webp` at the old size (50px tall from the breakpoint, 46px below), side by side with
+> a 0.25rem gap, lettering first. The nav gains a fifth item (`/home`, linking `/`) and reads as
+> root paths, each label prefixed with an `aria-hidden` `/`. The wider brand mark plus the fifth
+> item no longer fit one row with any margin at 45rem, so the mobile-menu breakpoint moves to
+> 56rem (measured: at 50rem the row is squeezed to its CSS-enforced minimum gap with nothing to
+> spare; at 56rem it clears that minimum by ~75px).
+
 ## 4. Hero (replaces Axiom §6.1 and §6.1a)
 
 ### 4.1 Layout

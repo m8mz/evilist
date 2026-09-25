@@ -37,9 +37,11 @@ export function heroPitch(phrase: string): string {
   return `${capitalise(phrase)} in Linux infrastructure. Today I run the platform behind hundreds of banking websites at 99.99%: security, compliance, failover and the automation, end to end. And I build the tooling in Go and Python.`;
 }
 
+/** The header nav, styled to read as root directories (Header.astro prefixes each with "/"). */
 export const nav = [
-  { href: "/resume", label: "Resume" },
-  { href: "/now", label: "Now" },
-  { href: "/notes", label: "Notes" },
-  { href: "/contact", label: "Contact" },
+  { href: "/", label: "home" },
+  { href: "/resume", label: "resume" },
+  { href: "/now", label: "now" },
+  { href: "/notes", label: "notes" },
+  { href: "/contact", label: "contact" },
 ] as const;
