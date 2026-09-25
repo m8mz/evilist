@@ -17,7 +17,10 @@ export const STILL = { width: 1920, height: 1080, quality: 82 };
 /** The scene, kept whole (meet by height), on the carbon canvas. */
 export function wrap16x9(sceneSvg, rig) {
   const box = sceneBox(rig);
-  const inner = sceneSvg.replace(/^<svg [^>]*>/, "").replace(/<\/svg>$/, "");
+  const inner = sceneSvg
+    .trim()
+    .replace(/^<svg [^>]*>/, "")
+    .replace(/<\/svg>$/, "");
   const height = STILL.height;
   const width = Math.round((box.width / box.height) * height);
   const x = Math.round((STILL.width - width) / 2);

@@ -47,6 +47,12 @@ describe("wrap16x9", () => {
     );
     expect(wrapped).not.toContain("style=");
   });
+
+  it("tolerates a trailing newline on the scene file", () => {
+    const wrapped = wrap16x9(sceneMarkup(art, rig) + "\n", rig);
+    expect(wrapped.match(/<\/svg>/g)).toHaveLength(2);
+    expect(wrapped.endsWith("</svg></svg>")).toBe(true);
+  });
 });
 
 describe("renderRankStills", () => {
