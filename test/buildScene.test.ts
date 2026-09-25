@@ -176,6 +176,8 @@ describe("sceneMarkup", () => {
       {},
     );
     expect(svg).toContain('<g class="glow" fill="#da5c2c"');
+    // Outfit layers never glow, even the S+ cuff piping's ember: only props and energy do.
+    expect(svg).not.toMatch(/id="outfit-b-[^"]+"[^>]*>[^<]*<g class="glow"/);
   });
 
   it("can start on another rank, posed", () => {

@@ -80,7 +80,8 @@ export const energyAt = (i, n) => {
   return { opacity: round3(p * p), scale: round3(0.5 + 0.5 * p) };
 };
 
-const groupOf = (layer) => layerGroup(layer, layer.name === "ember" ? ' class="glow"' : "");
+const groupOf = (layer, glow) =>
+  layerGroup(layer, glow && layer.name === "ember" ? ' class="glow"' : "");
 
 export function sceneMarkup(art, rig, { visibleRank = 0 } = {}) {
   const box = sceneBox(rig);
@@ -92,13 +93,13 @@ export function sceneMarkup(art, rig, { visibleRank = 0 } = {}) {
   const energy = energyAt(visibleRank, ranks.length);
 
   const floor = `<rect id="floor" x="${box.width * 0.125}" y="${rig.anchors.feet + 4}" width="${box.width * 0.75}" height="4" fill="#202020"/>`;
-  const energyGroup = `<g id="energy" opacity="${energy.opacity}" transform="${energyTransform(rig, Number(energy.scale))}"><g transform="translate(${box.propsX} 0) scale(${PROPS_SCALE})">${(art.energy ?? []).map(groupOf).join("")}</g></g>`;
+  const energyGroup = `<g id="energy" opacity="${energy.opacity}" transform="${energyTransform(rig, Number(energy.scale))}"><g transform="translate(${box.propsX} 0) scale(${PROPS_SCALE})">${(art.energy ?? []).map((l) => groupOf(l, true)).join("")}</g></g>`;
   const props = ranks
     .map((rank, i) => {
       const layers = art.props[rank] ?? [];
       const outline = layers.find((l) => l.name === "base")?.d ?? "";
       const vis = i === visibleRank ? "visible" : "hidden";
-      return `<g id="props-${rank}" visibility="${vis}"><g id="props-${rank}-fill" opacity="1">${layers.map(groupOf).join("")}</g><path id="props-${rank}-outline" d="${outline}" fill="none" stroke="${OUTLINE.stroke}" stroke-width="${OUTLINE.width}" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" opacity="0"/></g>`;
+      return `<g id="props-${rank}" visibility="${vis}"><g id="props-${rank}-fill" opacity="1">${layers.map((l) => groupOf(l, true)).join("")}</g><path id="props-${rank}-outline" d="${outline}" fill="none" stroke="${OUTLINE.stroke}" stroke-width="${OUTLINE.width}" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="0" opacity="0"/></g>`;
     })
     .join("");
   const avatar = parts
@@ -106,7 +107,7 @@ export function sceneMarkup(art, rig, { visibleRank = 0 } = {}) {
       const outfits = ranks
         .map((rank, i) => {
           const layers = (art.outfits[rank] ?? []).filter((l) => l.part === part);
-          return `<g id="outfit-${rank}-${part}" ${state(i)}>${layers.map(groupOf).join("")}</g>`;
+          return `<g id="outfit-${rank}-${part}" ${state(i)}>${layers.map((l) => groupOf(l, false)).join("")}</g>`;
         })
         .join("");
       return `<g id="part-${part}"${partTransform(rig, part, pose)}><g id="part-${part}-idle">${outfits}</g></g>`;

@@ -38,6 +38,9 @@ short-desktop rules). The clip layers and posters go. The scene takes their plac
 full body, centred horizontally, about 70% of the scene area's height, standing on a flat floor line
 over the carbon stage (no gradients, no blur, no glow: flat shapes only, per the design brief).
 
+> **Amended 2026-09-25 (execution):** about 80%: the scene box starts below the rank rail on desktop
+> and the figure fills most of what remains; the builder's viewBox is unchanged.
+
 ### 3.2 Rank by rank
 
 One scroll position drives everything. Each rank owns 1/7 of the track (`stageForProgress` is
@@ -64,6 +67,10 @@ as overlays. It costs ~8 credits more than the estimate in the brainstorm.
 - **Pose** comes from the rig, not the art: every outfit is generated in the same neutral A-pose, and
   per-rank keyframes rotate the arms at the shoulder pivots (D's hand raised to the wireframe, S
   conducting the pipeline, S+ arms loose, coat tails swaying), interpolated through the blend.
+
+  > **Amended 2026-09-25 (execution):** the coat tails have no pivot in this version (they are cut as
+  > parts so a later keyframe can move them); the swaying named here is left to the idle motion.
+
 - **Props** draw their outlines in (a stroke copy of each prop's traced silhouette, `pathLength="1"`,
   `stroke-dashoffset` 1 → 0), then fill in (opacity), then fade out as the next rank's props arrive.
 - **Energy** grows continuously with overall progress (the energy groups' scale and opacity), on top of

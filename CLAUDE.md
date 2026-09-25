@@ -89,7 +89,7 @@ Marcus prefers step-by-step delivery:
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
-- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield stills animated into loops). No aura, no diagonal section cuts.
+- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield flat-vector renders traced into one scroll-driven SVG scene; its violet energy aura lives inside that art, ADR 0003). No hero aura effect (the Three.js one is gone), no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
 - Animate only `transform` and `opacity`, plus `stroke-dashoffset` for vector outline draw-ins (the journey's props).
 - Budgets:

@@ -50,6 +50,12 @@ describe("sceneState", () => {
     expect(s.pose.neck).toBeCloseTo(-2, 5);
   });
 
+  it("cross-fades by smoothstep, not linearly, at a quarter through the blend", () => {
+    const s = sceneState(at(0, 1 - BLEND + 0.25 * BLEND), poses);
+    expect(s.outfits[1]!.opacity).toBeCloseTo(0.15625, 5);
+    expect(s.outfits[0]!.opacity).toBeCloseTo(0.84375, 5);
+  });
+
   it("fades the old props out first, draws the new outline in, then fills and drops the outline", () => {
     const half = sceneState(at(0, 0.85), poses).props; // t = 0.5
     expect(half[0]).toEqual({ rank: 0, fill: 0, outline: 0, draw: 0 });

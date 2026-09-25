@@ -119,4 +119,24 @@ test.describe("visual regression @visual", () => {
       threshold: 0.02,
     });
   });
+
+  test("journey end (rank S+, open coat)", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate((header) => {
+      const el = document.querySelector<HTMLElement>("[data-journey]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (6.5 / 7));
+    }, HEADER_PX);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
+    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
+    await expect(page.locator("[data-scene] #outfit-systems-architect-torso")).toHaveAttribute(
+      "opacity",
+      "1.000",
+    );
+    await expect(page).toHaveScreenshot("journey-rank-s-plus.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.02,
+    });
+  });
 });

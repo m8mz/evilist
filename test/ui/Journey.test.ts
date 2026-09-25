@@ -35,7 +35,7 @@ describe("Journey", () => {
     expect(html).not.toContain("style=");
   });
 
-  it("no longer draws the SVG scene", async () => {
+  it('no longer draws the retired Axiom chibi (class="scene")', async () => {
     expect(await render(Journey)).not.toContain('class="scene');
   });
 });

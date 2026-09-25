@@ -21,6 +21,12 @@ function fakeDist(files: Record<string, number>): string {
 
 const run = (cwd: string) => spawnSync("node", [SCRIPT], { cwd, encoding: "utf8" });
 
+/** Writes a small journey/scene.svg into a fake dist so the scene budget row stays green. */
+function withScene(dist: string, bytes = 10 * 1024): void {
+  mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+  writeFileSync(join(dist, "dist/client/journey/scene.svg"), Buffer.alloc(bytes, 1));
+}
+
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -28,7 +34,9 @@ afterEach(() => {
 
 describe("check-bundle-size", () => {
   it("passes with self-hosted fonts inside the budget", () => {
-    const res = run(fakeDist({ "fonts/a.woff2": 21_000, "fonts/b.woff2": 21_000 }));
+    const dist = fakeDist({ "fonts/a.woff2": 21_000, "fonts/b.woff2": 21_000 });
+    withScene(dist);
+    const res = run(dist);
     expect(res.stdout).toContain("ok   Fonts (woff2)");
     expect(res.status).toBe(0);
   });
@@ -47,10 +55,11 @@ describe("check-bundle-size", () => {
 
   it("fails a stray file in journey/ (only the scene belongs there)", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+    withScene(dist);
     writeFileSync(join(dist, "dist/client/journey/sysadmin-640.mp4"), Buffer.alloc(10, 1));
     const res = run(dist);
     expect(res.stdout).toContain("FAIL stray journey file: sysadmin-640.mp4");
+    expect(res.stdout).not.toContain("FAIL Journey scene (gz): missing");
     expect(res.status).toBe(1);
   });
 
@@ -70,6 +79,12 @@ describe("check-bundle-size", () => {
     writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(320 * 1024));
     const res = run(dist);
     expect(res.stdout).toMatch(/FAIL Journey scene \(gz\)/);
+    expect(res.status).toBe(1);
+  });
+
+  it("fails when the journey scene is missing from the build", () => {
+    const res = run(fakeDist({ "fonts/a.woff2": 42_000 }));
+    expect(res.stdout).toContain("FAIL Journey scene (gz): missing");
     expect(res.status).toBe(1);
   });
 });

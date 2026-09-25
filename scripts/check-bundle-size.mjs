@@ -32,9 +32,14 @@ const rows = [
   ["Fonts (woff2)", fontBytes, BUDGETS.fonts, FONT_FLOOR],
 ];
 
-const scenePath = "dist/client/journey/scene.svg";
-if (existsSync(scenePath)) rows.push(["Journey scene (gz)", gz(scenePath), BUDGETS.scene, 0]);
 let failed = false;
+const scenePath = "dist/client/journey/scene.svg";
+if (existsSync(scenePath)) {
+  rows.push(["Journey scene (gz)", gz(scenePath), BUDGETS.scene, 0]);
+} else {
+  console.log("FAIL Journey scene (gz): missing");
+  failed = true;
+}
 for (const [name, bytes, budget, floor] of rows) {
   const ok = bytes <= budget && bytes >= floor;
   failed ||= !ok;

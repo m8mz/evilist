@@ -40,21 +40,24 @@ export function initJourney(): void {
   const load = async () => {
     if (requested || !stage) return;
     requested = true;
+    let doc: Document | null = null;
     try {
       const response = await fetch(SCENE_URL);
       if (!response.ok) return;
-      const doc = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
-      if (!isSceneDocument(doc)) return;
-      const svg = document.importNode(doc.documentElement, true);
-      const bound = bindScene((id) => svg.querySelector(`#${id}`));
-      if (!bound) return;
-      // Painted at the visitor's current progress, never at rank E, however late it arrives.
-      applyState(bound, last);
-      stage.replaceChildren(svg);
-      refs = bound;
+      const parsed = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
+      if (!isSceneDocument(parsed)) return;
+      doc = parsed;
     } catch {
       // The silhouette stays; the cards and the rail still work.
     }
+    if (!doc) return;
+    const svg = document.importNode(doc.documentElement, true);
+    const bound = bindScene((id) => svg.querySelector(`#${id}`));
+    if (!bound) return;
+    // Painted at the visitor's current progress, never at rank E, however late it arrives.
+    applyState(bound, last);
+    stage.replaceChildren(svg);
+    refs = bound;
   };
 
   const maybeLoad = () => {
