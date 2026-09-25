@@ -24,17 +24,15 @@ describe("Work", () => {
     }
   });
 
-  it("describes the topology once, through its caption, and keeps list semantics", async () => {
-    const html = await render(Work);
-    expect(html).toMatch(/<svg class="topo"[^>]*aria-hidden="true"/);
-    expect(html).toMatch(
-      /<figcaption class="work__caption"[^>]*>two datacenters, BGP failover, HAProxy in front</,
-    );
-    expect(html).toContain('<ul role="list"');
+  it("keeps list semantics on the shared repos", async () => {
+    expect(await render(Work)).toContain('<ul role="list"');
   });
 
-  it("shows the rack illustration next to the topology", async () => {
+  it("has no topology diagram and no rack still: the rack has its own band now", async () => {
     const html = await render(Work);
-    expect(html).toMatch(/<figure class="still[^"]*"[\s\S]*alt="Illustration: a colocation rack/);
+    expect(html).not.toMatch(/class="topo/);
+    expect(html).not.toContain("<figure");
+    expect(html).not.toContain("work__infra");
+    expect(html).not.toContain("Illustration:");
   });
 });

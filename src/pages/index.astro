@@ -5,6 +5,7 @@ import Hero from "../components/home/Hero.astro";
 import Journey from "../components/journey/Journey.astro";
 import Skills from "../components/home/Skills.astro";
 import Work from "../components/home/Work.astro";
+import ParallaxBand from "../components/home/ParallaxBand.astro";
 import About from "../components/home/About.astro";
 import OffTheClock from "../components/home/OffTheClock.astro";
 import CTA from "../components/home/CTA.astro";
@@ -36,6 +37,8 @@ const decade = capitalise(decadePhrase(years));
     <p class="lede">Tools I've built to make infrastructure boring, in the good way.</p>
     <Work />
   </Section>
+
+  <ParallaxBand />
 
   <Section prompt="how-i-work" id="about" aria-labelledby="about-title">
     <h2 id="about-title">How I work</h2>

@@ -37,6 +37,10 @@ bloom, no glow halos.
 
 ## Shot 2 — rack (`~/built`), 16:9 → `src/images/rack.webp` (round 2, Marcus's direction)
 
+Served full bleed by `src/components/home/ParallaxBand.astro`, the band after `~/built` (hero v2
+Phase 2; it was a `Still` inside Work before). Renditions: AVIF/WebP at 800/1200/1600/2000 px,
+quality 60, each under 100 KB.
+
 Round 1 (a single half-empty rack) was rejected. Round 2 prompt, followed by suffix v2:
 
 Inside a colocation cage at night: a row of full-height 48U server racks seen from the cold aisle

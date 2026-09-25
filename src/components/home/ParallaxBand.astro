@@ -1,0 +1,75 @@
+---
+// The rack band (spec §5): the rack still, full bleed between Work and About, drifting slower than
+// the page. The image box is 124% of the band's height, so 12% hangs past each edge, and
+// scripts/parallax.ts sets --parallax from 0 (band entering at the bottom) to 1 (leaving at the
+// top). The CSS maps that to a shift of ±12% of the band, the overhang, so an edge never shows.
+// Without the script (reduced motion, no JS) --parallax stays 0.5: centred and still.
+// On portrait screens cover draws the wide image at 1.6–2.6× the viewport's width, hence sizes.
+import { Picture } from "astro:assets";
+import rack from "../../images/rack.webp";
+---
+
+<div class="parallax" data-parallax>
+  <div class="parallax__media">
+    <Picture
+      src={rack}
+      alt="Illustration: a colocation rack row at night, fully populated and lit by orange status lights"
+      widths={[800, 1200, 1600, 2000]}
+      width={2000}
+      sizes="(orientation: portrait) 200vw, 100vw"
+      formats={["avif", "webp"]}
+      fallbackFormat="webp"
+      quality={60}
+      loading="lazy"
+      class="parallax__img"
+    />
+  </div>
+</div>
+
+<script>
+  import { initParallax } from "../../scripts/parallax";
+  initParallax();
+</script>
+
+<style>
+  .parallax {
+    --parallax: 0.5;
+    position: relative;
+    overflow: hidden;
+    height: clamp(18rem, 55svh, 34rem);
+    /* Only a top rule: the section after the band draws the bottom one, as its own top rule. */
+    border-top: 1px solid var(--color-iron);
+    background: var(--color-carbon);
+  }
+
+  .parallax__media {
+    position: absolute;
+    inset: -12% 0;
+    /* translateY's % is of this box, 1.24 × the band: this moves it ±12% of the band. */
+    transform: translateY(calc((var(--parallax) - 0.5) * 24% / 1.24));
+  }
+
+  .parallax :global(.parallax__img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The scrim Still uses: a flat carbon layer at 20%, not a gradient. */
+  .parallax::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--color-carbon);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+
+  @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+    .parallax__media {
+      will-change: transform;
+    }
+  }
+</style>

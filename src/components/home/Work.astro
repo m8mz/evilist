@@ -1,10 +1,7 @@
 ---
-// What Marcus has built: three case cards, the repos he shares, and the topology he runs.
+// What Marcus has built: three case cards and the repos he shares.
 import KeyValue from "../ui/KeyValue.astro";
 import Panel from "../ui/Panel.astro";
-import Topology from "./Topology.astro";
-import Still from "../ui/Still.astro";
-import rack from "../../images/rack.webp";
 import { sharedRepos, work } from "../../data/work";
 ---
 
@@ -32,18 +29,6 @@ import { sharedRepos, work } from "../../data/work";
       </li>
     ))}
   </ul>
-</div>
-
-<div class="work__infra">
-  <figure class="work__topology">
-    <Topology decorative />
-    <figcaption class="work__caption">two datacenters, BGP failover, HAProxy in front</figcaption>
-  </figure>
-  <Still
-    src={rack}
-    subject="a colocation rack row at night, fully populated and lit by orange status lights"
-    sizes="(min-width: 72rem) 34rem, (min-width: 60rem) 45vw, 92vw"
-  />
 </div>
 
 <style>
@@ -106,24 +91,5 @@ import { sharedRepos, work } from "../../data/work";
 
   .shared__desc {
     color: var(--color-fog);
-  }
-
-  .work__infra {
-    display: grid;
-    gap: 1.5rem;
-    margin-top: 3rem;
-  }
-
-  @media (min-width: 60rem) {
-    .work__infra {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      align-items: center;
-    }
-  }
-
-  .work__caption {
-    margin-top: 0.75rem;
-    color: var(--color-ash);
-    font-size: var(--text-caption);
   }
 </style>

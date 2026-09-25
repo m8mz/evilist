@@ -100,37 +100,104 @@ test.describe("hero", () => {
   });
 });
 
-test.describe("infrastructure diagram", () => {
-  test("describes the topology once, through its caption", async ({ page }) => {
+/**
+ * Scrolls the band's top edge to `y` px below the viewport's top (negative is above it), waits
+ * two frames for Motion, then measures how far the image has moved from centre (px, + is down)
+ * and whether it still covers the band.
+ */
+async function rackAt(page: Page, y: number) {
+  const band = page.locator(".parallax");
+  await band.evaluate((el, y) => {
+    scrollTo({ top: el.getBoundingClientRect().top + scrollY - y, behavior: "instant" });
+  }, y);
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  return band.evaluate((el) => {
+    const b = el.getBoundingClientRect();
+    const m = el.querySelector(".parallax__media")!.getBoundingClientRect();
+    return {
+      height: b.height,
+      shift: m.top - (b.top - 0.12 * b.height),
+      covers: m.top <= b.top + 0.5 && m.bottom >= b.bottom - 0.5,
+    };
+  });
+}
+
+test.describe("rack band", () => {
+  test("sits full width between Work and About, with the rack as a lazy illustration", async ({
+    page,
+  }) => {
     await page.goto("/");
-    const figure = page.locator("figure.work__topology");
-    await expect(figure.locator("figcaption")).toHaveText(
-      "two datacenters, BGP failover, HAProxy in front",
-    );
-    await expect(figure.locator("svg.topo")).toHaveAttribute("aria-hidden", "true");
-    await expect(page.getByRole("img", { name: /BGP failover/ })).toHaveCount(0);
+    const band = page.locator("#work + .parallax");
+    await expect(band).toHaveCount(1);
+    const box = (await band.boundingBox())!;
+    const work = (await page.locator("#work").boundingBox())!;
+    const about = (await page.locator("#about").boundingBox())!;
+    // Flush against both neighbours. (Astro renders the band's <script> in place, so About is
+    // not the band's adjacent sibling in the DOM; the boxes are what count.)
+    expect(Math.round(box.y)).toBe(Math.round(work.y + work.height));
+    expect(Math.round(about.y)).toBe(Math.round(box.y + box.height));
+    expect(box.x).toBe(0);
+    expect(box.width).toBeGreaterThanOrEqual(page.viewportSize()!.width - 1);
+    const img = band.locator("img");
+    await expect(img).toHaveAttribute("loading", "lazy");
+    await expect(img).toHaveAttribute("alt", /^Illustration: a colocation rack row at night/);
+    await expect(page.locator(".work__infra, .topo")).toHaveCount(0);
   });
 
-  test("keeps the topology labels readable on every screen", async ({ page }) => {
+  test("has one iron rule above and one below, never two", async ({ page }) => {
     await page.goto("/");
-    const px = await page
-      .locator(".topo__label")
-      .first()
-      .evaluate((el) => {
-        const svg = (el as SVGTextElement).ownerSVGElement!;
-        const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
-        return parseFloat(getComputedStyle(el).fontSize) * scale;
-      });
-    expect(px).toBeGreaterThanOrEqual(11);
+    const band = page.locator(".parallax");
+    await expect(band).toHaveCSS("border-top-width", "1px");
+    await expect(band).toHaveCSS("border-top-color", "rgb(32, 32, 32)");
+    // The rule below is About's own top rule, flush with the band (checked in the test above).
+    await expect(band).toHaveCSS("border-bottom-width", "0px");
+    await expect(page.locator("#about")).toHaveCSS("border-top-width", "1px");
   });
 
-  test("moves the pulse only when motion is allowed", async ({ page }, info) => {
+  test("drifts with the scroll and never shows an edge; holds still under reduced motion", async ({
+    page,
+  }, info) => {
     await page.goto("/");
-    const name = await page
-      .locator(".topo__pulse")
-      .evaluate((el) => getComputedStyle(el).animationName);
-    if (info.project.name === "reduced-motion") expect(name).toBe("none");
-    else expect(name).not.toBe("none");
+    const vh = page.viewportSize()!.height;
+    const entering = await rackAt(page, vh * 0.9);
+    const leaving = await rackAt(page, vh * 0.1 - entering.height);
+    if (info.project.name === "reduced-motion") {
+      expect(Math.abs(entering.shift)).toBeLessThan(1);
+      expect(Math.abs(leaving.shift)).toBeLessThan(1);
+    } else {
+      expect(entering.shift).toBeLessThan(0);
+      expect(leaving.shift).toBeGreaterThan(0);
+      expect(leaving.shift - entering.shift).toBeGreaterThan(0.15 * entering.height);
+    }
+    // Progress 0 (top edge at the viewport's bottom), ½ (centred) and 1 (bottom edge at its top).
+    for (const y of [vh, (vh - entering.height) / 2, -entering.height]) {
+      expect((await rackAt(page, y)).covers, `band top at ${Math.round(y)}px`).toBe(true);
+    }
+  });
+
+  test("is sharp on every screen: the served image is at least as wide as it is drawn", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await rackAt(page, 0);
+    const img = page.locator(".parallax img");
+    await expect
+      .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+      .toBe(true);
+    const { served, needed } = await img.evaluate(async (el: HTMLImageElement) => {
+      // naturalWidth of a srcset image is density-corrected; a bare probe reports the file's pixels.
+      const probe = new Image();
+      probe.src = el.currentSrc;
+      await probe.decode();
+      const box = el.getBoundingClientRect();
+      // object-fit: cover draws the image at whichever side needs the larger scale.
+      const drawn = Math.max(box.width, box.height * (probe.naturalWidth / probe.naturalHeight));
+      return { served: probe.naturalWidth, needed: drawn * devicePixelRatio };
+    });
+    // 2000 px is the largest rendition; browsers may settle for a candidate up to ~15% short.
+    expect(served).toBeGreaterThanOrEqual(0.85 * Math.min(needed, 2000));
   });
 });
 

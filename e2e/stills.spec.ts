@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-/** Pages that show stills. Task 7 adds "/now". */
+/** Pages that show stills. On "/" that is the rack band, the rack still full bleed. */
 const PAGES = ["/", "/now"];
 
 test.beforeEach(({}, info) => {
@@ -10,15 +10,17 @@ test.beforeEach(({}, info) => {
 test("serves every still rendition, and the img src, under 120 KB", async ({ page, request }) => {
   for (const path of PAGES) {
     await page.goto(path);
-    const urls = await page.locator(".still source, .still img").evaluateAll((els) =>
-      els.flatMap((el) =>
-        (el.getAttribute("srcset") ?? "")
-          .split(",")
-          .map((candidate) => candidate.trim().split(" ")[0])
-          .filter((url): url is string => Boolean(url))
-          .concat(el.getAttribute("src") ?? []),
-      ),
-    );
+    const urls = await page
+      .locator(".still source, .still img, .parallax source, .parallax img")
+      .evaluateAll((els) =>
+        els.flatMap((el) =>
+          (el.getAttribute("srcset") ?? "")
+            .split(",")
+            .map((candidate) => candidate.trim().split(" ")[0])
+            .filter((url): url is string => Boolean(url))
+            .concat(el.getAttribute("src") ?? []),
+        ),
+      );
     expect(urls.length, path).toBeGreaterThan(0);
     for (const url of new Set(urls)) {
       const res = await request.get(url);
