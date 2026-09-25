@@ -31,7 +31,7 @@ export default defineConfig({
       name: "JetBrains Mono",
       cssVariable: "--font-jetbrains",
       weights: [400, 700],
-      styles: ["normal"],
+      styles: ["normal", "italic"],
       subsets: ["latin"],
       fallbacks: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
     },
