@@ -71,7 +71,7 @@ Marcus prefers step-by-step delivery:
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
 - Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
 - Sections open with a `~/path` `Prompt` eyebrow and are separated by 1px iron rules.
-- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them; prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim); import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
+- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them, and the journey's clips (`seedance_2_0`); prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim); import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
 - CSP gotchas:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
@@ -80,13 +80,13 @@ Marcus prefers step-by-step delivery:
   - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
 - Journey (`src/components/journey/`):
-  - `Journey.astro` holds the pinned stage, `JourneyScene.astro` the SVG, `scripts/journey.ts` the scroll mapping.
-  - On SVG elements a CSS `transform` animation replaces the element's `transform` attribute. Put positioning on an outer `<g>` and the animation on an inner one.
+  - `Journey.astro` holds the pinned, full-width stage (in `Section`'s `bleed` slot): one layer per rank with its still as a lazy poster and its clip as a `<video>` whose sources wait in `data-src`. `src/data/journeyArt.ts` maps each stage to its still, alt subject and `clipSources`; `scripts/journey.ts` maps scroll to the rank and runs the clips (primes the active rank and its neighbours once the journey is on screen, plays the active clip, pauses off screen).
+  - Clips: `node scripts/encode-clip.mjs <source.mp4> <stage-id>` writes `public/journey/<id>-{1280,640}.{webm,mp4}` within the limits in `scripts/clip-variants.mjs`; `pnpm size` checks them.
   - Switch stages with visibility/opacity, never `display`, or the layout shifts.
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
-- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an SVG chibi in the journey. No aura, no diagonal section cuts.
+- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield stills animated into loops). No aura, no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
 - Animate only `transform`, `opacity` and `pathLength`.
 - Budgets:

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-/** Pages that show stills. On "/" that is the rack band, the rack still full bleed. */
+/** Pages that show stills. On "/" that is the rack band, the journey's posters and the timeline's stills. */
 const PAGES = ["/", "/now"];
 
 test.beforeEach(({}, info) => {
@@ -11,7 +11,9 @@ test("serves every still rendition, and the img src, under 120 KB", async ({ pag
   for (const path of PAGES) {
     await page.goto(path);
     const urls = await page
-      .locator(".still source, .still img, .parallax source, .parallax img")
+      .locator(
+        ".still source, .still img, .parallax source, .parallax img, .journey__poster source, .journey__poster img",
+      )
       .evaluateAll((els) =>
         els.flatMap((el) =>
           (el.getAttribute("srcset") ?? "")

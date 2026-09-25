@@ -26,4 +26,13 @@ describe("Section", () => {
     expect(html).toContain("band--carbon");
     expect(html).toMatch(/class="prompt__path"[^>]*>journey</);
   });
+
+  it("renders a bleed slot after the content column, full width", async () => {
+    const html = await render(Section, {
+      slots: { default: "<p>column</p>", bleed: "<div>wide</div>" },
+    });
+    expect(html).toMatch(
+      /<div class="wrap"[^>]*>[\s\S]*<p>column<\/p>\s*<\/div>\s*<div>wide<\/div>/,
+    );
+  });
 });

@@ -1,22 +1,32 @@
 ---
-// Scroll-driven career journey. A tall track with a pinned stage: as the visitor scrolls, the stage
-// advances through the seven ranks. scripts/journey.ts maps scroll progress to the active stage;
-// CSS does all the animating (transform/opacity only).
+// Scroll-driven career journey (spec §7). A tall track with a pinned, full-width stage: as the
+// visitor scrolls, the stage advances through the seven ranks. Each rank has a layer with its
+// still (the poster) and its looping clip. scripts/journey.ts maps scroll progress to the active
+// rank, primes the layers near it and plays the active clip; CSS does the switching.
 //
 // Accessibility and fallbacks: this animated version is decorative (aria-hidden). JourneyTimeline
-// carries the same content for screen readers, and is what everyone sees without scripting or
-// with reduced motion.
-import JourneyScene from "./JourneyScene.astro";
+// carries the same content, with each rank's still, for screen readers, and is what everyone sees
+// without scripting or with reduced motion.
+//
+// It goes in the Section's `bleed` slot, so the stage spans the band's full width; the skip link
+// and the timeline keep the content column.
+import { Picture } from "astro:assets";
 import JourneyTimeline from "./JourneyTimeline.astro";
 import Panel from "../ui/Panel.astro";
 import RankChip from "../ui/RankChip.astro";
 import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
+import { clipSources, stageArt } from "../../data/journeyArt";
+
+/** Each card lists at most this many highlights (only the first below 60rem). */
+const CARD_HIGHLIGHTS = 3;
 ---
 
-<a href="#skills" class="journey-skip">
-  Skip the career journey
-</a>
+<div class="wrap">
+  <a href="#skills" class="journey-skip">
+    Skip the career journey
+  </a>
+</div>
 
 <div class="journey" data-journey data-activity={career[0].activity} aria-hidden="true">
   <div class="journey__stage">
@@ -31,8 +41,36 @@ import { career, formatRange } from "../../data/career";
       </li>
     </ol>
 
-    <div class="journey__scene">
-      <JourneyScene />
+    <div class="journey__media">
+      {career.map((stage, i) => (
+        <div class:list={["journey__clip", { "is-active": i === 0 }]} data-clip>
+          <Picture
+            src={stageArt[stage.id].still}
+            alt={`Illustration: ${stageArt[stage.id].subject}`}
+            widths={[640, 1280, 1920]}
+            width={1920}
+            sizes="(orientation: portrait) 150vw, 100vw"
+            formats={["avif", "webp"]}
+            fallbackFormat="webp"
+            quality={60}
+            loading="lazy"
+            pictureAttributes={{ class: "journey__poster" }}
+            class="journey__poster-img"
+          />
+          <video
+            class="journey__video"
+            muted
+            loop
+            playsinline
+            preload="none"
+            {...{ disablepictureinpicture: true, disableremoteplayback: true }}
+          >
+            {clipSources(stage.id).map((source) => (
+              <source data-src={source.src} type={source.type} media={source.media} />
+            ))}
+          </video>
+        </div>
+      ))}
     </div>
 
     <div class="journey__cards">
@@ -50,14 +88,18 @@ import { career, formatRange } from "../../data/career";
           <h3>{stage.shortTitle ?? stage.title}</h3>
           <p class="journey__meta">{stage.org}</p>
           <p>{stage.summary}</p>
-          <p class="journey__highlight">{stage.highlights[0]}</p>
+          <ul class="journey__highlights" role="list">
+            {stage.highlights.slice(0, CARD_HIGHLIGHTS).map((highlight) => (
+              <li>{highlight}</li>
+            ))}
+          </ul>
         </Panel>
       ))}
     </div>
   </div>
 </div>
 
-<div class="journey-fallback">
+<div class="wrap journey-fallback">
   <JourneyTimeline />
 </div>
 
@@ -132,6 +174,7 @@ import { career, formatRange } from "../../data/career";
     margin-top: 2rem;
   }
 
+  /* Below 60rem: rail, clip, card in rows; the clip takes what the card leaves. */
   .journey__stage {
     position: sticky;
     top: var(--header);
@@ -142,29 +185,12 @@ import { career, formatRange } from "../../data/career";
     padding-block: 1rem 1.5rem;
   }
 
-  @media (min-width: 60rem) {
-    .journey {
-      height: calc(var(--stages) * 70dvh + 100dvh - var(--header));
-    }
-
-    .journey__stage {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr);
-      column-gap: 3rem;
-      align-items: center;
-    }
-
-    .journey__rail {
-      grid-column: 1 / -1;
-    }
-  }
-
   /* ---------- Progress rail ---------- */
   .journey__rail {
     position: relative;
     display: flex;
     justify-content: space-between;
-    padding: 0;
+    padding: 0 var(--gutter);
     list-style: none;
   }
 
@@ -194,7 +220,7 @@ import { career, formatRange } from "../../data/career";
 
   .journey__track-line {
     position: absolute;
-    inset: 50% 1rem auto;
+    inset: 50% calc(var(--gutter) + 1rem) auto;
     height: 1px;
     background: var(--color-slate);
   }
@@ -206,26 +232,69 @@ import { career, formatRange } from "../../data/career";
     transform-origin: left;
     transform: scaleX(var(--progress, 0));
   }
-  /* ---------- Scene ---------- */
-  .journey__scene {
+
+  /* ---------- Clips ---------- */
+  .journey__media {
+    position: relative;
     min-height: 0;
-    height: 100%;
-    display: grid;
-    place-items: center;
+    overflow: hidden;
+    background: var(--color-carbon);
   }
 
-  .journey__scene :global(.scene) {
-    max-height: 100%;
+  /* One layer per rank, stacked; the active one fades in. Hidden layers use visibility. */
+  .journey__clip {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    opacity: 0;
+    transition:
+      opacity 320ms ease-out,
+      visibility 0s linear 320ms;
+  }
+
+  .journey__clip.is-active {
+    visibility: visible;
+    opacity: 1;
+    transition:
+      opacity 320ms ease-out,
+      visibility 0s;
+  }
+
+  /* The poster loads only once scripts/journey.ts primes its layer: display gates the lazy load, it never switches ranks. */
+  .journey__clip :global(.journey__poster) {
+    display: none;
+  }
+
+  .journey__clip.is-primed :global(.journey__poster) {
+    display: block;
+  }
+
+  .journey__clip :global(.journey__poster-img),
+  .journey__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* The clip fades in over its still once it is actually playing. */
+  .journey__video {
+    opacity: 0;
+    transition: opacity 320ms ease-out;
+  }
+
+  .journey__clip.is-playing .journey__video {
+    opacity: 1;
   }
 
   /* ---------- Cards ---------- */
   .journey__cards {
     display: grid;
+    padding-inline: var(--gutter);
   }
 
-  /* All cards share one grid cell, so the area is always as tall as the tallest card and
-       switching stages never shifts the layout. Inactive cards are hidden with visibility.
-       The cards are Panel components, so the class is reached with :global. */
+  /* All cards share one grid cell, so the area is as tall as the tallest card and switching ranks never shifts the layout. */
   .journey__cards :global(.journey__card) {
     grid-area: 1 / 1;
     display: grid;
@@ -258,22 +327,69 @@ import { career, formatRange } from "../../data/career";
     font-weight: 700;
   }
 
-  .journey__highlight {
+  .journey__highlights {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding-left: 1.2rem;
+    list-style: "- ";
     color: var(--color-fog);
   }
 
-  /* Phones: smaller summaries so the active card fits under the pinned scene. Tablets keep 15px. */
+  .journey__highlights li::marker {
+    color: var(--color-ash);
+  }
+
+  /* Below 60rem the card sits under the clip: one highlight keeps it whole on a phone. */
+  @media (max-width: 59.99rem) {
+    .journey__highlights li + li {
+      display: none;
+    }
+  }
+
+  /* Phones: smaller text so the active card fits under the pinned clip. Tablets keep 15px. */
   @media (max-width: 47.99rem) {
-    .journey__cards p:not(.journey__meta) {
+    .journey__cards p:not(.journey__meta),
+    .journey__highlights {
       font-size: var(--text-caption);
     }
   }
 
-  @media (max-width: 59.99rem) {
-    .journey__highlight {
-      display: none;
+  /* From 60rem the clip fills the stage; the rail runs across the top and the card sits left. Last, so it overrides the rules above. */
+  @media (min-width: 60rem) {
+    .journey {
+      height: calc(var(--stages) * 70dvh + 100dvh - var(--header));
+    }
+
+    .journey__stage {
+      display: block;
+      padding: 0;
+    }
+
+    .journey__media {
+      position: absolute;
+      inset: 0;
+    }
+
+    .journey__rail {
+      position: absolute;
+      inset: 1.5rem 0 auto;
+      z-index: 1;
+    }
+
+    .journey__cards {
+      position: absolute;
+      inset: 5rem auto 2.5rem var(--gutter);
+      z-index: 1;
+      width: min(30rem, 40vw);
+      padding: 0;
+    }
+
+    .journey__cards :global(.journey__card) {
+      align-self: center;
     }
   }
+
   @keyframes card-in {
     from {
       opacity: 0;

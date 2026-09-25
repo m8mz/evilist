@@ -1,6 +1,7 @@
 ---
 // Page band: a 1px iron rule on top, an optional `~/prompt` eyebrow, then the content column.
 // `tone="carbon"` lifts the band one surface step. There are no diagonal cuts any more.
+// A `bleed` slot renders after the column, at the band's full width (the journey's stage).
 import type { HTMLAttributes } from "astro/types";
 import Prompt from "./Prompt.astro";
 
@@ -17,6 +18,7 @@ const { tone = "void", prompt, class: className, ...rest } = Astro.props;
     {prompt && <Prompt path={prompt} class="band__prompt" />}
     <slot />
   </div>
+  <slot name="bleed" />
 </section>
 
 <style>

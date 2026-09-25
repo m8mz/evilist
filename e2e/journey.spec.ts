@@ -104,6 +104,53 @@ test.describe("animated journey", () => {
       "none",
     );
   });
+
+  test("from 60rem, the clip fills the full-width stage and the card sits on the left", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "desktop layout");
+    await page.goto("/");
+    await scrollToStage(page, 3);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "escalation");
+    const width = page.viewportSize()!.width;
+    const stage = (await page.locator(".journey__stage").boundingBox())!;
+    const media = (await page.locator(".journey__media").boundingBox())!;
+    const card = (await page.locator(".journey__card.is-active").boundingBox())!;
+    expect(stage.x).toBe(0);
+    expect(stage.width).toBeGreaterThanOrEqual(width - 1);
+    expect(media).toEqual(stage);
+    expect(card.x).toBeLessThan(width / 4);
+    expect(card.width).toBeLessThanOrEqual(480);
+    await expect(page.locator(".journey__card.is-active")).toHaveCSS(
+      "background-color",
+      "rgb(25, 25, 25)",
+    );
+  });
+
+  test("below 60rem, the rail, the clip and the card stack without overlapping", async ({
+    page,
+  }, info) => {
+    test.skip(!["iphone-15", "pixel-7", "ipad"].includes(info.project.name), "stacked layout");
+    await page.goto("/");
+    await scrollToStage(page, 2);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "migration");
+    const rail = (await page.locator(".journey__rail").boundingBox())!;
+    const media = (await page.locator(".journey__media").boundingBox())!;
+    const card = (await page.locator(".journey__card.is-active").boundingBox())!;
+    expect(rail.y + rail.height).toBeLessThanOrEqual(media.y);
+    expect(media.y + media.height).toBeLessThanOrEqual(card.y);
+    expect(media.height).toBeGreaterThan(120);
+  });
+
+  test("shows up to three highlights from 60rem, and one below", async ({ page }) => {
+    await page.goto("/");
+    await scrollToStage(page, 6);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
+    const wide = page.viewportSize()!.width >= 960;
+    await expect(
+      page.locator(".journey__card.is-active .journey__highlights li:visible"),
+    ).toHaveCount(wide ? 3 : 1);
+  });
 });
 
 test.describe("reduced motion", () => {
