@@ -91,6 +91,11 @@ import { career, formatRange } from "../../data/career";
       clip-path: inset(50%);
       white-space: nowrap;
     }
+
+    /* Its stills would load behind the hidden timeline; the stage shows the art instead. */
+    .journey-fallback :global(.timeline__still) {
+      display: none;
+    }
   }
 
   /* Visually hidden until focused (keyboard users). */

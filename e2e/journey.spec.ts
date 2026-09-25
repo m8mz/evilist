@@ -96,6 +96,14 @@ test.describe("animated journey", () => {
       "15px",
     );
   });
+
+  test("keeps the timeline's stills unrendered behind the stage", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".journey-fallback .timeline__still").first()).toHaveCSS(
+      "display",
+      "none",
+    );
+  });
 });
 
 test.describe("reduced motion", () => {
@@ -108,6 +116,18 @@ test.describe("reduced motion", () => {
     await expect(page.locator("[data-journey]")).toBeHidden();
     await expect(page.locator(".journey-fallback .timeline")).toBeVisible();
     await expect(page.locator(".journey-fallback .timeline__title")).toHaveCount(7);
+  });
+
+  test("shows each rank's still beside its timeline entry", async ({ page }) => {
+    await page.goto("/");
+    const stills = page.locator(".journey-fallback .timeline__still img");
+    await expect(stills).toHaveCount(7);
+    await stills.last().scrollIntoViewIfNeeded();
+    await expect
+      .poll(() =>
+        stills.last().evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true);
   });
 });
 

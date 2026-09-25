@@ -1,9 +1,11 @@
 ---
-// Static career timeline: the no-JS and reduced-motion version of the journey, and what search
-// engines and screen readers read.
+// Static career timeline, with each rank's still: the no-JS and reduced-motion version of the
+// journey, and what search engines and screen readers read.
 import RankChip from "../ui/RankChip.astro";
+import Still from "../ui/Still.astro";
 import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
+import { stageArt } from "../../data/journeyArt";
 ---
 
 <ol class="timeline" role="list">
@@ -16,6 +18,12 @@ import { career, formatRange } from "../../data/career";
         <Tag class="timeline__dates">{formatRange(stage.start, stage.end)}</Tag>
         <p class="timeline__summary">{stage.summary}</p>
       </div>
+      <Still
+        src={stageArt[stage.id].still}
+        subject={stageArt[stage.id].subject}
+        sizes="(min-width: 48rem) 18rem, 80vw"
+        class="timeline__still"
+      />
     </li>
   ))}
 </ol>
@@ -47,6 +55,20 @@ import { career, formatRange } from "../../data/career";
     grid-template-columns: 5rem minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
+  }
+
+  .timeline__stage :global(.timeline__still) {
+    grid-column: 2;
+  }
+
+  @media (min-width: 48rem) {
+    .timeline__stage {
+      grid-template-columns: 5rem minmax(0, 1fr) 18rem;
+    }
+
+    .timeline__stage :global(.timeline__still) {
+      grid-column: 3;
+    }
   }
 
   /* Positioned so the chip paints over the rail line. */

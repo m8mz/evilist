@@ -1,0 +1,75 @@
+// The journey's art per career stage (spec §7): the picked Higgsfield still, which is the poster
+// under each clip and the timeline's picture, and the clip's four encodes that
+// scripts/encode-clip.mjs writes to public/journey/. Keyed by CareerStage.id.
+import type { ImageMetadata } from "astro";
+import linuxEngineer from "../images/journey/linux-engineer.webp";
+import professionalServices from "../images/journey/professional-services.webp";
+import sysadmin from "../images/journey/sysadmin.webp";
+import systemsArchitect from "../images/journey/systems-architect.webp";
+import t1Support from "../images/journey/t1-support.webp";
+import t3Support from "../images/journey/t3-support.webp";
+import webConcierge from "../images/journey/web-concierge.webp";
+
+export interface StageArt {
+  still: ImageMetadata;
+  /** What the still shows; its alt text is "Illustration: <subject>". */
+  subject: string;
+}
+
+export const stageArt: Readonly<Record<string, StageArt>> = {
+  "t1-support": {
+    still: t1Support,
+    subject:
+      "an anime systems engineer in a black hoodie and headset on a night shift at a support desk, lit by orange monitors",
+  },
+  "web-concierge": {
+    still: webConcierge,
+    subject:
+      "the same engineer at a standing desk, arranging a floating website wireframe above his laptop",
+  },
+  "professional-services": {
+    still: professionalServices,
+    subject: "the same engineer between two rows of servers, holding a glowing orange cube of data",
+  },
+  "t3-support": {
+    still: t3Support,
+    subject:
+      "the same engineer standing calm before a wall of orange alert lights, shadows rising at his feet",
+  },
+  sysadmin: {
+    still: sysadmin,
+    subject:
+      "the same engineer in a short black coat beside an open server rack, violet smoke curling at his feet",
+  },
+  "linux-engineer": {
+    still: linuxEngineer,
+    subject:
+      "the same engineer in a long black coat conducting a pipeline of floating modules while violet shadow hands assemble them",
+  },
+  "systems-architect": {
+    still: systemsArchitect,
+    subject:
+      "the same engineer in a long open coat in a datacenter aisle, rows of server racks and violet shadow energy around him",
+  },
+};
+
+export interface ClipSource {
+  src: string;
+  type: string;
+  media?: string;
+}
+
+// The codec strings match scripts/encode-clip.mjs: AV1 main profile, 8-bit; H.264 High 4.0.
+const WEBM = 'video/webm; codecs="av01.0.05M.08"';
+const MP4 = 'video/mp4; codecs="avc1.640028"';
+const WIDE = "(min-width: 48rem)";
+
+/** A stage's clip encodes, in the order <video> should try them. */
+export function clipSources(stageId: string): ClipSource[] {
+  return [
+    { src: `/journey/${stageId}-1280.webm`, type: WEBM, media: WIDE },
+    { src: `/journey/${stageId}-1280.mp4`, type: MP4, media: WIDE },
+    { src: `/journey/${stageId}-640.webm`, type: WEBM },
+    { src: `/journey/${stageId}-640.mp4`, type: MP4 },
+  ];
+}
