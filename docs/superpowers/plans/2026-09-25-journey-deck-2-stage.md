@@ -10,6 +10,16 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-25-journey-card-deck-design.md`, §3, §5–§9, §11–§14. **Depends on:** Plan 1 (`2026-09-25-journey-deck-1-foundations.md`) merged into the branch: `career.ts` helpers, `src/data/deck.ts`, `src/scripts/deck/{deck-params,deck-layout,deck-pose,deck-paint}.ts`, `src/images/devil-mark.svg`.
 
+## Controller amendments (2026-09-25, after Plan 1's reviews)
+
+Plan 1's reviews changed three contracts this plan's code samples were written against. Where a task's code below disagrees with these, these win:
+
+1. **The intro clock is accumulated, not derived.** `IntroState` is `{ elapsed: number }` (ms of intro time). The stage keeps `intro = { elapsed: 0 }` from `startIntro()` and, each frame, does `intro.elapsed += dt × (targetP > 0.5 / N ? params.intro.fastForward : 1)`; there is no `speed` field and no `startedAt`. Task 7's `startIntro` and frame code change accordingly; in freeze mode `dt` is 0, so the intro never runs (as intended).
+2. **`landedAt` lives until the card is racked again.** Set `landedAt[i] = time` on the first frame `c.landed` is true (in freeze mode `time − 10_000`); set it back to `null` only when `c.pull <= 0`. Never null it when `landed` flips false: the pose model keeps fading the float and tilt through the leaving pull. `applyText` still releases the text slot on phase `leaving`, `racked` or `pulling`.
+3. **The canvas font family comes from the page.** Before mounting, `index.ts` reads `getComputedStyle(document.documentElement).getPropertyValue("--font-jetbrains")`, takes the first comma-separated family with its quotes stripped, calls `setDeckFontFamily(family)` from `deck-paint.ts`, and loads that family (`document.fonts.load(\`400 14px "${family}"\`)`, plus the italic 400 and the 700). The literal `"JetBrains Mono"`in Task 8's`FONTS`list is wrong: the Fonts API registers a hashed family name.`deck-paint.ts`no longer exports`FONT`; use `font()`and`deckFontFamily()`.
+
+Also from Plan 1: the pose model's `PullParams` gained `settleStart` (0.9) and `rotDelay` (0.15); `energyFor`'s third parameter is `landedThreshold`; the phone's `next` anchor already accounts for the −80° projection; a band-rejected portrait import writes `<id>.rejected.webp`.
+
 ## Global Constraints
 
 - pnpm only; the only lockfile is `pnpm-lock.yaml`. `minimumReleaseAge` rejects releases younger than 24 h: if `three@0.186.1` is refused, pin `0.186.0` (and `@types/three@0.186.0`), never add an exclusion. Pin exact versions (`-E`).
