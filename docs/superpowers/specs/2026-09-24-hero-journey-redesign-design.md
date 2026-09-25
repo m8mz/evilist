@@ -171,12 +171,17 @@ starts a sentence:
 - **Rack band** `ParallaxBand.astro`, placed on the home page directly after the Work section and
   outside any `.wrap`: full bleed, 1px iron rules top and bottom, height
   `clamp(18rem, 55svh, 34rem)`, overflow hidden.
-- Inside, `rack.webp` via `<Picture>` (AVIF/WebP, widths 800/1200/1600/2400, lazy,
+- Inside, `rack.webp` via `<Picture>` (AVIF/WebP, widths 800/1200/1600/2000 at quality 60, lazy,
   `alt="Illustration: a colocation rack row at night, fully populated and lit by orange status
 lights"`), `object-fit: cover`, 124% of the band's height, plus the 20% carbon scrim that
-  `Still` uses.
+  `Still` uses. (Amended in the Phase 2 plan: a 2400 px rendition measures 183 KB AVIF / 195 KB
+  WebP at quality 60 and only fits the 120 KB per-still cap at quality 40; 2000 px measures 97 /
+  91 KB.) `sizes="(orientation: portrait) 200vw, 100vw"`, because on portrait screens cover
+  scales the wide image to 1.6–2.6× the viewport's width.
 - `scripts/parallax.ts`: Motion `scroll()` with the band as target and offset
-  `["start end", "end start"]` maps progress 0 → 1 to `translateY(-12%)` → `translateY(12%)`.
+  `["start end", "end start"]` maps progress 0 → 1 to a shift of −12% → +12% of the band's
+  height (the image's own overhang, so an edge never shows).
+- The band draws both rules; the section after it drops its top rule, so the rule isn't doubled.
 - Reduced motion: no script; the image sits centred and still. No text on the band.
 
 ## 6. Content from LinkedIn (amends Axiom §9.2)
@@ -228,7 +233,9 @@ Observability + Nagios, Zabbix; Automation and code + Perl.
 - `/resume`: every highlight. Highlights at index ≥ `printHighlights` carry `no-print`. The PDF is
   regenerated (`pnpm build:pdf`) and must stay exactly two pages; if the skills additions push it
   over, `printHighlights` is lowered, never the web content.
-- Journey cards: summary plus up to 3 highlights from 60rem, 1 below.
+- Journey cards: summary plus up to 3 highlights from 60rem, 1 below. Built in Phase 3 with the
+  new card (§7.1), since that phase replaces the card's layout; until then the card keeps its one
+  highlight.
 - JSON-LD and the PDF read the same data, as today.
 
 ## 7. Journey (replaces Axiom §6.2 avatar and scene; amends §8.2)
@@ -354,11 +361,11 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
 
 ## 10. Phases and acceptance
 
-| Phase | Branch                  | Scope                                        | Acceptance                                                                                                                                                                  |
-| ----- | ----------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `feat/hero-v2`          | §3, §4, §8 (ember, ADR 0003, motion), docs   | Header and hero as specified at all four widths; htop band, facts and arrow field gone; unit, component and e2e tests green; `/` within budget; baselines regenerated.      |
-| 2     | `feat/content-parallax` | §5, §6                                       | Topology gone; rack band parallaxes and stays still under reduced motion; `/resume` shows every highlight; PDF two pages and fresh; baselines regenerated.                  |
-| 3     | `feat/journey-anime`    | §7, §8 (imagery), remaining `CLAUDE.md` edit | Seven picked stills and clips, encoded within limits; journey full width; lazy loading and playback verified; `JourneyScene` gone; imagery log complete; baselines updated. |
+| Phase | Branch                  | Scope                                                            | Acceptance                                                                                                                                                                  |
+| ----- | ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `feat/hero-v2`          | §3, §4, §8 (ember, ADR 0003, motion), docs                       | Header and hero as specified at all four widths; htop band, facts and arrow field gone; unit, component and e2e tests green; `/` within budget; baselines regenerated.      |
+| 2     | `feat/content-parallax` | §5, §6                                                           | Topology gone; rack band parallaxes and stays still under reduced motion; `/resume` shows every highlight; PDF two pages and fresh; baselines regenerated.                  |
+| 3     | `feat/journey-anime`    | §7, §6.3 journey cards, §8 (imagery), remaining `CLAUDE.md` edit | Seven picked stills and clips, encoded within limits; journey full width; lazy loading and playback verified; `JourneyScene` gone; imagery log complete; baselines updated. |
 
 Step 1 of §7.4 (the character sheet) may run during Phase 1, since Marcus's picks take calendar
 time; nothing from it lands in the repo until Phase 3.
