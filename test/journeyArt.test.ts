@@ -17,4 +17,11 @@ describe("journey art", () => {
     const art = await import("../src/data/journeyArt");
     expect(Object.keys(art).sort()).toEqual(["stageArt"]);
   });
+
+  it("describes each rank's picture as the flat vector composite it now is", () => {
+    for (const stage of career) {
+      expect(stageArt[stage.id]!.subject, stage.id).toMatch(/^a flat vector /);
+      expect(stageArt[stage.id]!.still.height, stage.id).toBe(1080);
+    }
+  });
 });

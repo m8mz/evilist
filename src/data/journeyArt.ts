@@ -20,35 +20,36 @@ export const stageArt: Readonly<Record<string, StageArt>> = {
   "t1-support": {
     still: t1Support,
     subject:
-      "an anime systems engineer in a black hoodie and headset on a night shift at a support desk, lit by orange monitors",
+      "a flat vector engineer in a black hoodie and headset standing at a support desk between two orange-lit monitors",
   },
   "web-concierge": {
     still: webConcierge,
     subject:
-      "the same engineer at a standing desk, arranging a floating website wireframe above his laptop",
+      "a flat vector engineer in a hoodie, sleeves pushed up, one hand raised to floating website wireframe panels",
   },
   "professional-services": {
     still: professionalServices,
-    subject: "the same engineer between two rows of servers, holding a glowing orange cube of data",
+    subject:
+      "a flat vector engineer in a black zip jacket holding out a glowing orange data cube beside a path of small lights",
   },
   "t3-support": {
     still: t3Support,
     subject:
-      "the same engineer standing calm before a wall of orange alert lights, shadows rising at his feet",
+      "a flat vector engineer in a high-collar jacket standing calm before a wall of orange alert lights, violet shadows at his feet",
   },
   sysadmin: {
     still: sysadmin,
     subject:
-      "the same engineer in a short black coat beside an open server rack, violet smoke curling at his feet",
+      "a flat vector engineer in a short black coat beside an open server rack, violet smoke along the floor",
   },
   "linux-engineer": {
     still: linuxEngineer,
     subject:
-      "the same engineer in a long black coat conducting a pipeline of floating modules while violet shadow hands assemble them",
+      "a flat vector engineer in a long black coat conducting a pipeline of floating modules while violet shadow hands reach in",
   },
   "systems-architect": {
     still: systemsArchitect,
     subject:
-      "the same engineer in a long open coat in a datacenter aisle, rows of server racks and violet shadow energy around him",
+      "a flat vector engineer in a long open coat with orange cuffs before rows of violet shadow server racks, a violet aura around him",
   },
 };
