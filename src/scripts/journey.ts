@@ -2,8 +2,9 @@
 // Motion's scroll() tracks the journey element on scroll events; all visual changes are CSS
 // transitions on transform and opacity. Nothing is fetched until the journey reaches the screen
 // (it starts just below the fold, so a wider margin would load it with the page); then the active
-// rank and its neighbours are primed (poster shown, clip sources set) and the active clip plays
-// while the journey is on screen. A refused play() leaves the rank's still showing.
+// rank, once it has held for a quarter of a second, and its neighbours are primed (poster shown,
+// clip sources set) and the active clip plays while the journey is on screen. A refused play()
+// leaves the rank's still showing.
 import { scroll } from "motion";
 
 export function stageForProgress(progress: number, stages: number): number {
@@ -16,6 +17,10 @@ export function neighbours(index: number, count: number): number[] {
   return [index - 1, index, index + 1].filter((i) => i >= 0 && i < count);
 }
 
+/** How long a rank must stay active before its clip loads and plays: a smooth scroll through the
+ * journey (the skip link, back to top) passes each rank faster than this and loads none of them. */
+const SETTLE_MS = 250;
+
 export function initJourney(): void {
   const root = document.querySelector<HTMLElement>("[data-journey]");
   if (!root) return;
@@ -27,6 +32,7 @@ export function initJourney(): void {
   const videoOf = (i: number) => clips[i]?.querySelector("video") ?? null;
   let current = 0;
   let onScreen = false;
+  let settle: ReturnType<typeof setTimeout> | undefined;
 
   const prime = (index: number) => {
     for (const i of neighbours(index, clips.length)) {
@@ -63,15 +69,18 @@ export function initJourney(): void {
       node.classList.toggle("is-reached", i <= index);
       node.classList.toggle("is-current", i === index);
     });
-    if (onScreen) {
-      prime(index);
-      pause(previous);
-      play(index);
-    }
+    pause(previous);
+    clearTimeout(settle);
+    settle = setTimeout(() => {
+      if (!onScreen) return;
+      prime(current);
+      play(current);
+    }, SETTLE_MS);
   };
 
-  new IntersectionObserver(([entry]) => {
-    onScreen = entry.isIntersecting;
+  new IntersectionObserver((entries) => {
+    // The newest entry is the current state: a busy main thread can deliver an enter and a leave together.
+    onScreen = entries[entries.length - 1].isIntersecting;
     if (onScreen) {
       prime(current);
       play(current);
@@ -79,6 +88,11 @@ export function initJourney(): void {
       clips.forEach((_, i) => pause(i));
     }
   }).observe(root);
+
+  // A back/forward-cache restore can leave the active clip paused, and the observer won't fire again.
+  addEventListener("pageshow", (event) => {
+    if (event.persisted && onScreen) play(current);
+  });
 
   // Listens for the page's whole life: stopping on pagehide froze the journey after a
   // back/forward-cache restore.

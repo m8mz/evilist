@@ -229,6 +229,10 @@ test.describe("journey clips", () => {
   test("plays the active clip, fades it in, and pauses the rest", async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Playwright's WebKit has no AV1 or H.264 to play");
     await page.goto("/");
+    await scrollToStage(page, 0);
+    await expect
+      .poll(() => playing(page))
+      .toEqual([true, false, false, false, false, false, false]);
     await scrollToStage(page, 2);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "migration");
     await expect
@@ -285,11 +289,43 @@ test.describe("journey clips", () => {
     }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
     await page.waitForLoadState("networkidle");
-    for (const id of ["professional-services", "t3-support", "sysadmin"]) {
+    for (const id of [
+      "t1-support",
+      "web-concierge",
+      "professional-services",
+      "t3-support",
+      "sysadmin",
+    ]) {
       expect(art.stills.has(id), id).toBe(false);
       expect(art.clips.has(id), id).toBe(false);
     }
-    expect(art.stills.has("systems-architect")).toBe(true);
+    await expect.poll(() => art.stills.has("systems-architect")).toBe(true);
+  });
+
+  test("passing through on the skip link loads none of the ranks it passes", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "one project is enough");
+    await page.goto("/");
+    await scrollToStage(page, 0);
+    await expect
+      .poll(() => page.evaluate(() => document.querySelectorAll("[data-clip].is-primed").length))
+      .toBe(2);
+    const art = trackArt(page);
+    const skip = page.getByRole("link", { name: "Skip the career journey" });
+    await skip.focus();
+    await skip.press("Enter");
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.querySelector("#skills")!.getBoundingClientRect().top),
+      )
+      .toBeLessThan(200);
+    // Longer than SETTLE_MS: a rank that was going to load would have started by now.
+    await page.waitForTimeout(500);
+    for (const id of STAGE_IDS.slice(2)) {
+      expect(art.stills.has(id), id).toBe(false);
+      expect(art.clips.has(id), id).toBe(false);
+    }
   });
 });
 
