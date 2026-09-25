@@ -1,6 +1,10 @@
 // The deck's pose model (deck spec §7): pure functions from scroll progress, pointer tilt, hover,
 // the clock and the intro to seven card poses and the stage's energy. No DOM, no Three. The stage
 // (Plan 2) converts px to world units and drives the meshes; tests pin every curve here.
+//
+// A card's tilt, idle float and landed energy don't snap on at a binary "landed" threshold: they
+// blend in continuously as `pull` crosses `settleStart`, via `landedFactor`. The `landed` boolean
+// (pull > `landedAt`) still exists, but only decides `phase` and the caller's text print-in.
 import type { RankLabel } from "../../data/career";
 import type { DeckLayout, Point } from "./deck-layout";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
@@ -18,6 +22,11 @@ export function backOut(t: number, overshoot: number): number {
   const c1 = overshoot;
   const c3 = c1 + 1;
   return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
+}
+
+/** How far `pull` has crossed into `[threshold, 1]`, for blending tilt, float and landed energy. */
+function landedFactor(pull: number, threshold: number): number {
+  return clamp01((pull - threshold) / (1 - threshold));
 }
 
 export interface Pulls {
@@ -57,11 +66,15 @@ export interface Energy {
   index: number | null;
 }
 
-/** The stage's energy: S breathes, S+ grows with its rank; during a handoff the larger pull wins. */
+/**
+ * The stage's energy: S breathes, S+ grows with its rank; during a handoff the larger pull wins.
+ * Energy scales with the pull below `landedThreshold`, then blends toward the landed value over
+ * pull ∈ [landedThreshold, 1] (`landedFactor`), so it never snaps.
+ */
 export function energyFor(
   pulls: Pulls,
   labels: readonly RankLabel[],
-  landedAt: number = DECK_PARAMS.pull.landedAt,
+  landedThreshold: number = DECK_PARAMS.pull.settleStart,
   params: DeckParams = DECK_PARAMS,
 ): Energy {
   const E = params.energy;
@@ -72,12 +85,16 @@ export function energyFor(
     const pull = pulls.pull[i] ?? 0;
     if (pull <= 0 || pull <= best) return;
     best = pull;
-    const landed = pull > landedAt;
-    let energy: number;
-    if (!landed) energy = E.pulling * pull;
-    else if (label === "S") energy = E.s;
-    else energy = E.sPlusBase + E.sPlusRamp * Math.min(1, pulls.within / E.sPlusWindow);
-    out.energy = energy;
+    const pulling = E.pulling * pull;
+    // Only the rank that's actually active ramps its own S+ energy with `within`; a card still
+    // arriving during the previous rank's handoff hasn't started its own stretch yet, so it must
+    // not race ahead to the ramp's end just because `within` (the *previous* rank's within) is
+    // high.
+    const within = i === pulls.active ? pulls.within : 0;
+    const landedValue =
+      label === "S" ? E.s : E.sPlusBase + E.sPlusRamp * Math.min(1, within / E.sPlusWindow);
+    const lf = landedFactor(pull, landedThreshold);
+    out.energy = pulling + (landedValue - pulling) * lf;
     out.kind = label;
     out.index = i;
   });
@@ -99,9 +116,13 @@ export interface CardPose {
 }
 
 export interface IntroState {
-  startedAt: number;
-  /** 1 normally; the caller raises it to fast-forward when the visitor scrolls. */
-  speed: number;
+  /**
+   * Ms of intro clock time. The caller accumulates `elapsed += dt * speed` each frame (dt the
+   * real ms since the last frame); raising `speed` only changes the rate going forward, so the
+   * clock is always continuous, even fast-forwarded — never `(time - startedAt) * speed`, which
+   * rescales time already elapsed and teleports every card.
+   */
+  elapsed: number;
 }
 
 export interface IntroPose {
@@ -175,12 +196,19 @@ function restPose(
 
 const TAU = Math.PI * 2;
 
-/** Moves a card from its rest pose to the presented anchor by `pull` (spec §7). */
+/**
+ * Moves a card from its rest pose to the presented anchor by `pull` (spec §7). Rotation waits
+ * until `rotDelay` of the pull is done, so the card slides and lifts before it turns — otherwise
+ * rotation leads translation and the card sweeps through its rack neighbours. `lift` is false only
+ * for the card that's leaving mid-handoff: it takes a low path (no sine peak in z, no scale bump)
+ * so it doesn't share depth with the incoming card and pass through it.
+ */
 function interpolate(
   rest: RestPose,
   pull: number,
   layout: DeckLayout,
   params: DeckParams,
+  lift: boolean,
 ): CardPose {
   const P = params.pull;
   const target = layout.presented;
@@ -200,15 +228,20 @@ function interpolate(
     };
   }
   const e = easeInOutCubic(pull);
-  const b = backOut(pull, P.overshoot);
+  const r = clamp01((pull - P.rotDelay) / (1 - P.rotDelay));
+  const b = backOut(r, P.overshoot);
+  const z = lift
+    ? P.liftZ * P.liftPeak * Math.sin(Math.PI * pull) + P.liftZ * pull
+    : P.liftZ * pull;
+  const scale = lift ? 1 + P.scalePeak * Math.sin(Math.PI * pull) : 1;
   return {
     x: rest.x + (target.x - rest.x) * e,
     y: rest.y + (target.y - rest.y) * e,
-    z: P.liftZ * P.liftPeak * Math.sin(Math.PI * pull) + P.liftZ * pull,
+    z,
     rotX: 0,
     rotY: rest.rotY * (1 - b),
     rotZ: 0,
-    scale: 1 + P.scalePeak * Math.sin(Math.PI * pull),
+    scale,
     opacity: rest.opacity + (1 - rest.opacity) * e,
     pull,
     landed: pull > P.landedAt,
@@ -225,6 +258,38 @@ function float(time: number, landedAt: number, params: DeckParams) {
   return { y: wave(F.y), rotZ: wave(F.rotZ), rotY: wave(F.rotY), rotX: wave(F.rotX) };
 }
 
+/**
+ * The landed decoration for a card with some pull: tilt and idle float blend in continuously over
+ * pull ∈ [settleStart, 1] (`landedFactor`), on top of float's own 1.5 s fade-in. Also decides the
+ * phase once the card isn't racked. Shared by the scroll model and the intro's pulling card, so
+ * the handover between them has no seam and a landed card never reports "pulling".
+ */
+function decorateLanded(
+  pose: CardPose,
+  tilt: { x: number; y: number },
+  time: number,
+  landedAt: number | null,
+  leaving: boolean,
+  params: DeckParams,
+): void {
+  const lf = landedFactor(pose.pull, params.pull.settleStart);
+  pose.rotX += tilt.x * lf;
+  pose.rotY += tilt.y * lf;
+  if (landedAt != null) {
+    const f = float(time, landedAt, params);
+    pose.y += f.y * lf;
+    pose.rotZ += f.rotZ * lf;
+    pose.rotY += f.rotY * lf;
+    pose.rotX += f.rotX * lf;
+  }
+  if (pose.landed) {
+    pose.phase =
+      landedAt != null && time - landedAt < params.print.landingMs ? "landing" : "presented";
+  } else {
+    pose.phase = leaving ? "leaving" : "pulling";
+  }
+}
+
 /** Everything the stage needs for one frame (spec §7). */
 export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): StagePose {
   if (input.intro) {
@@ -235,8 +300,9 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
   const count = input.labels.length;
   const pulls = pullsFor(input.p, count, params.pull.handoffStart);
   const cards = input.labels.map((_, i) => {
+    const leaving = i === pulls.active && pulls.k > 0;
     const rest = restPose(i, pulls.active, pulls.k, input.layout, params);
-    const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params);
+    const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params, !leaving);
     if (pose.pull <= 0) {
       if (input.layout.mode === "desktop") {
         const h = clamp01(input.hover[i] ?? 0);
@@ -245,27 +311,10 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
       }
       return pose;
     }
-    if (!pose.landed) {
-      pose.phase = i === pulls.active && pulls.k > 0 ? "leaving" : "pulling";
-      return pose;
-    }
-    pose.rotX += input.tilt.x;
-    pose.rotY += input.tilt.y;
-    const landedAt = input.landedAt[i];
-    if (landedAt != null) {
-      const f = float(input.time, landedAt, params);
-      pose.y += f.y;
-      pose.rotZ += f.rotZ;
-      pose.rotY += f.rotY;
-      pose.rotX += f.rotX;
-      pose.phase = input.time - landedAt < params.print.landingMs ? "landing" : "presented";
-    } else {
-      // The caller has not recorded a landing (a deep link, a frozen frame): nothing to animate.
-      pose.phase = "presented";
-    }
+    decorateLanded(pose, input.tilt, input.time, input.landedAt[i] ?? null, leaving, params);
     return pose;
   });
-  const energy = energyFor(pulls, input.labels, params.pull.landedAt, params);
+  const energy = energyFor(pulls, input.labels, params.pull.settleStart, params);
   return {
     cards,
     active: pulls.active,
@@ -285,13 +334,15 @@ export function introDurationMs(count: number, params: DeckParams = DECK_PARAMS)
 
 /**
  * The entrance (spec §7): the rack deals in, holds, then E pulls itself out. On phones only E and
- * the waiting card take part. Returns `intro.done` once the scroll model should take over; the
- * end state equals `deckPose` at p = 0, so the handover has no jump.
+ * the waiting card take part. `input.intro.elapsed` is the caller's own intro clock (see
+ * `IntroState`), so fast-forwarding never rescales time already elapsed. Returns `intro.done` once
+ * the scroll model should take over; the end state equals `deckPose` at p = 0 (same tilt, float
+ * and phase, via the shared `decorateLanded`), so the handover has no jump.
  */
 function introPose(input: PoseInput, params: DeckParams): StagePose {
   const I = params.intro;
   const count = input.labels.length;
-  const t = (input.time - input.intro!.startedAt) * input.intro!.speed;
+  const t = input.intro!.elapsed;
   const dealEnd = I.dealMs + (count - 1) * I.staggerMs;
   const pullStart = dealEnd + I.holdMs;
   const end = pullStart + I.pullMs;
@@ -306,16 +357,17 @@ function introPose(input: PoseInput, params: DeckParams): StagePose {
       phone && i === 0
         ? { ...input.layout.next!, rotY: params.layout.phoneNextRotY, opacity: 1 }
         : restPose(i, 0, 0, input.layout, params);
-    if (phone && i > 1) return interpolate({ ...rest, opacity: 0 }, 0, input.layout, params);
+    if (phone && i > 1) return interpolate({ ...rest, opacity: 0 }, 0, input.layout, params, true);
     if (i === 0 && t >= pullStart) {
       const pull = easeInOutCubic(clamp01((t - pullStart) / I.pullMs));
-      const pose = interpolate(rest, pull, input.layout, params);
-      if (pull > 0 && !pose.landed) pose.phase = "pulling";
+      const pose = interpolate(rest, pull, input.layout, params, true);
+      if (pull > 0)
+        decorateLanded(pose, input.tilt, input.time, input.landedAt[0] ?? null, false, params);
       return pose;
     }
     const local = clamp01((t - i * I.staggerMs) / I.dealMs);
     const e = easeOutCubic(local);
-    const pose = interpolate(rest, 0, input.layout, params);
+    const pose = interpolate(rest, 0, input.layout, params, true);
     pose.x = rest.x + offset * (1 - e);
     return pose;
   });

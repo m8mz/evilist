@@ -7,6 +7,8 @@ describe("deck params", () => {
     expect(DECK_PARAMS.pull.handoffStart).toBe(0.7);
     expect(DECK_PARAMS.pull.rackRotY).toBe(103);
     expect(DECK_PARAMS.pull.liftZ).toBe(60);
+    expect(DECK_PARAMS.pull.settleStart).toBe(0.9);
+    expect(DECK_PARAMS.pull.rotDelay).toBe(0.15);
     expect(DECK_PARAMS.layout.cardHMin).toBe(320);
     expect(DECK_PARAMS.layout.cardHMax).toBe(560);
     expect(DECK_PARAMS.layout.columnMax).toBe(1200);
@@ -26,6 +28,10 @@ describe("deck params", () => {
     expect(p.pull.handoffStart).toBeLessThan(1);
     expect(p.pull.landedAt).toBeGreaterThan(p.pull.handoffStart);
     expect(p.pull.landedAt).toBeLessThan(1);
+    expect(p.pull.settleStart).toBeGreaterThan(p.pull.handoffStart);
+    expect(p.pull.settleStart).toBeLessThan(p.pull.landedAt);
+    expect(p.pull.rotDelay).toBeGreaterThan(0);
+    expect(p.pull.rotDelay).toBeLessThan(1);
     expect(p.pull.overshoot).toBeGreaterThan(0);
     expect(p.layout.cardHMin).toBeLessThan(p.layout.cardHMax);
     expect(p.layout.cardHRatio).toBeGreaterThan(0);

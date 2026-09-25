@@ -35,6 +35,11 @@ export interface PullParams {
   handoffStart: number;
   /** A card counts as landed above this pull. */
   landedAt: number;
+  /** Tilt, float and the landed energy blend in over pull ∈ [settleStart, 1]. */
+  settleStart: number;
+  /** Rotation waits until this much of the pull is done, so the card slides and lifts before it
+   * turns. */
+  rotDelay: number;
   /** The back-ease's overshoot constant (c1). */
   overshoot: number;
   /** The presented card's z, and the peak of the extra lift during the pull. */
@@ -148,6 +153,8 @@ export function defaultDeckParams(): DeckParams {
     pull: {
       handoffStart: 0.7,
       landedAt: 0.985,
+      settleStart: 0.9,
+      rotDelay: 0.15,
       overshoot: 1.3,
       liftZ: 60,
       liftPeak: 1.6,
