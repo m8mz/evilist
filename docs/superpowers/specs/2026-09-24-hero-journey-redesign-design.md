@@ -125,10 +125,15 @@ starts a sentence:
 
 ### 4.4 Network pane
 
-- **Data** `src/data/network.ts`: 24 labelled nodes from the real stack — Linux, HAProxy, Podman,
-  Ansible, Go, Python, Proxmox, Ceph, BGP, WireGuard, Wazuh, PostgreSQL, MariaDB, Grafana,
-  Prometheus, Kubernetes, Docker, Jenkins, Nginx, Bash, Django, Keepalived, FreeIPA, GitHub
-  Actions — plus 30 unlabelled filler nodes.
+- **Data** `src/data/network.ts`: 58 labelled nodes, the open-source Linux tools Marcus runs and
+  the distros they run on (Linux, HAProxy, Keepalived, Nginx, Apache, Podman, Docker, Kubernetes,
+  Ansible, Jenkins, Git, Go, Python, Bash, Perl, Django, PostgreSQL, PgBouncer, MariaDB, Galera,
+  Ceph, Proxmox, KVM, OpenStack, OpenVZ, WireGuard, pfSense, Wazuh, FreeIPA, OpenLDAP, Prometheus,
+  Grafana, Elasticsearch, Kibana, LibreNMS, Nagios, Zabbix, Sensu, ModSecurity, firewalld,
+  iptables, ClamAV, systemd, OpenSSH, Samba, NFS, BGP, Neovim, tmux, Debian, Ubuntu, Rocky Linux,
+  AlmaLinux, CentOS, Fedora, Arch, openSUSE, Alpine), plus 40 unlabelled filler nodes. Amended
+  2026-09-25 from 24 labels and 30 fillers: Marcus asked for a dense pane of the open-source Linux
+  tools and distros he works with. Idle pulses run every 1.25 s with up to two live at once.
 - **Layout** `src/scripts/network.ts` (shared by server and client, like `htop.ts`): a seeded PRNG
   places nodes in a fixed viewBox with a minimum spacing; each node links to its 2–3 nearest
   neighbours, plus any links needed to make the graph connected. Same seed, same picture: every
@@ -143,7 +148,9 @@ starts a sentence:
   (`is-echo`). Moving away fades everything over ~600ms, so sweeping the cursor leaves a trail and
   the pattern keeps changing.
 - **Idle and touch.** While the hero is on screen, the tab is visible and the pointer has been
-  still for 3 s, a random labelled node fires the same lit → echo → fade sequence every ~2.5 s.
+  still for 3 s, a random labelled node fires the same lit → echo → fade sequence every ~1.25 s,
+  with up to two pulses live at once (amended 2026-09-25 from one every ~2.5 s, for the denser
+  pane).
 - **Reduced motion:** no idle pulses and no transitions; hover still lights nodes, instantly.
 - **Without JS:** the static constellation.
 - The SVG never takes clicks; the hero's buttons stay fully usable.
@@ -388,7 +395,7 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
 - **Unit (vitest, test first):** `decadePhrase` at 9/10/11; `heroPitch` opens with the
   capitalised phrase; `site.titles` includes Forward
   Deployed Engineer, has no duplicates, every entry ≤ 25 characters, `titles[0] === site.role`;
-  the network layout is deterministic, in bounds, connected and has 24 labelled nodes; the tilt
+  the network layout is deterministic, in bounds, connected and has 58 labelled nodes; the tilt
   mapping clamps to ±3.5°; `clipSources` returns four sources in webm-before-mp4 order; career data
   keeps its public-safety checks and every `printHighlights` ≤ its highlight count.
 - **Component (Container API):** header renders the logo `img`; hero has no facts, the rotating

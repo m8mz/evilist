@@ -358,9 +358,10 @@ test.describe("stack network", () => {
       test.skip(info.project.name === "reduced-motion", "no pulses under reduced motion");
       await page.goto("/");
       const pulsing = page.locator(".net__node.is-source");
-      await expect(pulsing).toHaveCount(1, { timeout: 7000 });
+      // Up to two pulses can be live at once; any one of them will do.
+      await expect(pulsing).not.toHaveCount(0, { timeout: 7000 });
       // The pulse only lights nodes the visitor can see, so its dot is there to hover.
-      const node = await pulsing.evaluate((g: SVGGElement) => {
+      const node = await pulsing.first().evaluate((g: SVGGElement) => {
         const r = g.querySelector("circle")!.getBoundingClientRect();
         return { id: g.dataset.netNode!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
       });
@@ -444,7 +445,11 @@ test.describe("stack network", () => {
       await page.waitForTimeout(6000);
       await expect(lit).toHaveCount(0);
     } else {
-      await expect(lit).toHaveCount(1, { timeout: 7000 });
+      // One pulse every 1.25 s, up to two live at once: never none for long, never more than two.
+      await expect(lit).not.toHaveCount(0, { timeout: 7000 });
+      expect(await lit.count()).toBeLessThanOrEqual(2);
+      await page.waitForTimeout(3000);
+      expect(await lit.count()).toBeLessThanOrEqual(2);
     }
   });
 });

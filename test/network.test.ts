@@ -32,34 +32,69 @@ function reachable(network: Network, from: number): Set<number> {
 }
 
 describe("NETWORK", () => {
-  it("labels the 24 tools from the spec, in order", () => {
+  it("labels the 58 open-source Linux tools and distros from the spec, in order", () => {
     expect(NETWORK.labels).toEqual([
       "Linux",
       "HAProxy",
+      "Keepalived",
+      "Nginx",
+      "Apache",
       "Podman",
+      "Docker",
+      "Kubernetes",
       "Ansible",
+      "Jenkins",
+      "Git",
       "Go",
       "Python",
-      "Proxmox",
-      "Ceph",
-      "BGP",
-      "WireGuard",
-      "Wazuh",
-      "PostgreSQL",
-      "MariaDB",
-      "Grafana",
-      "Prometheus",
-      "Kubernetes",
-      "Docker",
-      "Jenkins",
-      "Nginx",
       "Bash",
+      "Perl",
       "Django",
-      "Keepalived",
+      "PostgreSQL",
+      "PgBouncer",
+      "MariaDB",
+      "Galera",
+      "Ceph",
+      "Proxmox",
+      "KVM",
+      "OpenStack",
+      "OpenVZ",
+      "WireGuard",
+      "pfSense",
+      "Wazuh",
       "FreeIPA",
-      "GitHub Actions",
+      "OpenLDAP",
+      "Prometheus",
+      "Grafana",
+      "Elasticsearch",
+      "Kibana",
+      "LibreNMS",
+      "Nagios",
+      "Zabbix",
+      "Sensu",
+      "ModSecurity",
+      "firewalld",
+      "iptables",
+      "ClamAV",
+      "systemd",
+      "OpenSSH",
+      "Samba",
+      "NFS",
+      "BGP",
+      "Neovim",
+      "tmux",
+      "Debian",
+      "Ubuntu",
+      "Rocky Linux",
+      "AlmaLinux",
+      "CentOS",
+      "Fedora",
+      "Arch",
+      "openSUSE",
+      "Alpine",
     ]);
-    expect(NETWORK.labels).toHaveLength(24);
+    expect(NETWORK.labels).toHaveLength(58);
+    expect(NETWORK.filler).toBe(40);
   });
 });
 
@@ -96,13 +131,16 @@ describe("layoutNetwork", () => {
   });
 
   it("spaces labelled nodes so their labels don't collide", () => {
-    // If this fails after a layout change, change NETWORK.seed, not this number.
+    // 58 labels can't all reach the 96px target on this canvas (the placer settles for the best
+    // of its tries), so this pins the achieved floor: two labelled dots are never closer than a
+    // label's height plus its gap, and only one or two labels show at a time anyway. If this
+    // fails after a layout change, change NETWORK.seed, not this number.
     const labelled = net.nodes.filter((n) => n.label);
     for (const a of labelled)
       for (const b of labelled)
         if (a.id < b.id)
           expect(Math.hypot(a.x - b.x, a.y - b.y), `${a.label}/${b.label}`).toBeGreaterThanOrEqual(
-            80,
+            60,
           );
   });
 

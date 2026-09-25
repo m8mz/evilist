@@ -1,7 +1,8 @@
 // Lights the hero network (spec §4.4). The labelled node nearest the cursor (within 120 CSS px)
 // lights with its edges and neighbours; the next hop echoes 120 ms later; everything fades when
 // the cursor moves on. While no mouse rests on a lit node and the pointer has been still for 3 s
-// (always, on touch screens), a random node pulses every 2.5 s. Reduced motion: no pulses; the
+// (always, on touch screens), a random node pulses every 1.25 s, with up to two pulses live at
+// once (the second keeps clear of the first's neighbourhood). Reduced motion: no pulses; the
 // global rule makes the fades instant.
 //
 // Only nodes the visitor can see take part: a dot inside the visible part of the pane and clear of
@@ -18,14 +19,16 @@ import {
   nearestLabelled,
   visibleBox,
   type Box,
+  type Lighting,
   type Point,
 } from "./network";
 
 const REACH_PX = 120;
 const ECHO_MS = 120;
 const IDLE_MS = 3000;
-const PULSE_EVERY_MS = 2500;
+const PULSE_EVERY_MS = 1250;
 const PULSE_HOLD_MS = 1400;
+const PULSES_AT_ONCE = 2;
 /** Between a dot and its label, in SVG units (the dot scales with the SVG, so does the gap). */
 const LABEL_GAP = 10;
 
@@ -113,44 +116,84 @@ export function initStackNetwork(hero: HTMLElement): void {
     text.setAttribute("text-anchor", side);
   };
 
-  let current: number | null = null;
+  /** A lit source: its lighting, whether its echo has fired, and its timers. */
+  interface Source {
+    lighting: Lighting;
+    echoed: boolean;
+    echoTimer: number;
+    holdTimer: number;
+  }
+  // Up to two idle pulses can be live at once; the pointer is exclusive and drops them all.
+  const active = new Map<number, Source>();
   let byPointer = false;
-  let echoTimer = 0;
-  let holdTimer = 0;
   let lastMove = 0;
 
+  /** Repaints every node and edge from the union of the live sources (lit outranks echo). */
+  const render = () => {
+    const sources = new Set<number>();
+    const lit = new Set<number>();
+    const echo = new Set<number>();
+    const litEdges = new Set<string>();
+    const echoEdges = new Set<string>();
+    for (const [id, s] of active) {
+      sources.add(id);
+      for (const n of s.lighting.lit) lit.add(n);
+      for (const key of s.lighting.litEdges) litEdges.add(key);
+      if (!s.echoed) continue;
+      for (const n of s.lighting.echo) echo.add(n);
+      for (const key of s.lighting.echoEdges) echoEdges.add(key);
+    }
+    for (const [id, el] of nodes) {
+      el.classList.toggle("is-source", sources.has(id));
+      el.classList.toggle("is-lit", lit.has(id));
+      el.classList.toggle("is-echo", echo.has(id) && !lit.has(id));
+    }
+    for (const [key, el] of edges) {
+      el.classList.toggle("is-lit", litEdges.has(key));
+      el.classList.toggle("is-echo", echoEdges.has(key) && !litEdges.has(key));
+    }
+  };
+
+  const drop = (id: number) => {
+    const s = active.get(id);
+    if (!s) return;
+    window.clearTimeout(s.echoTimer);
+    window.clearTimeout(s.holdTimer);
+    active.delete(id);
+    nodes.get(id)?.classList.remove("is-unlabelled");
+    render();
+  };
+
   const clear = () => {
-    window.clearTimeout(echoTimer);
-    window.clearTimeout(holdTimer);
     byPointer = false;
-    if (current === null) return;
-    for (const el of [...nodes.values(), ...edges.values()])
-      el.classList.remove("is-source", "is-lit", "is-echo", "is-unlabelled");
-    current = null;
+    for (const id of [...active.keys()]) drop(id);
   };
 
   const light = (source: number, fromPointer: boolean) => {
     if (fromPointer) {
+      byPointer = true;
+      for (const id of [...active.keys()]) if (id !== source) drop(id);
       // A pointer landing on a node that's already lit — even mid-pulse — takes ownership,
       // so the pulse's hold timer never blanks the node out from under the cursor.
-      window.clearTimeout(holdTimer);
-      byPointer = true;
+      const held = active.get(source);
+      if (held) window.clearTimeout(held.holdTimer);
     }
-    if (source === current) return;
-    clear();
-    current = source;
-    byPointer = fromPointer;
-    placeLabel(source);
-    const l = lightingFor(network, source);
-    nodes.get(source)?.classList.add("is-source");
-    for (const id of l.lit) nodes.get(id)?.classList.add("is-lit");
-    for (const key of l.litEdges) edges.get(key)?.classList.add("is-lit");
-    const echo = () => {
-      for (const id of l.echo) nodes.get(id)?.classList.add("is-echo");
-      for (const key of l.echoEdges) edges.get(key)?.classList.add("is-echo");
+    if (active.has(source)) return;
+    const s: Source = {
+      lighting: lightingFor(network, source),
+      echoed: reduced,
+      echoTimer: 0,
+      holdTimer: 0,
     };
-    if (reduced) echo();
-    else echoTimer = window.setTimeout(echo, ECHO_MS);
+    active.set(source, s);
+    placeLabel(source);
+    if (!reduced) {
+      s.echoTimer = window.setTimeout(() => {
+        s.echoed = true;
+        render();
+      }, ECHO_MS);
+    }
+    render();
   };
 
   let frame = 0;
@@ -183,15 +226,23 @@ export function initStackNetwork(hero: HTMLElement): void {
   inView(hero, () => {
     const timer = window.setInterval(() => {
       if (document.hidden || byPointer || Date.now() - lastMove < IDLE_MS) return;
-      const picks = pulseable();
+      if (active.size >= PULSES_AT_ONCE) return;
+      // A second pulse keeps clear of the first's lit neighbourhood, so two labels never crowd.
+      const taken = new Set<number>();
+      for (const [id, s] of active) {
+        taken.add(id);
+        for (const n of s.lighting.lit) taken.add(n);
+        for (const n of s.lighting.echo) taken.add(n);
+      }
+      const picks = pulseable().filter((id) => !taken.has(id));
       if (picks.length === 0) return;
-      light(picks[Math.floor(Math.random() * picks.length)]!, false);
-      window.clearTimeout(holdTimer);
-      holdTimer = window.setTimeout(clear, PULSE_HOLD_MS);
+      const pick = picks[Math.floor(Math.random() * picks.length)]!;
+      light(pick, false);
+      const s = active.get(pick);
+      if (s) s.holdTimer = window.setTimeout(() => drop(pick), PULSE_HOLD_MS);
     }, PULSE_EVERY_MS);
     return () => {
       window.clearInterval(timer);
-      window.clearTimeout(holdTimer);
       clear();
     };
   });
