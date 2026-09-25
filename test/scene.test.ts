@@ -5,10 +5,15 @@ import { applyState, bindScene, type Attr } from "../src/scripts/scene";
 
 /** A fake SVG: every id the builder emits, recording the attributes written to it. */
 function fakeScene(missing: string[] = []) {
-  const els = new Map<string, Attr & { attrs: Record<string, string> }>();
+  const els = new Map<string, Attr & { attrs: Record<string, string>; writes: number }>();
   const add = (id: string) => {
     const attrs: Record<string, string> = {};
-    els.set(id, { attrs, setAttribute: (n, v) => void (attrs[n] = v) });
+    const el = {
+      attrs,
+      writes: 0,
+      setAttribute: (n: string, v: string) => void ((attrs[n] = v), el.writes++),
+    };
+    els.set(id, el);
   };
   add("energy");
   for (const part of PART_ORDER) {
@@ -102,6 +107,27 @@ describe("applyState", () => {
     expect(attrs(scene, "energy")).toEqual({
       opacity: "1.000",
       transform: `translate(${x} ${hy}) scale(1.000) translate(${-x} ${-hy})`,
+    });
+  });
+
+  it("writes only what changed: a second identical apply writes nothing, a rank change writes that rank", () => {
+    const scene = fakeScene();
+    const refs = bindScene(scene.byId)!;
+    const total = () => [...scene.els.values()].reduce((n, el) => n + el.writes, 0);
+    applyState(refs, sceneState(4.5 / 7, poses));
+    const first = total();
+    expect(first).toBeGreaterThan(50);
+    applyState(refs, sceneState(4.5 / 7, poses));
+    expect(total()).toBe(first);
+    applyState(refs, sceneState(5.5 / 7, poses));
+    expect(total()).toBeGreaterThan(first);
+    expect(attrs(scene, "outfit-linux-engineer-head")).toEqual({
+      visibility: "visible",
+      opacity: "1.000",
+    });
+    expect(attrs(scene, "outfit-sysadmin-head")).toEqual({
+      visibility: "hidden",
+      opacity: "0.000",
     });
   });
 });

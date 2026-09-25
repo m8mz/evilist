@@ -2,7 +2,8 @@
 // (vector journey spec §5): rotate() on the pivoted parts, visibility and opacity on the live
 // outfits and prop sets, stroke-dashoffset on an arriving outline, opacity and scale on the
 // energy. Attributes only, never style, for the CSP. The ids are the builder's contract
-// (scripts/build-scene.mjs).
+// (scripts/build-scene.mjs). A frame writes only the attributes whose value changed since the
+// last frame.
 import { PART_ORDER, PIVOT_OF_PART, RIG, type PartId, type Rig } from "../data/avatarRig";
 import type { SceneState } from "./avatar";
 
@@ -51,35 +52,47 @@ export function bindScene(byId: (id: string) => Attr | null, rig: Rig = RIG): Sc
 
 const f = (n: number): string => n.toFixed(3);
 
+/** What each element was last given, so a frame only writes what changed. */
+const written = new WeakMap<Attr, Record<string, string>>();
+
+const set = (el: Attr, name: string, value: string): void => {
+  let last = written.get(el);
+  if (!last) written.set(el, (last = {}));
+  if (last[name] === value) return;
+  last[name] = value;
+  el.setAttribute(name, value);
+};
+
 export function applyState(refs: SceneRefs, state: SceneState, rig: Rig = RIG): void {
   for (const part of PART_ORDER) {
     const pivot = PIVOT_OF_PART[part];
     const el = refs.parts[part];
     if (!pivot || !el) continue;
     const [x, y] = rig.pivots[pivot];
-    el.setAttribute("transform", `rotate(${f(state.pose[pivot])} ${x} ${y})`);
+    set(el, "transform", `rotate(${f(state.pose[pivot])} ${x} ${y})`);
   }
   const outfits = new Map(state.outfits.map((o) => [o.rank, o.opacity]));
   refs.outfits.forEach((outfit, rank) => {
     const opacity = outfits.get(rank);
     for (const el of Object.values(outfit)) {
-      el.setAttribute("visibility", opacity === undefined ? "hidden" : "visible");
-      el.setAttribute("opacity", f(opacity ?? 0));
+      set(el, "visibility", opacity === undefined ? "hidden" : "visible");
+      set(el, "opacity", f(opacity ?? 0));
     }
   });
   const props = new Map(state.props.map((p) => [p.rank, p]));
   refs.props.forEach((el, rank) => {
     const p = props.get(rank);
-    el.group.setAttribute("visibility", p ? "visible" : "hidden");
+    set(el.group, "visibility", p ? "visible" : "hidden");
     if (!p) return;
-    el.fill.setAttribute("opacity", f(p.fill));
-    el.outline.setAttribute("opacity", f(p.outline));
-    el.outline.setAttribute("stroke-dashoffset", f(p.draw));
+    set(el.fill, "opacity", f(p.fill));
+    set(el.outline, "opacity", f(p.outline));
+    set(el.outline, "stroke-dashoffset", f(p.draw));
   });
   const [hx, hy] = rig.pivots.hips;
   const x = hx + rig.canvas.width * FIGURE_X;
-  refs.energy.setAttribute("opacity", f(state.energy.opacity));
-  refs.energy.setAttribute(
+  set(refs.energy, "opacity", f(state.energy.opacity));
+  set(
+    refs.energy,
     "transform",
     `translate(${x} ${hy}) scale(${f(state.energy.scale)}) translate(${-x} ${-hy})`,
   );
