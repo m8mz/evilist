@@ -302,7 +302,7 @@ test.describe("journey clips", () => {
     await expect.poll(() => art.stills.has("systems-architect")).toBe(true);
   });
 
-  test("passing through on the skip link loads none of the ranks it passes", async ({
+  test("passing through on the skip link loads none of the ranks it only passes", async ({
     page,
   }, info) => {
     test.skip(info.project.name !== "desktop", "one project is enough");
@@ -322,7 +322,8 @@ test.describe("journey clips", () => {
       .toBeLessThan(200);
     // Longer than SETTLE_MS: a rank that was going to load would have started by now.
     await page.waitForTimeout(500);
-    for (const id of STAGE_IDS.slice(2)) {
+    // The last rank decelerates out of view past SETTLE_MS, so it and its neighbour may load; the ranks in between must not.
+    for (const id of ["professional-services", "t3-support", "sysadmin"]) {
       expect(art.stills.has(id), id).toBe(false);
       expect(art.clips.has(id), id).toBe(false);
     }
