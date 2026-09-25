@@ -103,7 +103,9 @@ test.describe("hero", () => {
 /**
  * Scrolls the band's top edge to `y` px below the viewport's top (negative is above it), waits
  * two frames for Motion, then measures how far the image has moved from centre (px, + is down)
- * and whether it still covers the band.
+ * and whether it still covers the band. The image box's inset and the band's clip both resolve
+ * against the padding box (border-box minus the 1px top rule), so the reference frame here is the
+ * padding box, not `getBoundingClientRect()`'s border box.
  */
 async function rackAt(page: Page, y: number) {
   const band = page.locator(".parallax");
@@ -116,10 +118,14 @@ async function rackAt(page: Page, y: number) {
   return band.evaluate((el) => {
     const b = el.getBoundingClientRect();
     const m = el.querySelector(".parallax__media")!.getBoundingClientRect();
+    // The image box's inset and the band's clip both use the padding box: the 1px top rule is
+    // the band's border, above it.
+    const top = b.top + el.clientTop;
+    const height = el.clientHeight;
     return {
       height: b.height,
-      shift: m.top - (b.top - 0.12 * b.height),
-      covers: m.top <= b.top + 0.5 && m.bottom >= b.bottom - 0.5,
+      shift: m.top - (top - 0.12 * height),
+      covers: m.top <= top + 0.5 && m.bottom >= top + height - 0.5,
     };
   });
 }
