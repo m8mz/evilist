@@ -274,7 +274,10 @@ test.describe("journey scene", () => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => {
-      if (m.type() === "error") errors.push(m.text());
+      // The browser reports the 404 this test serves; anything else is ours.
+      if (m.type() === "error" && !m.text().startsWith("Failed to load resource")) {
+        errors.push(m.text());
+      }
     });
     await page.route("**/journey/scene.svg", (route) =>
       route.fulfill({
