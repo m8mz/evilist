@@ -2,7 +2,8 @@
 // traced and cut into the rig's parts, every prop set and the energy traced whole, all written
 // as one SVG whose ids are the contract with src/scripts/scene.ts and
 // scripts/render-rank-stills.mjs (see the plan's "Scene ids"). Also writes the inline
-// silhouette (the base pose as one coarse path) that holds the stage until the scene loads.
+// silhouette (the base pose as one coarse path, traced at a quarter of the canvas) that holds
+// the stage until the scene loads.
 // Usage: node scripts/build-scene.mjs   (art/journey → public/journey/scene.svg,
 //                                       src/components/journey/silhouette.svg)
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
@@ -39,6 +40,10 @@ export const PIVOT_OF_PART = {
 export const OUTLINE = { stroke: "#6e6e78", width: 3 };
 /** The silhouette is coarse on purpose: ~3 KB, inlined in every page render. */
 export const SILHOUETTE_TRACE = { turdSize: 40, optTolerance: 2.5, decimals: 0 };
+/** Props are backdrops: traced at half their canvas, placed at twice the size. */
+export const PROPS_SCALE = 2;
+/** The inline placeholder only needs a shape: traced at a quarter of the canvas. */
+export const SILHOUETTE_SCALE = 4;
 
 /** The scene around the figure canvas: 1.6× as wide, the figure 30% in, props as a square 5% in. */
 export function sceneBox(rig) {
@@ -87,7 +92,7 @@ export function sceneMarkup(art, rig, { visibleRank = 0 } = {}) {
   const energy = energyAt(visibleRank, ranks.length);
 
   const floor = `<rect id="floor" x="${box.width * 0.125}" y="${rig.anchors.feet + 4}" width="${box.width * 0.75}" height="4" fill="#202020"/>`;
-  const energyGroup = `<g id="energy" opacity="${energy.opacity}" transform="${energyTransform(rig, Number(energy.scale))}"><g transform="translate(${box.propsX} 0)">${(art.energy ?? []).map(groupOf).join("")}</g></g>`;
+  const energyGroup = `<g id="energy" opacity="${energy.opacity}" transform="${energyTransform(rig, Number(energy.scale))}"><g transform="translate(${box.propsX} 0) scale(${PROPS_SCALE})">${(art.energy ?? []).map(groupOf).join("")}</g></g>`;
   const props = ranks
     .map((rank, i) => {
       const layers = art.props[rank] ?? [];
@@ -108,12 +113,12 @@ export function sceneMarkup(art, rig, { visibleRank = 0 } = {}) {
     })
     .join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="xMidYMid meet">${floor}${energyGroup}<g id="props" transform="translate(${box.propsX} 0)">${props}</g><g id="avatar" transform="translate(${box.figureX} 0)">${avatar}</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="xMidYMid meet">${floor}${energyGroup}<g id="props" transform="translate(${box.propsX} 0) scale(${PROPS_SCALE})">${props}</g><g id="avatar" transform="translate(${box.figureX} 0)">${avatar}</g></svg>`;
 }
 
 export function silhouetteMarkup(d, rig) {
   const box = sceneBox(rig);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="xMidYMid meet"><path transform="translate(${box.figureX} 0)" fill="#202020" d="${d}"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="xMidYMid meet"><path transform="translate(${box.figureX} 0) scale(${SILHOUETTE_SCALE})" fill="#202020" d="${d}"/></svg>`;
 }
 
 /** Re-poses a built scene on rank `index`: the same edits the runtime makes, as attributes. */
@@ -150,6 +155,7 @@ async function traceOptional(path, options) {
 export async function buildScene({ artDir, outDir, silhouettePath, rig, trace = {} }) {
   const { width, height } = rig.canvas;
   const { propsSize } = sceneBox(rig);
+  const tracedPropsSize = Math.round(propsSize / PROPS_SCALE);
   const basePath = join(artDir, "base.webp");
   if (!existsSync(basePath)) throw new Error(`missing ${basePath}`);
   const art = { outfits: {}, props: {}, energy: [] };
@@ -158,19 +164,30 @@ export async function buildScene({ artDir, outDir, silhouettePath, rig, trace = 
     if (!existsSync(outfit)) throw new Error(`missing ${outfit}`);
     art.outfits[rank] = await traceLayers(outfit, { width, height, parts: rig.parts, trace });
     art.props[rank] = await traceOptional(join(artDir, `props-${rank}.webp`), {
-      width: propsSize,
-      height: propsSize,
+      width: tracedPropsSize,
+      height: tracedPropsSize,
       trace,
     });
   }
   art.energy = await traceOptional(join(artDir, "energy.webp"), {
-    width: propsSize,
-    height: propsSize,
+    width: tracedPropsSize,
+    height: tracedPropsSize,
     trace,
   });
 
-  const base = await loadIndices(basePath, { width, height, blur: 0 });
-  const mask = await maskPng(base.indices, width, height, (i) => i !== BACKGROUND);
+  const silhouetteWidth = Math.round(width / SILHOUETTE_SCALE);
+  const silhouetteHeight = Math.round(height / SILHOUETTE_SCALE);
+  const base = await loadIndices(basePath, {
+    width: silhouetteWidth,
+    height: silhouetteHeight,
+    blur: 0,
+  });
+  const mask = await maskPng(
+    base.indices,
+    silhouetteWidth,
+    silhouetteHeight,
+    (i) => i !== BACKGROUND,
+  );
   const silhouette = silhouetteMarkup(mask ? await tracePath(mask, SILHOUETTE_TRACE) : "", rig);
   const scene = sceneMarkup(art, rig, { visibleRank: 0 });
 

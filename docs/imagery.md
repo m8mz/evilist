@@ -343,3 +343,13 @@ B 06, A 09, S 11, S+ 12 → `art/journey/props-<stage-id>.webp`, energy 15 → `
 (1500×1500). Passed over: outfit 02 (red and violet headset), 06 (violet zip stripe), 13 (tails wider
 than the coat masks); props 00 (a headset floating above the desk), 03 (furniture in the centre),
 07 (bricks, not lights), 14 (flame filling the centre).
+
+**Re-roll (2026-09-25).** The first assembled scene came to 824 KB gzipped against a 300 KB budget,
+and the B alert-light grid and the S+ rack rows were 72% of the props' bytes (hundreds of small
+shapes each). Both were re-rolled asking for a few large elements, 4 credits (2,536 → 2,532), and
+the builder now traces props at half resolution:
+
+| Rank | Prompt change                                                                                   | Variants (job)                                                                 | Pick                         |
+| ---- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------- |
+| B    | two panels of large orange lights, five rows by four, upper left and upper right; broad shadows | `0a9c487b-a10f-462e-9d2a-78e125cb2466`, `f70e1639-4e56-4bcd-a982-f5fbff0a50f8` | first (broader floor shapes) |
+| S+   | three simple rack blocks a side with a few lights, tops dissolving into two or three wisps      | `cfbf690a-37f4-41fb-b167-456a602c188a`, `c247b352-8be9-4232-85a3-2b34850b8596` | first (cleaner)              |

@@ -54,8 +54,8 @@ describe("quantise", () => {
 });
 
 describe("roundPath", () => {
-  it("rounds to one decimal, drops trailing zeros and folds whitespace", () => {
-    expect(roundPath("M 10.000 20.500\nC 1.234 -0.000 3 4")).toBe("M 10 20.5 C 1.2 0 3 4");
+  it("rounds to whole numbers, drops trailing zeros and folds whitespace", () => {
+    expect(roundPath("M 10.000 20.500\nC 1.234 -0.000 3 4")).toBe("M 10 21 C 1 0 3 4");
   });
 });
 

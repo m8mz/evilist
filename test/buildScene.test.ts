@@ -160,9 +160,10 @@ describe("sceneMarkup", () => {
     expect(svg).toContain('<g id="part-head" transform="rotate(0 50 45)">');
     expect(svg).toContain('<g id="part-torso">');
     expect(svg).toContain('<g id="avatar" transform="translate(30 0)">');
+    expect(svg).toContain('<g id="props" transform="translate(5 0) scale(2)">');
     // progress at the middle of rank 0 of 2 is 0.25: opacity 0.0625, scale 0.625
     expect(svg).toContain(
-      '<g id="energy" opacity="0.063" transform="translate(80 90) scale(0.625) translate(-80 -90)"><g transform="translate(5 0)">',
+      '<g id="energy" opacity="0.063" transform="translate(80 90) scale(0.625) translate(-80 -90)"><g transform="translate(5 0) scale(2)">',
     );
     expect(svg).toContain('<rect id="floor"');
     expect(svg).not.toContain("style=");
@@ -234,7 +235,7 @@ describe("buildScene", () => {
     expect(existsSync(silhouette)).toBe(true);
     const sil = readFileSync(silhouette, "utf8");
     expect(sil).toMatch(
-      /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 160 150" preserveAspectRatio="xMidYMid meet"><path transform="translate\(30 0\)" fill="#202020" d="M/,
+      /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 160 150" preserveAspectRatio="xMidYMid meet"><path transform="translate\(30 0\) scale\(4\)" fill="#202020" d="M/,
     );
     expect(statSync(silhouette).size).toBeLessThan(4096);
     expect(gzipSync(scene).length).toBeGreaterThan(100);

@@ -33,7 +33,7 @@ export const BACKGROUND = 255;
  * Tracing defaults, tuned on the spike figure at 1000 px tall (36 KB gz for ten layers). Blur is
  * off by default: flat art has no noise to soften, and blurring it only manufactures edge bands.
  */
-export const TRACE = { blur: 0, turdSize: 10, alphaMax: 1, optTolerance: 0.6, decimals: 1 };
+export const TRACE = { blur: 0, turdSize: 10, alphaMax: 1, optTolerance: 1.0, decimals: 0 };
 
 export const hexToRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
