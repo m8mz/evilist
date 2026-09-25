@@ -293,3 +293,53 @@ against it with `scripts/preview-rig.mjs`. The first trace mottled the trousers 
 midway between two palette greys), so the palette's greys were moved onto the render's own tones
 (ink `#0c0c10`, coat `#141418`, shadow `#26262e`, cloth `#383840`, skin `#e0c0ac`): eight clean layers,
 24 KB gzipped for the whole figure.
+
+### Step 2 — outfits (2026-09-25)
+
+2:3, the picked base (`ae0bd678…`, uploaded from variant A) as the reference. Two variants per
+rank, batches of 5 / 5 / 4, 28 credits (2,580 → 2,552). Every render registered onto the base with
+`scripts/register-outfit.mjs` at a residual of 0.03–0.05% (the gate is 2%).
+
+> The same character in exactly the same pose, framing, proportions and position on the canvas as
+> the reference image (a flat vector A-pose figure on an off-white background): keep the head, face,
+> hair, hands, legs and boots identical and in the same place. Change only the clothing to:
+> [outfit]. [suffix]
+
+| Rank | Stage id                | Outfit                                                                             | Variants (job)                                                                       |
+| ---- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| E    | `t1-support`            | plain black hoodie, hood down, black over-ear headset on his head                  | 00 `f07876a1-7a5e-46b9-948d-802b5399126b`, 01 `b8f89d05-b081-49b4-a722-e96545c73509` |
+| D    | `web-concierge`         | the hoodie with the sleeves pushed up to the elbows, the headset around his neck   | 02 `b30f303a-3f15-43fc-8fe1-df59c688881a`, 03 `5a319939-e385-419a-96d1-36ee8e4a26f7` |
+| C    | `professional-services` | fitted black zip jacket, zipped up, no hood                                        | 04 `2cce1fbf-0570-4bcb-9ba6-b4cf77e882aa`, 05 `b8ed1d5a-250a-4320-9e69-e837e617570b` |
+| B    | `t3-support`            | black high-collar zip jacket, collar standing up                                   | 06 `dc48e342-e86a-4fc1-875d-caf0d6a171c8`, 07 `c8a2ca77-2e13-489d-8b3b-aaef3a210d96` |
+| A    | `sysadmin`              | short black high-collar coat to the hips, closed                                   | 08 `589ff794-3441-417f-9ac2-5d24cff630cc`, 09 `225d7404-70e7-4771-924f-cce9f7631141` |
+| S    | `linux-engineer`        | long black high-collar coat to mid-calf, closed                                    | 10 `beedf12c-ea64-4757-9873-fdaf12e4bd22`, 11 `69d9c4dc-52d4-4c74-b0f7-25be2cd9a774` |
+| S+   | `systems-architect`     | the long coat worn open, burnt-orange piping at the cuffs, tails clear of the legs | 12 `68cae372-d23c-49fa-9dbf-ef0586696790`, 13 `8a9b2068-1b0a-42df-99d7-a16b3a60fa8a` |
+
+Off-palette strays: 02's headset rendered red and violet; 06 has a violet zip stripe.
+
+### Step 3 — props and energy (2026-09-25)
+
+1:1, no reference. Two variants per set, batches of 5 / 5 / 5 / 1, 16 credits (2,552 → 2,536).
+
+> Flat vector illustration of props only, arranged around an empty standing space in the centre
+> of the canvas where a full-body figure will be placed later: leave the middle third of the canvas
+> empty from top to bottom. The props: [props]. [suffix, with the skin and eye colours left out]
+> No people, no figures, no silhouettes.
+
+| Rank   | Stage id                | Props                                                                                  | Variants (job)                                                                       |
+| ------ | ----------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| E      | `t1-support`            | a low support desk along the bottom, a monitor glowing orange each side, keyboard, mug | 00 `2262916a-fd42-4fb8-8176-9dd4a2d29729`, 01 `21111615-3904-41a9-9ddf-fb15292c2b81` |
+| D      | `web-concierge`         | three floating wireframe panels at shoulder height, two left, one right                | 02 `70934e2e-7274-4c92-b547-bd56bc23cdeb`, 03 `aa50665f-4618-4e41-8120-9df2be63adac` |
+| C      | `professional-services` | an orange data cube at the left, a curving path of lights to the right, violet wisps   | 04 `499ef4d5-f53c-4c05-bd00-bf726d25e0dc`, 05 `56c4f4cb-3af2-4a8b-9314-0743cfcbe3f6` |
+| B      | `t3-support`            | a wall of orange alert lights on both sides, violet shadows rising from the floor      | 06 `5c692d9d-a311-491b-bf67-faab6d488ce6`, 07 `974278b4-d97d-4301-879b-9d05e2db2794` |
+| A      | `sysadmin`              | an open server rack at the right with orange LEDs, violet smoke along the floor        | 08 `191b3ff2-3c89-4856-a824-52a883a7d723`, 09 `13074171-f1cc-49e8-b816-1273fbeb0470` |
+| S      | `linux-engineer`        | a pipeline of floating modules arcing across the top, two violet shadow hands          | 10 `58c58d68-c686-43b7-8591-998f529f6dda`, 11 `f65a3562-c316-413e-88a4-de5b09a9c329` |
+| S+     | `systems-architect`     | rows of tall violet shadow server racks receding on both sides, tops dissolving upward | 12 `24db12eb-05f0-4cb7-b546-34ecde7002f3`, 13 `df638f5f-65b0-4cb3-9337-5b94aa295c84` |
+| energy | `energy.webp`           | a full violet aura of shadow energy around an empty centre, densest near the floor     | 14 `352d0232-e9ef-4bd3-afda-16bd9f5b04d6`, 15 `050dee40-a80e-4618-81f8-0fad314ca7b4` |
+
+**Picks (Marcus took the controller's list, 2026-09-25).** Outfits: E 00, D 03, C 04, B 07, A 08,
+S 11, S+ 12 → `art/journey/outfit-<stage-id>.webp` (registered, 1000×1500). Props: E 01, D 02, C 04,
+B 06, A 09, S 11, S+ 12 → `art/journey/props-<stage-id>.webp`, energy 15 → `art/journey/energy.webp`
+(1500×1500). Passed over: outfit 02 (red and violet headset), 06 (violet zip stripe), 13 (tails wider
+than the coat masks); props 00 (a headset floating above the desk), 03 (furniture in the centre),
+07 (bricks, not lights), 14 (flame filling the centre).
