@@ -249,3 +249,56 @@ export const capitalise = (phrase: string): string =>
 export function currentStage(): CareerStage {
   return career.find((s) => s.end === null) ?? career[career.length - 1];
 }
+
+/* ---------- The journey deck's stats (deck spec §4) ---------- */
+
+/** Months since year 0 of a "yyyy-mm" string. */
+const monthIndex = (yyyyMm: string): number => {
+  const [year, month] = yyyyMm.split("-").map(Number);
+  return year! * 12 + (month! - 1);
+};
+
+const monthIndexOf = (date: Date): number => date.getFullYear() * 12 + date.getMonth();
+
+/** Whole months from `start` to `end`, or to `now` while the stage is ongoing. Never negative. */
+export function stageMonths(stage: CareerStage, now: Date): number {
+  const end = stage.end ? monthIndex(stage.end) : monthIndexOf(now);
+  return Math.max(0, end - monthIndex(stage.start));
+}
+
+const plural = (n: number, unit: string): string => `${n} ${unit}${n === 1 ? "" : "s"}`;
+
+/** "3 months", "19 months", "2 years", "4 years, 10 months". Under 24 months stays in months. */
+export function tenure(stage: CareerStage, now: Date): string {
+  const months = stageMonths(stage, now);
+  if (months < 24) return plural(months, "month");
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  return rest ? `${plural(years, "year")}, ${plural(rest, "month")}` : plural(years, "year");
+}
+
+/** Cumulative months through this stage over all stages' months: the card's XP bar, 0–1. */
+export function xp(stage: CareerStage, now: Date): number {
+  const total = career.reduce((sum, s) => sum + stageMonths(s, now), 0);
+  if (total === 0) return 0;
+  const through = career
+    .filter((s) => s.rank <= stage.rank)
+    .reduce((sum, s) => sum + stageMonths(s, now), 0);
+  return through / total;
+}
+
+/** How many of the XP bar's blocks are lit: rounded up, so every stage shows at least one. */
+export function xpBlocks(value: number, total = 10): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(total, Math.max(0, Math.ceil(value * total)));
+}
+
+/** The card's set number, "EVL-06/07". */
+export const setNumber = (stage: CareerStage): string =>
+  `EVL-${String(stage.rank).padStart(2, "0")}/${String(career.length).padStart(2, "0")}`;
+
+/** The skills the card lists: the first `cap`, then "+N" for the rest. */
+export function acquired(stage: CareerStage, cap = 8): string[] {
+  if (stage.skills.length <= cap) return [...stage.skills];
+  return [...stage.skills.slice(0, cap), `+${stage.skills.length - cap}`];
+}
