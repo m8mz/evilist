@@ -61,7 +61,7 @@ export const career: readonly CareerStage[] = [
     summary:
       "Taught customers to build their own sites on WordPress, Joomla, Drupal, Weebly, and Website Builder as a paid one-on-one service.",
     highlights: [
-      "Ran live build sessions and managed my own appointment schedule",
+      "Ran live one-on-one build sessions",
       "Turned non-technical customers into confident site owners",
       "Managed 40–60 clients on my own schedule",
       "Helped start the WP Live department in the Tempe office, focused on WordPress",
