@@ -268,12 +268,14 @@ one.
 ### 7.1 Layout
 
 - The `~/journey` prompt, h2 "From E-rank to S+ rank" and the lede stay in the centred column. The
-  pinned stage breaks out to full viewport width. Scroll mechanics (`scripts/journey.ts`,
+  pinned stage breaks out to full viewport width, through a `bleed` slot on `Section` (100vw would
+  overflow by the scrollbar's width on Windows). Scroll mechanics (`scripts/journey.ts`,
   `stageForProgress`, track height), the rank rail, the skip link and the `JourneyTimeline`
   fallback are unchanged.
 - **From 60rem:** the active rank's clip fills the stage (`object-fit: cover`); the rail runs
-  across the top inside the gutter; the active card sits on the left, max 30rem, on a solid carbon
-  `Panel case` (no blur, no gradient, no transparency).
+  across the top inside the gutter; the active card sits on the left, max 30rem, on the `Panel
+case`'s own solid graphite surface, one step above the carbon band (no blur, no gradient, no
+  transparency).
 - **Below 60rem:** grid rows rail / clip / card. The clip takes the remaining height, cover-cropped
   around the centred character; the card sits under it, whole.
 - Clips and cards switch together: opacity cross-fade over 320ms, visibility for hidden layers,
@@ -329,17 +331,27 @@ with its own style suffix; the monochrome photographic suffixes do not apply to 
   - `public/journey/<id>-1280.webm` (AV1, ≤ 700 KB) and `<id>-1280.mp4` (H.264, ≤ 1.1 MB)
   - `public/journey/<id>-640.webm` (AV1, ≤ 250 KB) and `<id>-640.mp4` (H.264, ≤ 400 KB)
 - Stills: `scripts/import-still.mjs` → `src/images/journey/<id>.webp`, served through `<Picture>`
-  as a lazy poster layer under each video (not the `poster` attribute, which loads eagerly).
+  as a lazy poster layer under each video (not the `poster` attribute, which loads eagerly). The
+  poster stays `display: none` until its layer is primed (lazy images under `display: none` never
+  load); that gates loading and never switches stages. `src/data/journeyArt.ts` maps each stage
+  to its still, its alt subject and `clipSources`.
 - Markup per stage: `<video muted loop playsinline preload="none" disablepictureinpicture
 disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pairs (webm, then
   mp4) for 1280 and a default pair for 640. A helper `clipSources(stageId)` builds the list.
 - `scripts/journey.ts` gains:
-  - an `IntersectionObserver` (root margin one viewport) that copies `data-src` → `src` and calls
-    `load()` once, so nothing is fetched on page load;
+  - an `IntersectionObserver` with no margin (amended in the Phase 3 plan: the journey starts only
+    48–580 px below the fold at every tested viewport, so a one-viewport margin or native lazy
+    loading would fetch it with the page and break `/`'s 600 KB budget). Once the journey is on
+    screen it primes the active rank and its neighbours: shows their posters, copies `data-src` →
+    `src` and calls `load()` once. Nothing is fetched on page load, and a jump to the last rank
+    loads at most four ranks;
   - on stage change: pause the old clip, `play()` the new one (a rejected promise leaves the still
     showing), fade the video in once it is playing;
-  - pause every clip when the journey leaves the viewport.
+  - pause every clip when the journey leaves the viewport;
+  - no `pagehide` stop, which froze the journey after a back/forward-cache restore.
 - Reduced motion or no JS: `JourneyTimeline`, now with each rank's still beside its entry (lazy).
+  While the animated journey shows, the visually hidden timeline's stills are `display: none`, so
+  they never load behind it.
 - `JourneyScene.astro` (the SVG character and props) is deleted. `CareerStage.activity` stays; it
   names each stage's shot.
 
