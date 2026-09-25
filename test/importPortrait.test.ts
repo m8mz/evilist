@@ -31,6 +31,13 @@ describe("isViolet", () => {
     expect(isViolet(0x20, 0x60, 0xff)).toBe(false);
     expect(isViolet(0x10, 0x08, 0x20)).toBe(false); // too dark to count
   });
+
+  it("keys the spec's pale S+ eye and B rim colours, still not grey or ember", () => {
+    expect(isViolet(0xe6, 0xdd, 0xff)).toBe(true); // S+'s pale eye, sat ≈ 0.13
+    expect(isViolet(0x8a, 0x7f, 0xb8)).toBe(true); // B's rim, sat ≈ 0.31
+    expect(isViolet(0x84, 0x84, 0x84)).toBe(false);
+    expect(isViolet(0xda, 0x5c, 0x2c)).toBe(false);
+  });
 });
 
 describe("glowMask", () => {
@@ -48,6 +55,15 @@ describe("glowMask", () => {
   it("reports zero for an image without violet", async () => {
     const d = tmp();
     await render(join(d, "in.png"), 0);
+    expect((await glowMask(join(d, "in.png"))).coverage).toBe(0);
+  });
+
+  it("flattens transparency onto black first, so a transparent violet source measures no coverage", async () => {
+    const d = tmp();
+    // Fully transparent violet: without flattening onto black before removeAlpha, the dropped
+    // alpha channel would leave the violet RGB behind and key as 100% coverage.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#7040d2" fill-opacity="0"/></svg>`;
+    await sharp(Buffer.from(svg)).png().toFile(join(d, "in.png"));
     expect((await glowMask(join(d, "in.png"))).coverage).toBe(0);
   });
 });
@@ -90,8 +106,11 @@ describe("importPortrait", () => {
     await expect(
       importPortrait(join(d, "in.png"), "linux-engineer", { outDir: d, band: [0.3, 2] }),
     ).rejects.toThrow(/glow coverage \d\.\d+% is outside the band \[0\.3, 2\] for linux-engineer/);
-    // The files are still there to look at.
-    expect(existsSync(join(d, "linux-engineer.webp"))).toBe(true);
+    // The rejected render is kept aside to look at, never under the live name.
+    expect(existsSync(join(d, "linux-engineer.rejected.webp"))).toBe(true);
+    expect(existsSync(join(d, "linux-engineer-glow.rejected.webp"))).toBe(true);
+    expect(existsSync(join(d, "linux-engineer.webp"))).toBe(false);
+    expect(existsSync(join(d, "linux-engineer-glow.webp"))).toBe(false);
   });
 
   it("runs as a CLI and reads the band from deck-glow-bands.json", async () => {

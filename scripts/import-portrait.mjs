@@ -12,7 +12,9 @@ import sharp from "sharp";
 export const GLOW = {
   hueMin: 250,
   hueMax: 285,
-  satMin: 0.35,
+  // Low enough to key the spec's pale S+ eye colour (#e6ddff, sat ≈ 0.13) and the B rim
+  // (#8a7fb8, sat ≈ 0.31), both violet at a glance but far less saturated than the deck's #7040d2.
+  satMin: 0.12,
   valMin: 0.25,
   blur: 3,
   maskWidth: 400,
@@ -42,6 +44,10 @@ export function isViolet(r, g, b, glow = GLOW) {
 export async function glowMask(input, glow = GLOW) {
   const { data, info } = await sharp(input)
     .resize({ width: glow.maskWidth, withoutEnlargement: true })
+    // Flatten transparency onto black first: an unflattened transparent pixel's RGB channel is
+    // whatever the source left behind (often the violet colour itself, at alpha 0), which would
+    // key as 100% violet once alpha is simply dropped.
+    .flatten({ background: "#000" })
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -68,18 +74,23 @@ export async function importPortrait(
   { outDir = "src/images/deck", band, glow = GLOW } = {},
 ) {
   mkdirSync(outDir, { recursive: true });
-  const source = join(outDir, `${id}.webp`);
-  const glowFile = join(outDir, `${id}-glow.webp`);
+  // Measure the glow before writing anything: a render outside the band goes to `.rejected.webp`
+  // files instead, so a bad render never overwrites the live ones a passing render left behind.
+  const { mask, width: maskW, height: maskH, coverage } = await glowMask(input, glow);
+  const inBand = !band || (coverage >= band[0] && coverage <= band[1]);
+  const suffix = inBand ? "" : ".rejected";
+  const source = join(outDir, `${id}${suffix}.webp`);
+  const glowFile = join(outDir, `${id}-glow${suffix}.webp`);
   const meta = await sharp(input)
     .resize({ width: glow.sourceWidth, withoutEnlargement: true })
     .webp({ quality: glow.quality })
     .toFile(source);
-  const { mask, width, height, coverage } = await glowMask(input, glow);
-  await sharp(mask, { raw: { width, height, channels: 1 } })
+  await sharp(mask, { raw: { width: maskW, height: maskH, channels: 1 } })
     .blur(glow.blur)
     .webp({ quality: 90 })
     .toFile(glowFile);
-  if (band && (coverage < band[0] || coverage > band[1])) {
+  if (!inBand) {
+    console.error(`rejected render kept at ${source}`);
     throw new Error(
       `glow coverage ${coverage.toFixed(2)}% is outside the band [${band[0]}, ${band[1]}] for ${id}`,
     );
