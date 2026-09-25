@@ -1,5 +1,6 @@
 // Imports a generated render into art/journey: fitted onto the canvas (letterboxed with white,
-// never cropped, never enlarged past the canvas), flattened, lossless WebP so the trace is exact.
+// never cropped; a smaller render is scaled up to the canvas), flattened, lossless WebP so the
+// trace is exact.
 // Usage: node scripts/import-art.mjs <render> art/journey/<name>.webp <width> <height>
 //   base and outfits: 1000 1500   props and energy: 1500 1500
 import { realpathSync } from "node:fs";

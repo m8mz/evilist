@@ -80,6 +80,10 @@ export async function registerOutfit(
   const base = await measure(basePath, width, height);
   const outfitMeta = await sharp(outfitPath).metadata();
   const raw = await measure(outfitPath, outfitMeta.width, outfitMeta.height);
+  // A blank or failed render has no figure to fit: reject it instead of crashing in sharp.
+  if (base.span <= 0 || raw.span <= 0) {
+    return { scale: 0, left: 0, top: 0, residual: Infinity, accepted: false };
+  }
   const scale = base.span / raw.span;
   const resized = await sharp(outfitPath)
     .flatten({ background: "#ffffff" })

@@ -68,4 +68,19 @@ describe("registerOutfit", () => {
     expect(r.residual).toBeGreaterThan(RESIDUAL_MAX);
     expect(existsSync(out)).toBe(false);
   });
+
+  it("rejects a blank render instead of crashing, and writes nothing", async () => {
+    dir = mkdtempSync(join(tmpdir(), "reg-"));
+    const base = join(dir, "base.webp");
+    const blank = join(dir, "blank.webp");
+    const out = join(dir, "registered.webp");
+    await figure(base);
+    await sharp({ create: { width: 500, height: 750, channels: 3, background: "#f4f4f0" } })
+      .webp({ lossless: true })
+      .toFile(blank);
+    const r = await registerOutfit(base, blank, out);
+    expect(r.accepted).toBe(false);
+    expect(r.residual).toBe(Infinity);
+    expect(existsSync(out)).toBe(false);
+  });
 });
