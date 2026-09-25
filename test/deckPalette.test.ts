@@ -35,6 +35,7 @@ describe("the deck painters' palette", () => {
       "deck-pose.ts",
       "deck-layout.ts",
       "deck-params.ts",
+      "deck-textures.ts",
       "deck-tier.ts",
       "deck-util.ts",
       "deck-rail.ts",
