@@ -95,13 +95,17 @@ export function deckLayout(
     };
   }
 
+  // The next card waits back-to-viewer at phoneNextRotY (-80°): its projected width is
+  // |cos(rotY)| × cardW, a thin sliver rather than the full card, so its far edge — not an
+  // unrotated card's — is what sits `phoneNextInset` inside the stage's right edge.
+  const projected = Math.abs(Math.cos((p.phoneNextRotY * Math.PI) / 180)) * cardW;
   return {
     mode,
     cardW,
     cardH,
     slots: [],
     presented: { x: stageW / 2, y: presentedY },
-    next: { x: stageW - p.phoneNextInset + cardW / 2, y: rackY },
+    next: { x: stageW - p.phoneNextInset - projected / 2, y: rackY },
     exit: { x: p.phoneExitX * cardW, y: rackY },
     baseY,
     floorY,

@@ -110,9 +110,13 @@ describe("deckLayout on phones", () => {
     expect(l.slots).toEqual([]);
   });
 
-  it("parks the next card 24 px inside the right edge and played cards off the left", () => {
+  it("parks the next card's projected sliver 24 px inside the right edge and played cards off the left", () => {
     const l = phone(390, 844);
-    expect(l.next!.x).toBeCloseTo(390 - 24 + l.cardW / 2, 5);
+    // The next card sits back-to-viewer at -80°, so only |cos(80°)| of its width projects; it's
+    // that sliver's far edge, not an unrotated card's, that lands 24 px inside the stage.
+    const projected = Math.abs(Math.cos((80 * Math.PI) / 180)) * l.cardW;
+    expect(l.next!.x + projected / 2).toBeCloseTo(390 - 24, 5);
+    expect(l.next!.x - projected / 2).toBeLessThan(390);
     expect(l.exit!.x).toBeCloseTo(-0.6 * l.cardW, 5);
     expect(l.next!.y).toBe(l.exit!.y);
     expect(l.next!.y).toBeCloseTo(l.presented.y + 30, 5);
