@@ -30,7 +30,13 @@ describe("the deck painters' palette", () => {
 
   it("has no other hex colours in the deck scripts", () => {
     const allowed = new Set([...Object.values(COLORS), "#2a2a2a", "#1b1526", "#0b0b0b", "#0d0d0d"]);
-    for (const file of ["deck-paint.ts", "deck-pose.ts", "deck-layout.ts", "deck-params.ts"]) {
+    for (const file of [
+      "deck-paint.ts",
+      "deck-pose.ts",
+      "deck-layout.ts",
+      "deck-params.ts",
+      "deck-tier.ts",
+    ]) {
       const text = readFileSync(`src/scripts/deck/${file}`, "utf8");
       for (const hex of text.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
         expect(allowed.has(hex.toLowerCase()), `${hex} in ${file}`).toBe(true);
