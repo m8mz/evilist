@@ -191,8 +191,8 @@ lights"`), `object-fit: cover`, 124% of the band's height, plus the 20% carbon s
 ### 6.1 Career data (`src/data/career.ts`)
 
 Highlights stay ordered strongest first. A new field `printHighlights: number` says how many the
-PDF prints (BankSITE: 5, Caris: 3, Systems Administrator: 3, others: 2). Additions (ranks as in
-§6.4):
+PDF prints (BankSITE: 5, Caris: 3, Systems Administrator: 2, others: 2; at 3 the PDF runs to three
+pages). Additions (ranks as in §6.4):
 
 - **S+ · BankSITE**, after the current five:
   - Design and run the full stack across two physical datacenters and the cloud: virtualization,

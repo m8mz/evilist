@@ -45,7 +45,7 @@ describe("Hero", () => {
     expect(html).toMatch(/class="hero__pane hero__pane--net"[^>]*\sinert(?:=""|[\s>])/);
   });
 
-  it("keeps the framed portrait with the S chip, ready to tilt", async () => {
+  it("keeps the framed portrait with the S+ chip, ready to tilt", async () => {
     const html = await render(Hero);
     expect(html).toContain("marcus@evilist:~");
     expect(html).toContain("S+ rank: Sr. Systems Architect");
