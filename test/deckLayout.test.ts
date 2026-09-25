@@ -82,6 +82,19 @@ describe("deckLayout on desktop", () => {
     expect(l.cardW).toBeCloseTo(400, 5);
   });
 
+  it("really shrinks when the column is the limit: a tall, narrow desktop window", () => {
+    const l = desktop(960, 1200);
+    const column = columnFor(960);
+    // The height rule alone would give the 560 px cap (cardW 400), wider than the column allows.
+    expect(l.cardW).toBeCloseTo(column.width / 2.36, 5);
+    expect(l.cardH).toBeCloseTo(l.cardW / CARD_ASPECT, 5);
+    expect(l.cardH).toBeLessThan(560);
+    const compositionLeft = l.slots[0]!.x - 0.11 * l.cardW;
+    const compositionRight = l.presented.x + l.cardW / 2;
+    expect(compositionLeft).toBeCloseTo(column.left, 5);
+    expect(compositionRight).toBeCloseTo(column.left + column.width, 5);
+  });
+
   it("never drops under 320 px tall, even on a 400 px stage", () => {
     const l = desktop(960, 400 + HEADER);
     expect(l.cardH).toBe(320);
