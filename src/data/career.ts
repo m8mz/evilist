@@ -25,6 +25,8 @@ export interface CareerStage {
   skills: string[];
   /** What the avatar is doing in the journey scene for this stage. */
   activity: Activity;
+  /** One line the journey card prints under `$ log`. Drawn from the highlights; under 80 chars. */
+  log: string;
 }
 
 const ENDURANCE = "Endurance International Group";
@@ -48,6 +50,7 @@ export const career: readonly CareerStage[] = [
     printHighlights: 2,
     skills: ["DNS", "Email", "Splunk", "cPanel"],
     activity: "headset",
+    log: "Traced lost mail through Splunk on live customer servers.",
   },
   {
     id: "web-concierge",
@@ -69,6 +72,7 @@ export const career: readonly CareerStage[] = [
     printHighlights: 2,
     skills: ["WordPress", "Joomla", "Drupal"],
     activity: "wordpress",
+    log: "Turned non-technical customers into confident site owners.",
   },
   {
     id: "professional-services",
@@ -87,6 +91,7 @@ export const career: readonly CareerStage[] = [
     printHighlights: 2,
     skills: ["PHP", "MySQL", "Site migrations"],
     activity: "migration",
+    log: "Moved websites and mailboxes between servers, providers and brands.",
   },
   {
     id: "t3-support",
@@ -105,6 +110,7 @@ export const career: readonly CareerStage[] = [
     printHighlights: 2,
     skills: ["Linux", "Apache", "Troubleshooting"],
     activity: "escalation",
+    log: "Closed the cases the other tiers couldn't.",
   },
   {
     id: "sysadmin",
@@ -140,6 +146,7 @@ export const career: readonly CareerStage[] = [
       "IPMI",
     ],
     activity: "rack",
+    log: "Kept a fleet of customer servers patched, hardened and running.",
   },
   {
     id: "linux-engineer",
@@ -181,6 +188,7 @@ export const career: readonly CareerStage[] = [
       "Active Directory",
     ],
     activity: "pipeline",
+    log: "Replaced manual server setup with repeatable automation.",
   },
   {
     id: "systems-architect",
@@ -207,6 +215,7 @@ export const career: readonly CareerStage[] = [
     printHighlights: 5,
     skills: ["HAProxy", "Proxmox", "Ceph", "BGP", "Wazuh", "Go", "Python", "PCI-DSS"],
     activity: "datacenter",
+    log: "99.99 % uptime, two datacenters, BGP failover.",
   },
 ];
 

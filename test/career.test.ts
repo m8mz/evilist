@@ -115,6 +115,18 @@ describe("career data", () => {
     expect(concierge.highlights).toHaveLength(4);
     expect(concierge.highlights).toContain("Managed 40–60 clients on my own schedule");
   });
+
+  it("gives every stage a one-line log quote under 80 characters (deck spec §4)", () => {
+    for (const s of career) {
+      expect(typeof s.log, s.id).toBe("string");
+      expect(s.log.length, s.id).toBeGreaterThan(10);
+      expect(s.log.length, s.id).toBeLessThan(80);
+      expect(s.log, s.id).not.toMatch(/\n/);
+    }
+    expect(career.find((s) => s.id === "linux-engineer")!.log).toBe(
+      "Replaced manual server setup with repeatable automation.",
+    );
+  });
 });
 
 describe("yearsOfExperience", () => {
