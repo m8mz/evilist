@@ -84,5 +84,211 @@ export function energyFor(
   return out;
 }
 
-// Part 2 (poses, tilt, hover, float) and part 3 (the intro) follow in the next tasks.
+export interface CardPose {
+  x: number;
+  y: number;
+  z: number;
+  rotX: number;
+  rotY: number;
+  rotZ: number;
+  scale: number;
+  opacity: number;
+  pull: number;
+  landed: boolean;
+  phase: CardPhase;
+}
+
+export interface IntroState {
+  startedAt: number;
+  /** 1 normally; the caller raises it to fast-forward when the visitor scrolls. */
+  speed: number;
+}
+
+export interface IntroPose {
+  done: boolean;
+  /** How much of the floor line has drawn in, 0–1. */
+  floor: number;
+  /** How far the rail chips have faded in, 0–1. */
+  rail: number;
+}
+
+export interface PoseInput {
+  p: number;
+  labels: readonly RankLabel[];
+  layout: DeckLayout;
+  /** Degrees, already smoothed by the caller. */
+  tilt: { x: number; y: number };
+  /** 0–1 per card, already smoothed by the caller. Desktop only. */
+  hover: readonly number[];
+  /** A monotonic clock in ms. */
+  time: number;
+  /** When each card last landed (ms), or null while it is not presented. */
+  landedAt: readonly (number | null)[];
+  intro: IntroState | null;
+}
+
+export interface StagePose {
+  cards: CardPose[];
+  active: number;
+  within: number;
+  energy: number;
+  kind: "S" | "S+" | null;
+  energyIndex: number | null;
+  intro: IntroPose | null;
+}
+
+interface RestPose {
+  x: number;
+  y: number;
+  rotY: number;
+  opacity: number;
+}
+
+/**
+ * Where card `i` sits when it is not presented. Desktop: its rack slot. Phone: the active card and
+ * the played ones belong at `exit` (half transparent, off the stage's left edge); the cards to
+ * come wait at `next`, stacked, where only the visible next one is opaque. During a handoff
+ * (`k > 0`) the incoming card `active + 1` arrives from `next` and `active + 2` becomes the
+ * visible next, so the stack never pops.
+ */
+function restPose(
+  i: number,
+  active: number,
+  k: number,
+  layout: DeckLayout,
+  params: DeckParams,
+): RestPose {
+  if (layout.mode === "desktop") {
+    const slot = layout.slots[i] ?? layout.slots[layout.slots.length - 1]!;
+    return { x: slot.x, y: slot.y, rotY: params.pull.rackRotY, opacity: 1 };
+  }
+  if (i <= active) {
+    return { ...layout.exit!, rotY: params.layout.phoneExitRotY, opacity: 0.5 };
+  }
+  const visibleNext = k > 0 ? active + 2 : active + 1;
+  return {
+    ...layout.next!,
+    rotY: params.layout.phoneNextRotY,
+    opacity: i === active + 1 || i === visibleNext ? 1 : 0,
+  };
+}
+
+const TAU = Math.PI * 2;
+
+/** Moves a card from its rest pose to the presented anchor by `pull` (spec §7). */
+function interpolate(
+  rest: RestPose,
+  pull: number,
+  layout: DeckLayout,
+  params: DeckParams,
+): CardPose {
+  const P = params.pull;
+  const target = layout.presented;
+  if (pull <= 0) {
+    return {
+      x: rest.x,
+      y: rest.y,
+      z: 0,
+      rotX: 0,
+      rotY: rest.rotY,
+      rotZ: 0,
+      scale: 1,
+      opacity: rest.opacity,
+      pull: 0,
+      landed: false,
+      phase: "racked",
+    };
+  }
+  const e = easeInOutCubic(pull);
+  const b = backOut(pull, P.overshoot);
+  return {
+    x: rest.x + (target.x - rest.x) * e,
+    y: rest.y + (target.y - rest.y) * e,
+    z: P.liftZ * P.liftPeak * Math.sin(Math.PI * pull) + P.liftZ * pull,
+    rotX: 0,
+    rotY: rest.rotY * (1 - b),
+    rotZ: 0,
+    scale: 1 + P.scalePeak * Math.sin(Math.PI * pull),
+    opacity: rest.opacity + (1 - rest.opacity) * e,
+    pull,
+    landed: pull > P.landedAt,
+    phase: "pulling",
+  };
+}
+
+/** The idle float's offsets for a landed card at `time`, fading in after `landedAt`. */
+function float(time: number, landedAt: number, params: DeckParams) {
+  const F = params.float;
+  const a = clamp01((time - landedAt) / F.fadeInMs);
+  const wave = (spec: { amp: number; periodMs: number }) =>
+    a * spec.amp * Math.sin((TAU * time) / spec.periodMs);
+  return { y: wave(F.y), rotZ: wave(F.rotZ), rotY: wave(F.rotY), rotX: wave(F.rotX) };
+}
+
+/** Everything the stage needs for one frame (spec §7). */
+export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): StagePose {
+  if (input.intro) {
+    const intro = introPose(input, params);
+    // introPose always populates `intro`; the field is nullable only in StagePose's general shape.
+    if (!intro.intro!.done) return intro;
+  }
+  const count = input.labels.length;
+  const pulls = pullsFor(input.p, count, params.pull.handoffStart);
+  const cards = input.labels.map((_, i) => {
+    const rest = restPose(i, pulls.active, pulls.k, input.layout, params);
+    const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params);
+    if (pose.pull <= 0) {
+      if (input.layout.mode === "desktop") {
+        const h = clamp01(input.hover[i] ?? 0);
+        pose.z += params.hover.z * h;
+        pose.y -= params.hover.y * h;
+      }
+      return pose;
+    }
+    if (!pose.landed) {
+      pose.phase = i === pulls.active && pulls.k > 0 ? "leaving" : "pulling";
+      return pose;
+    }
+    pose.rotX += input.tilt.x;
+    pose.rotY += input.tilt.y;
+    const landedAt = input.landedAt[i];
+    if (landedAt != null) {
+      const f = float(input.time, landedAt, params);
+      pose.y += f.y;
+      pose.rotZ += f.rotZ;
+      pose.rotY += f.rotY;
+      pose.rotX += f.rotX;
+      pose.phase = input.time - landedAt < params.print.landingMs ? "landing" : "presented";
+    } else {
+      // The caller has not recorded a landing (a deep link, a frozen frame): nothing to animate.
+      pose.phase = "presented";
+    }
+    return pose;
+  });
+  const energy = energyFor(pulls, input.labels, params.pull.landedAt, params);
+  return {
+    cards,
+    active: pulls.active,
+    within: pulls.within,
+    energy: energy.energy,
+    kind: energy.kind,
+    energyIndex: energy.index,
+    intro: null,
+  };
+}
+
+// Part 3, the intro, follows in the next task.
+function introPose(input: PoseInput, params: DeckParams): StagePose {
+  void params;
+  return {
+    cards: [],
+    active: 0,
+    within: 0,
+    energy: 0,
+    kind: null,
+    energyIndex: null,
+    intro: { done: true, floor: 1, rail: 1 },
+  };
+}
+
 export type { DeckLayout, Point };
