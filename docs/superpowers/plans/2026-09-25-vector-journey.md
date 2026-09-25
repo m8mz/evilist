@@ -1348,8 +1348,11 @@ describe("buildScene", () => {
     ]) {
       expect(scene, id).toContain(`id="${id}"`);
     }
-    expect(scene).toMatch(/id="outfit-b-body"[^>]*>(?:(?!<\/g>).)*fill="#da5c2c"/s);
-    expect(scene).not.toMatch(/id="outfit-a-body"[^>]*>(?:(?!<\/g>).)*fill="#da5c2c"/s);
+    // A part group's content runs up to the next group with an id.
+    const groupOf = (id: string) =>
+      scene.match(new RegExp(`id="${id}"[^>]*>([\\s\\S]*?)<g id=`))![1]!;
+    expect(groupOf("outfit-b-body")).toContain('fill="#da5c2c"');
+    expect(groupOf("outfit-a-body")).not.toContain('fill="#da5c2c"');
     expect(scene).toMatch(/id="props-a-outline" d="M/);
     expect(scene).toContain('id="props-b-outline" d=""');
     expect(scene).not.toContain("style=");
@@ -1672,10 +1675,10 @@ describe("renderRankStills", () => {
       expect([meta.width, meta.height, meta.format]).toEqual([STILL.width, STILL.height, "webp"]);
       expect(statSync(path).size).toBeLessThan(120 * 1024);
     }
-    // The head spans scene x 50–110, y 10–50; its middle (80, 30) lands at
-    // (384 + 80 * 7.2, 30 * 7.2) on the still: ink on a, ember on b.
+    // The head spans scene x 50–110, y 10–50 (rank b's is rotated -10° about (80, 45), which still
+    // covers (60, 30)); that point lands at (384 + 60 * 7.2, 30 * 7.2) on the still: ink on a, ember on b.
     const at = async (path: string) =>
-      (await sharp(path).extract({ left: 960, top: 216, width: 1, height: 1 }).raw().toBuffer())[0];
+      (await sharp(path).extract({ left: 816, top: 216, width: 1, height: 1 }).raw().toBuffer())[0];
     expect(await at(written[0]!)).toBeLessThan(0x20);
     expect(await at(written[1]!)).toBeGreaterThan(0xc0);
   });
@@ -2198,9 +2201,10 @@ describe("sceneState", () => {
       expect(s.outfits).toEqual([{ rank: 6, opacity: 1 }]);
       finite(s);
     }
+    // Anything not finite, and anything below zero, reads as the start.
     for (const p of [-0.2, Number.NaN, Number.POSITIVE_INFINITY]) {
       const s = sceneState(p, poses);
-      expect(s.rank).toBe(p > 1 ? 6 : 0);
+      expect(s.rank, String(p)).toBe(0);
       finite(s);
     }
   });
