@@ -182,7 +182,8 @@ lights"`), `object-fit: cover`, 124% of the band's height, plus the 20% carbon s
 - `scripts/parallax.ts`: Motion `scroll()` with the band as target and offset
   `["start end", "end start"]` maps progress 0 → 1 to a shift of −12% → +12% of the band's
   height (the image's own overhang, so an edge never shows).
-- The band draws both rules; the section after it drops its top rule, so the rule isn't doubled.
+- The band draws its top rule; the section after it supplies the bottom one (its own top rule), so
+  no rule doubles and the band styles nothing outside itself.
 - Reduced motion: no script; the image sits centred and still. No text on the band.
 
 ## 6. Content from LinkedIn (amends Axiom §9.2)
