@@ -390,6 +390,24 @@ const CARD_HIGHLIGHTS = 3;
     }
   }
 
+  /* Short desktop screens: one highlight and tighter insets keep the card inside the pinned stage. */
+  @media (min-width: 60rem) and (max-height: 44rem) {
+    .journey__cards {
+      inset-block: 4.5rem 1.5rem;
+    }
+
+    .journey__highlights li + li {
+      display: none;
+    }
+  }
+
+  /* Very short desktop screens: the summary alone. */
+  @media (min-width: 60rem) and (max-height: 34rem) {
+    .journey__highlights {
+      display: none;
+    }
+  }
+
   @keyframes card-in {
     from {
       opacity: 0;

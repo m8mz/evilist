@@ -151,6 +151,35 @@ test.describe("animated journey", () => {
       page.locator(".journey__card.is-active .journey__highlights li:visible"),
     ).toHaveCount(wide ? 3 : 1);
   });
+
+  test("keeps the active card inside the pinned stage on short desktop screens", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "desktop widths");
+    for (const size of [
+      { width: 1280, height: 600 },
+      { width: 960, height: 600 },
+    ]) {
+      await page.setViewportSize(size);
+      await page.goto("/");
+      for (const [i, [activity]] of ORDER.entries()) {
+        await scrollToStage(page, i);
+        await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", activity);
+        await expect
+          .poll(() =>
+            page.evaluate(
+              () => document.querySelector(".journey__stage")!.getBoundingClientRect().top,
+            ),
+          )
+          .toBeLessThanOrEqual(HEADER_PX);
+        const stage = (await page.locator(".journey__stage").boundingBox())!;
+        const card = (await page.locator(".journey__card.is-active").boundingBox())!;
+        expect(card.y + card.height, `${size.width}×${size.height} stage ${i}`).toBeLessThanOrEqual(
+          stage.y + stage.height,
+        );
+      }
+    }
+  });
 });
 
 test.describe("reduced motion", () => {
