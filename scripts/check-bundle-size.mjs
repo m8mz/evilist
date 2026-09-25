@@ -4,6 +4,7 @@
 //   There is a floor too: no fonts at all means the Fonts API entry broke and the site would ship
 //   in the fallback face with every other gate green.
 // - No Three.js: the aura was removed in the Axiom redesign; a three/hero-aura chunk is a regression.
+// - Journey scene: dist/client/journey/scene.svg gzipped within its budget (vector journey spec §7).
 // - Journey clips: every file in dist/client/journey is one of the four encodes of a stage's clip
 //   and within that encode's limit (scripts/clip-variants.mjs, spec §7.5).
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -11,7 +12,7 @@ import { gzipSync } from "node:zlib";
 import { CLIP_VARIANTS } from "./clip-variants.mjs";
 
 const KB = 1024;
-const BUDGETS = { initialHome: 100 * KB, fonts: 120 * KB };
+const BUDGETS = { initialHome: 100 * KB, fonts: 120 * KB, scene: 300 * KB };
 const FONT_FLOOR = 20 * KB; // JetBrains Mono 400 + 700, latin: ~42 KB
 const gz = (path) => gzipSync(readFileSync(path)).length;
 
@@ -33,6 +34,9 @@ const rows = [
   ["Initial JS on / (gz)", initialBytes, BUDGETS.initialHome, 0],
   ["Fonts (woff2)", fontBytes, BUDGETS.fonts, FONT_FLOOR],
 ];
+
+const scenePath = "dist/client/journey/scene.svg";
+if (existsSync(scenePath)) rows.push(["Journey scene (gz)", gz(scenePath), BUDGETS.scene, 0]);
 let failed = false;
 for (const [name, bytes, budget, floor] of rows) {
   const ok = bytes <= budget && bytes >= floor;
@@ -43,7 +47,7 @@ for (const [name, bytes, budget, floor] of rows) {
 
 const clipDir = "dist/client/journey";
 if (existsSync(clipDir)) {
-  const clips = readdirSync(clipDir);
+  const clips = readdirSync(clipDir).filter((f) => f !== "scene.svg");
   let over = 0;
   for (const name of clips) {
     const [, width, ext] = name.match(/-(\d+)\.(webm|mp4)$/) ?? [];

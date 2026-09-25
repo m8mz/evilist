@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -53,10 +54,14 @@ describe("check-bundle-size", () => {
     expect(res.status).toBe(1);
   });
 
-  it("passes clips within their limits", () => {
+  it("passes clips within their limits, ignoring the scene beside them", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     const res = run(
-      withClips(dist, { "sysadmin-1280.webm": 600 * 1024, "sysadmin-640.mp4": 300 * 1024 }),
+      withClips(dist, {
+        "sysadmin-1280.webm": 600 * 1024,
+        "sysadmin-640.mp4": 300 * 1024,
+        "scene.svg": 10 * 1024,
+      }),
     );
     expect(res.stdout).toMatch(/ok {3}Journey clips: 2 files/);
     expect(res.status).toBe(0);
@@ -73,6 +78,25 @@ describe("check-bundle-size", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     const res = run(withClips(dist, { "sysadmin-1920.webm": 10 }));
     expect(res.stdout).toContain("FAIL sysadmin-1920.webm");
+    expect(res.status).toBe(1);
+  });
+
+  it("passes a journey scene within 300 KB gzipped, reporting its size", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    // 200 KB of incompressible bytes gzips to about 200 KB: inside the budget.
+    mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+    writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(200 * 1024));
+    const res = run(dist);
+    expect(res.stdout).toMatch(/ok {3}Journey scene \(gz\): 20\d\.\d KB \(budget 300 KB\)/);
+    expect(res.status).toBe(0);
+  });
+
+  it("fails a journey scene over 300 KB gzipped", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+    writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(320 * 1024));
+    const res = run(dist);
+    expect(res.stdout).toMatch(/FAIL Journey scene \(gz\)/);
     expect(res.status).toBe(1);
   });
 });
