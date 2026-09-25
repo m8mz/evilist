@@ -117,3 +117,73 @@ Alternatives (same prompt with the hair, outfit and energy swapped):
 - C, `c6e0c748-6d17-4edf-a2b7-90b125560a09`: shaggy layered hair; asked for a coat draped like a
   cape over a sleeveless turtleneck, rendered as a long sleeved coat with fingerless gloves and
   ember stitching; violet on both forearms. Close to A.
+
+### Step 2 — stage stills (2026-09-25)
+
+`nano_banana_pro`, 2k (2752×1536), 16:9, concept A (`191aca87…`) as the only `image_references`
+input. Two variants per stage, batches of at most 5. Spend: 34 credits (2,978 → 2,944): 14
+stills plus 3 targeted re-rolls. **Picks: pending (Marcus).**
+
+Every prompt is the character block, then the stage's scene, then the style suffix.
+
+**Character block:**
+
+> The same original anime character as in the reference image: keep his face, hair, eye colour
+> and build exactly. A young adult man in his mid-twenties with a mature face, defined jawline,
+> high cheekbones and a calm composed expression; narrow sharp cool steel-grey eyes with small
+> crisp highlights and no glow; messy medium-length jet-black hair with loose strands over the
+> forehead and shorter tapered sides; tall, lean athletic build, broad shoulders, narrow waist,
+> defined but not bulky.
+
+**Style suffix:**
+
+> Style: modern shonen TV anime key visual, crisp clean lineart, cel shading with hard-edged
+> shadow shapes, a dramatic cool rim light, dark desaturated palette of black, charcoal and cool
+> grey; the only saturated colours are warm burnt orange (#da5c2c) from the scene's own small
+> lights and, where described, deep violet shadow energy. Wide 16:9 cinematic frame with the
+> character in the horizontal centre, his head and upper body inside the middle third of the
+> frame and his head well below the top edge; the left third of the frame is darker and quieter.
+> A calm, held pose that could loop, no motion blur, no action lines. High-quality anime key
+> visual, sharp. No text, no readable screen content, no logos, no watermark, no frame borders,
+> no other people, no red eyes, no glowing eyes, no fangs, no sharp teeth, no face markings, no
+> tattoos, no scars, no blindfold, no weapons. An original character who does not resemble any
+> existing anime or manga character or any real person.
+
+**Scenes** (the outfit and the violet energy rank up with him, spec §7.2):
+
+- **E** (`headset`): a night shift on a support desk; seated in a dim open-plan office, black
+  hoodie, headset with boom mic, two monitors glowing burnt orange with only abstract blocks; no
+  violet.
+- **D** (`wordpress`): at a standing desk with a laptop, hoodie sleeves pushed up, headset round
+  his neck, arranging a floating website wireframe (grey blocks, no letters, burnt-orange edges);
+  no violet.
+- **C** (`migration`): on a path of light between two server towers, holding a glowing burnt-orange
+  data cube; black zip jacket; the first faint violet wisps from his fingers.
+- **B** (`escalation`): standing firm before a wall of burnt-orange alert lights; black
+  high-collar zip jacket; shadows rising round his feet, edged faint violet.
+- **A** (`rack`): in the cold aisle, one hand on an open rack; short black high-collar coat; violet
+  smoke round his feet and legs.
+- **S** (`pipeline`): conducting a pipeline of floating modules while violet shadow hands assemble
+  them; long black high-collar coat, closed, no piping.
+- **S+** (`datacenter`): between two datacenter halls in the reference outfit (coat open, ember
+  piping at the cuffs); a violet shadow army of server racks towers behind him.
+
+| Stage | Variant 1                              | Variant 2                                        |
+| ----- | -------------------------------------- | ------------------------------------------------ |
+| E     | `c8b9f977-83d8-4a88-a37a-7b2483ab04cf` | `0cabdca9-1529-4507-bde8-5277aa303a4a` (re-roll) |
+| D     | `60662bec-678b-4183-aadb-12f154eb48c7` | `60447c01-27be-4482-a66e-efef092049e7` (re-roll) |
+| C     | `19a44c14-e247-40b4-a562-0efd8f8b8ecf` | `de7af12e-3695-4958-8ba3-0148eaa4cdeb`           |
+| B     | `b1d5550b-5831-4bd6-b763-6fd2fd068791` | `831e47ab-1c71-4b64-918a-c7a810aa3bd2`           |
+| A     | `8b9881c7-b881-4293-a624-634af954bbe2` | `18cf970b-cc96-4c7e-ad9f-e16f598d8faa`           |
+| S     | `a5071042-5cb6-4aa0-9756-091d6bc62717` | `a8cdd5d6-f59d-4c51-9de1-a945e5a0032c`           |
+| S+    | `0fd768ff-6c8f-4582-a2b2-c7f02b3db58f` | `e9c127c0-eee3-454c-bc3a-1cffad44147d` (re-roll) |
+
+Rejected, then re-rolled with an extra negative:
+
+- E `f7cc5179…`: two copies of the character. Re-roll added "exactly one person … no duplicate
+  figures, no reflections of him".
+- D `643cda36…`: a fruit logo on the laptop lid. Re-roll asked for "a plain unbranded matte-black
+  laptop (no logo on its lid)" and "no logos or brand marks on any device".
+- S+ `f42c70ee…`: the shadow army came out as human silhouettes. Re-roll described "giant server
+  racks made of translucent deep-violet shadow smoke … machines, not people: no human figures, no
+  silhouettes".
