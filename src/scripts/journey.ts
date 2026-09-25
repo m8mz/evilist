@@ -6,11 +6,9 @@
 // shown, clip sources set) and the active clip plays while the journey is on screen. A refused
 // play() leaves the rank's still showing.
 import { scroll } from "motion";
+import { stageForProgress } from "./avatar";
 
-export function stageForProgress(progress: number, stages: number): number {
-  if (!Number.isFinite(progress) || progress <= 0) return 0;
-  return Math.min(stages - 1, Math.floor(progress * stages));
-}
+export { stageForProgress };
 
 /** The ranks worth priming around `index`: it and its neighbours, within the journey. */
 export function neighbours(index: number, count: number): number[] {
