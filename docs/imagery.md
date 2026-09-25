@@ -247,3 +247,49 @@ lights; the first and last frames match, so each loop closes. Every encode fit a
 | S+   | `systems-architect`     | 397 / 601 / 174 / 254 |
 
 Spend: 360 credits (2,944 → 2,584): the pilot (45) and the seven locked-camera clips (315).
+
+## Vector journey (2026-09-25)
+
+The clips above are replaced by one traced-and-rigged SVG scene (spec
+`docs/superpowers/specs/2026-09-25-vector-journey-design.md`). Every render below is flat vector
+art on an off-white canvas, imported with `scripts/import-art.mjs` (outfits through
+`scripts/register-outfit.mjs`) into `art/journey/`, and traced by `scripts/build-scene.mjs` with the
+palette in `scripts/trace-vector.mjs`. `nano_banana_pro`, 2k (the job metadata reports
+`nano_banana_2`).
+
+### Style suffix (appended to every prompt below)
+
+> Flat vector style: solid flat fills only, a limited palette (near-black #0e0e12, charcoal #1e1e24,
+> dark grey #303038, grey #484852, mid grey #6e6e78, skin #e0c4b0 with one hard-edged shadow tone
+> #b49684, steel-grey eyes #96a0aa, burnt orange #da5c2c and deep violet #7040d2 only where named),
+> crisp hard edges, bold simple shapes, minimal detail, hard-edged cel shadows, no outlines inside
+> the silhouette except where shapes overlap. No gradients, no textures, no glow, no soft shading,
+> no noise. Plain flat off-white #f4f4f0 background and nothing else. No text, no logos, no
+> watermark, no frame, no red eyes, no fangs, no face markings. An original character who does not
+> resemble any existing anime or manga character or any real person.
+
+### Step 1 — base pose (2026-09-25)
+
+2:3, concept A (`191aca87…`) as the reference. Two variants, 4 credits (2,584 → 2,580).
+
+> The same original character as in the reference image (same face, messy medium-length jet-black
+> hair falling over the forehead, calm narrow steel-grey eyes, lean athletic build), drawn as a
+> geometric flat vector character for a scroll animation, wearing his base layer only: a fitted
+> black long-sleeve technical shirt, dark charcoal tapered trousers, a slim black belt and black
+> combat boots, with no coat, no headset, no energy and no props. Full body, front view, standing
+> in a neutral A-pose: both arms straight and held slightly away from the body, hands open and
+> relaxed, feet shoulder-width apart, so that the head, the torso, each arm and the legs read as
+> separate shapes. Head to toe in frame, centred, with even empty space above the head and below
+> the feet. Calm composed expression. [suffix]
+
+| Variant | Job                                    | Notes                                                                 |
+| ------- | -------------------------------------- | --------------------------------------------------------------------- |
+| A       | `06480b30-4272-4965-a458-e35b7477b3b5` | arms slightly out; clean base layer, no stray accents                 |
+| B       | `fdeda42a-5ad3-4957-bb8a-707f21f4b2ee` | "about twenty degrees" arms; added orange belt loops and violet boots |
+
+**Picked: A** (Marcus, 2026-09-25) → `art/journey/base.webp` (1000×1500). Measured anchors: crown
+56, feet 1457, centre 499; the rig's part polygons and pivots in `src/data/avatar-rig.json` were tuned
+against it with `scripts/preview-rig.mjs`. The first trace mottled the trousers (their dark tone sat
+midway between two palette greys), so the palette's greys were moved onto the render's own tones
+(ink `#0c0c10`, coat `#141418`, shadow `#26262e`, cloth `#383840`, skin `#e0c0ac`): eight clean layers,
+24 KB gzipped for the whole figure.

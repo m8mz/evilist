@@ -17,7 +17,7 @@ const art = () =>
     Buffer.from(
       `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600">
         <rect width="400" height="600" fill="#f4f4f0"/>
-        <rect x="100" y="100" width="200" height="400" fill="#101014"/>
+        <rect x="100" y="100" width="200" height="400" fill="#0a0a0e"/>
         <rect x="150" y="400" width="100" height="80" fill="#da5c2c"/>
       </svg>`,
     ),
@@ -43,7 +43,7 @@ describe("isBackground", () => {
 
 describe("quantise", () => {
   it("maps each pixel to the nearest palette colour, background to 255", () => {
-    const px = Buffer.from([218, 92, 44, 255, 255, 255, 20, 20, 24, 110, 60, 200]);
+    const px = Buffer.from([218, 92, 44, 255, 255, 255, 10, 10, 14, 110, 60, 200]);
     const names = Object.keys(PALETTE);
     const out = quantise(px, 4);
     expect(names[out[0]!]).toBe("ember");

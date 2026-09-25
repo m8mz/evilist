@@ -12,14 +12,14 @@ import sharp from "sharp";
 
 const potrace = createRequire(import.meta.url)("potrace");
 
-/** The art's palette (from the spike): the name is the layer id, the value the fill. */
+/** The art's palette (sampled from the base render, 2026-09-25): the name is the layer id, the value the fill. */
 export const PALETTE = {
-  ink: "#0e0e12",
-  coat: "#1e1e24",
-  shadow: "#303038",
-  cloth: "#484852",
+  ink: "#0c0c10",
+  coat: "#141418",
+  shadow: "#26262e",
+  cloth: "#383840",
   mid: "#6e6e78",
-  skin: "#e0c4b0",
+  skin: "#e0c0ac",
   skinshade: "#b49684",
   eye: "#96a0aa",
   ember: "#da5c2c",
