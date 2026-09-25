@@ -7,7 +7,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 >
 > **Axiom redesign done** (terminal look, replaces the manga/hanko design). Spec: `docs/superpowers/specs/2026-09-24-axiom-design-system-design.md`; plans: `docs/superpowers/plans/`. All four phases are done (tokens and shell; home, journey avatar and topology; `/now`, stills, htop band and social card; resume, notes, contact, PDF and ADR 0002). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline).
 >
-> **Hero and journey redesign in progress.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-24-hero-v2-*.md; ADR 0003. Phases 1 (header and hero) and 2 (the E → S+ ladder, LinkedIn content and rack parallax) are implemented; Phase 3 (journey) follows.
+> **Hero and journey redesign done.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-2{4,5}-hero-v2-*.md; ADR 0003. All three phases are implemented (header and hero; the E → S+ ladder, LinkedIn content and rack parallax; the anime journey). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline), on hold until Marcus says development is done.
 
 ## Commands
 

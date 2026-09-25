@@ -22,6 +22,9 @@ test.describe("visual regression @visual", () => {
     // at their static render.
     await page.addInitScript(() => {
       window.setInterval = (() => 0) as unknown as typeof window.setInterval;
+      // Clips would never match a baseline; refusing play() keeps each rank on its still.
+      HTMLMediaElement.prototype.play = () =>
+        Promise.reject(new DOMException("frozen", "NotAllowedError"));
     });
   });
 
@@ -85,6 +88,13 @@ test.describe("visual regression @visual", () => {
       scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (3.5 / 7));
     }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "escalation");
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-clip].is-active img")
+          .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true);
     await expect(page).toHaveScreenshot("journey-rank-b.png", {
       animations: "disabled",
       maxDiffPixelRatio: 0.01,
@@ -100,6 +110,13 @@ test.describe("visual regression @visual", () => {
       scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (0.5 / 7));
     }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "headset");
+    await expect
+      .poll(() =>
+        page
+          .locator("[data-clip].is-active img")
+          .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true);
     await expect(page).toHaveScreenshot("journey-rank-e.png", {
       animations: "disabled",
       maxDiffPixelRatio: 0.01,

@@ -1,6 +1,6 @@
 # Hero, journey and content redesign
 
-- **Status:** Draft for review
+- **Status:** Implemented (2026-09-25)
 - **Date:** 2026-09-24
 - **Decider:** Marcus Hancock-Gaillard
 - **Amends:** `2026-09-24-axiom-design-system-design.md` §3.2, §3.5, §5, §6.1, §6.1a, §6.2,
