@@ -55,7 +55,29 @@ test.describe("visual regression @visual", () => {
     });
   });
 
-  test("journey mid-way (rank C)", async ({ page }) => {
+  test("rack band (catches the crop and the scrim)", async ({ page }) => {
+    await page.goto("/");
+    const band = page.locator(".parallax");
+    // Centred in the viewport, the band sits at progress ½: the image is at rest.
+    await band.evaluate((el: HTMLElement) =>
+      scrollTo({
+        top: el.getBoundingClientRect().top + scrollY - (innerHeight - el.offsetHeight) / 2,
+        behavior: "instant",
+      }),
+    );
+    await expect
+      .poll(() =>
+        band.locator("img").evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true);
+    await expect(band).toHaveScreenshot("rack-band.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.02,
+    });
+  });
+
+  test("journey mid-way (rank B, escalation)", async ({ page }) => {
     await page.goto("/");
     await page.evaluate((header) => {
       const el = document.querySelector<HTMLElement>("[data-journey]")!;
@@ -63,7 +85,7 @@ test.describe("visual regression @visual", () => {
       scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (3.5 / 7));
     }, HEADER_PX);
     await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "escalation");
-    await expect(page).toHaveScreenshot("journey-rank-c.png", {
+    await expect(page).toHaveScreenshot("journey-rank-b.png", {
       animations: "disabled",
       maxDiffPixelRatio: 0.01,
       threshold: 0.02,
