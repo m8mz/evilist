@@ -1,8 +1,10 @@
 ---
-// Scroll-driven career journey (spec §7). A tall track with a pinned, full-width stage: as the
-// visitor scrolls, the stage advances through the seven ranks. Each rank has a layer with its
-// still (the poster) and its looping clip. scripts/journey.ts maps scroll progress to the active
-// rank, primes the layers near it and plays the active clip; CSS does the switching.
+// Scroll-driven career journey (spec §7; vector journey spec). A tall track with a pinned,
+// full-width stage: as the visitor scrolls, the stage advances through the seven ranks and the
+// vector scene (public/journey/scene.svg) ranks the character up with it. Until the scene loads,
+// and if it never does, the inline silhouette holds the stage. scripts/journey.ts maps scroll
+// progress to the active rank and the scene's state; CSS switches the cards and runs the idle
+// life on the scene's inner groups.
 //
 // Accessibility and fallbacks: this animated version is decorative (aria-hidden). JourneyTimeline
 // carries the same content, with each rank's still, for screen readers, and is what everyone sees
@@ -10,13 +12,12 @@
 //
 // It goes in the Section's `bleed` slot, so the stage spans the band's full width; the skip link
 // and the timeline keep the content column.
-import { Picture } from "astro:assets";
+import silhouette from "./silhouette.svg?raw";
 import JourneyTimeline from "./JourneyTimeline.astro";
 import Panel from "../ui/Panel.astro";
 import RankChip from "../ui/RankChip.astro";
 import Tag from "../ui/Tag.astro";
 import { career, formatRange } from "../../data/career";
-import { clipSources, stageArt } from "../../data/journeyArt";
 
 /** Each card lists at most this many highlights (only the first below 60rem). */
 const CARD_HIGHLIGHTS = 3;
@@ -42,35 +43,7 @@ const CARD_HIGHLIGHTS = 3;
     </ol>
 
     <div class="journey__media">
-      {career.map((stage, i) => (
-        <div class:list={["journey__clip", { "is-active": i === 0 }]} data-clip>
-          <Picture
-            src={stageArt[stage.id].still}
-            alt={`Illustration: ${stageArt[stage.id].subject}`}
-            widths={[640, 1280, 1920]}
-            width={1920}
-            sizes="(orientation: portrait) 150vw, 100vw"
-            formats={["avif", "webp"]}
-            fallbackFormat="webp"
-            quality={60}
-            loading="lazy"
-            pictureAttributes={{ class: "journey__poster" }}
-            class="journey__poster-img"
-          />
-          <video
-            class="journey__video"
-            muted
-            loop
-            playsinline
-            preload="none"
-            {...{ disablepictureinpicture: true, disableremoteplayback: true }}
-          >
-            {clipSources(stage.id).map((source) => (
-              <source data-src={source.src} type={source.type} media={source.media} />
-            ))}
-          </video>
-        </div>
-      ))}
+      <div class="journey__scene" data-scene set:html={silhouette} />
     </div>
 
     <div class="journey__cards">
@@ -233,7 +206,7 @@ const CARD_HIGHLIGHTS = 3;
     transform: scaleX(var(--progress, 0));
   }
 
-  /* ---------- Clips ---------- */
+  /* ---------- Scene ---------- */
   .journey__media {
     position: relative;
     min-height: 0;
@@ -241,51 +214,51 @@ const CARD_HIGHLIGHTS = 3;
     background: var(--color-carbon);
   }
 
-  /* One layer per rank, stacked; the active one fades in. Hidden layers use visibility. */
-  .journey__clip {
+  .journey__scene {
     position: absolute;
     inset: 0;
-    visibility: hidden;
-    opacity: 0;
-    transition:
-      opacity 320ms ease-out,
-      visibility 0s linear 320ms;
   }
 
-  .journey__clip.is-active {
-    visibility: visible;
-    opacity: 1;
-    transition:
-      opacity 320ms ease-out,
-      visibility 0s;
-  }
-
-  /* The poster loads only once scripts/journey.ts primes its layer: display gates the lazy load, it never switches ranks. */
-  .journey__clip :global(.journey__poster) {
-    display: none;
-  }
-
-  .journey__clip.is-primed :global(.journey__poster) {
+  .journey__scene :global(svg) {
     display: block;
-  }
-
-  .journey__clip :global(.journey__poster-img),
-  .journey__video {
-    position: absolute;
-    inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
   }
 
-  /* The clip fades in over its still once it is actually playing. */
-  .journey__video {
-    opacity: 0;
-    transition: opacity 320ms ease-out;
+  /* Idle life (vector journey spec §3.3): CSS on the inner groups; the scroll writes transforms */
+  /* on the outer ones, so the two never fight. fill-box keeps each origin on the group itself. */
+  .journey__scene :global(#part-torso-idle) {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: breathe 4s ease-in-out infinite;
   }
 
-  .journey__clip.is-playing .journey__video {
-    opacity: 1;
+  .journey__scene :global(#part-head-idle) {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: sway 5s ease-in-out infinite;
+  }
+
+  .journey__scene :global(.glow) {
+    animation: glow 2.4s ease-in-out infinite alternate;
+  }
+
+  @keyframes breathe {
+    50% {
+      transform: scaleY(1.01);
+    }
+  }
+
+  @keyframes sway {
+    50% {
+      transform: rotate(1.5deg);
+    }
+  }
+
+  @keyframes glow {
+    to {
+      opacity: 0.55;
+    }
   }
 
   /* ---------- Cards ---------- */
@@ -355,7 +328,7 @@ const CARD_HIGHLIGHTS = 3;
     }
   }
 
-  /* From 60rem the clip fills the stage; the rail runs across the top and the card sits left. Last, so it overrides the rules above. */
+  /* From 60rem the scene fills the stage; the rail runs across the top and the card sits left. Last, so it overrides the rules above. */
   @media (min-width: 60rem) {
     .journey {
       height: calc(var(--stages) * 70dvh + 100dvh - var(--header));

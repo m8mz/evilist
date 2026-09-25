@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { neighbours, stageForProgress } from "../src/scripts/journey";
+import { isSceneDocument, stageForProgress } from "../src/scripts/journey";
 
 describe("stageForProgress", () => {
   it("splits progress evenly across the stages", () => {
@@ -18,11 +18,20 @@ describe("stageForProgress", () => {
   });
 });
 
-describe("neighbours", () => {
-  it("is the rank and the ranks either side, inside the journey", () => {
-    expect(neighbours(0, 7)).toEqual([0, 1]);
-    expect(neighbours(3, 7)).toEqual([2, 3, 4]);
-    expect(neighbours(6, 7)).toEqual([5, 6]);
-    expect(neighbours(0, 1)).toEqual([0]);
+describe("isSceneDocument", () => {
+  const doc = (nodeName: string | null, hasAvatar: boolean) => ({
+    documentElement: nodeName === null ? null : { nodeName },
+    getElementById: (id: string) => (hasAvatar && id === "avatar" ? {} : null),
+  });
+
+  it("accepts an SVG document that carries the avatar", () => {
+    expect(isSceneDocument(doc("svg", true))).toBe(true);
+  });
+
+  it("rejects an HTML error page, a parser error and an SVG without the avatar", () => {
+    expect(isSceneDocument(doc("html", false))).toBe(false);
+    expect(isSceneDocument(doc("parsererror", false))).toBe(false);
+    expect(isSceneDocument(doc("svg", false))).toBe(false);
+    expect(isSceneDocument(doc(null, true))).toBe(false);
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import Journey from "../../src/components/journey/Journey.astro";
 import { career } from "../../src/data/career";
-import { clipSources } from "../../src/data/journeyArt";
 import { render } from "../render";
 
 describe("Journey", () => {
@@ -22,21 +21,18 @@ describe("Journey", () => {
     }
   });
 
-  it("gives every stage a layer with a lazy poster and a silent, unloaded looping clip", async () => {
+  it("holds the stage with the inline silhouette and no clip markup", async () => {
     const html = await render(Journey);
-    const layers = html.match(/<div class="journey__clip[\s\S]*?<\/video>/g) ?? [];
-    expect(layers).toHaveLength(career.length);
-    for (const [i, layer] of layers.entries()) {
-      expect(layer).toMatch(/<picture class="journey__poster"/);
-      expect(layer).toMatch(/<img[^>]*loading="lazy"/);
-      expect(layer).toMatch(
-        /<video class="journey__video"[^>]*muted[^>]*loop[^>]*playsinline[^>]*preload="none"[^>]*disablepictureinpicture[^>]*disableremoteplayback/,
-      );
-      const sources = [...layer.matchAll(/<source data-src="([^"]+)"/g)].map((m) => m[1]);
-      expect(sources).toEqual(clipSources(career[i].id).map((s) => s.src));
-      expect(layer).not.toMatch(/<source src=/);
-    }
-    expect(layers[0]).toMatch(/class="journey__clip is-active"/);
+    const stage = html.match(
+      /<div class="journey__scene"[^>]*data-scene[^>]*>[\s\S]*?<\/div>/,
+    )?.[0];
+    expect(stage).toBeDefined();
+    expect(stage).toContain('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1500"');
+    expect(stage).toMatch(/<path transform="translate\(300 0\) scale\(4\)" fill="#202020" d="M/);
+    expect(html).not.toContain("<video");
+    expect(html).not.toContain("journey__poster");
+    expect(html).not.toContain("data-src");
+    expect(html).not.toContain("style=");
   });
 
   it("no longer draws the SVG scene", async () => {
