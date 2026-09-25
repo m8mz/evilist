@@ -1,0 +1,9 @@
+{
+  "t1-support": [0, 0.05],
+  "web-concierge": [0, 0.05],
+  "professional-services": [0, 0.05],
+  "t3-support": [0.05, 0.5],
+  "sysadmin": [0.1, 1],
+  "linux-engineer": [0.3, 2],
+  "systems-architect": [1, 8]
+}
