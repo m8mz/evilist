@@ -34,25 +34,21 @@ const STAGE_IDS = [
   "systems-architect",
 ];
 
-/** Records which ranks' clips (/journey/<id>-…) and stills (/_astro/<id>.…) the page requests. */
+/** Records whether the scene (/journey/scene.svg) and which stills (/_astro/<id>.…) the page requests. */
 function trackArt(page: Page) {
-  const clips = new Set<string>();
   const stills = new Set<string>();
+  const art = { scene: false, stills };
   page.on("request", (request) => {
     const url = request.url();
-    for (const id of STAGE_IDS) {
-      if (url.includes(`/journey/${id}-`)) clips.add(id);
-      if (url.includes(`/_astro/${id}.`)) stills.add(id);
-    }
+    if (url.includes("/journey/scene.svg")) art.scene = true;
+    for (const id of STAGE_IDS) if (url.includes(`/_astro/${id}.`)) stills.add(id);
   });
-  return { clips, stills };
+  return art;
 }
 
-/** Which clips are playing, in rank order. */
-const playing = (page: Page) =>
-  page.evaluate(() =>
-    [...document.querySelectorAll<HTMLVideoElement>("[data-clip] video")].map((v) => !v.paused),
-  );
+/** The visibility attribute of an id inside the stage's scene. */
+const visibility = (page: Page, id: string) =>
+  page.locator(`[data-scene] #${id}`).getAttribute("visibility");
 
 test.describe("animated journey", () => {
   test.beforeEach(({}, info) => {
@@ -135,7 +131,7 @@ test.describe("animated journey", () => {
     );
   });
 
-  test("from 60rem, the clip fills the full-width stage and the card sits on the left", async ({
+  test("from 60rem, the scene fills the full-width stage and the card sits on the left", async ({
     page,
   }, info) => {
     test.skip(info.project.name !== "desktop", "desktop layout");
@@ -157,7 +153,7 @@ test.describe("animated journey", () => {
     );
   });
 
-  test("below 60rem, the rail, the clip and the card stack without overlapping", async ({
+  test("below 60rem, the rail, the scene and the card stack without overlapping", async ({
     page,
   }, info) => {
     test.skip(!["iphone-15", "pixel-7", "ipad"].includes(info.project.name), "stacked layout");
@@ -212,140 +208,114 @@ test.describe("animated journey", () => {
   });
 });
 
-test.describe("journey clips", () => {
+test.describe("journey scene", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name === "reduced-motion", "covered below");
   });
 
-  // At the project and Lighthouse sizes the journey starts only 31–91 px below the fold: a lede that
-  // wraps one more line would put its art into the page load, and this test would catch it.
-  test("fetches no clip or still before the journey reaches the screen", async ({ page }) => {
+  // At the project and Lighthouse sizes the journey starts 31–91 px below the fold; on a 2560×1300
+  // window it is on screen at load. Either way the scene waits for the first scroll.
+  test("fetches nothing before the journey reaches the screen, then the scene once", async ({
+    page,
+  }) => {
     const art = trackArt(page);
     await page.goto("/");
     await page.waitForLoadState("networkidle");
-    expect([...art.clips, ...art.stills]).toEqual([]);
+    expect(art.scene).toBe(false);
+    expect([...art.stills]).toEqual([]);
+    await expect(page.locator("[data-scene] svg path")).toHaveCount(1); // the silhouette
     await scrollToStage(page, 0);
-    await expect.poll(() => art.stills.has("t1-support")).toBe(true);
+    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
+    expect(art.scene).toBe(true);
+    expect([...art.stills]).toEqual([]);
   });
 
-  test("on tall desktop windows, the page loads at most the first rank's art", async ({
+  test("on tall desktop windows, the page still loads nothing of the journey", async ({
     page,
   }, info) => {
     test.skip(info.project.name !== "desktop", "desktop windows");
-    for (const [size, allowed] of [
-      [{ width: 1920, height: 1080 }, []],
-      [{ width: 2560, height: 1300 }, ["t1-support"]],
-    ] as const) {
+    for (const size of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1300 },
+    ]) {
       await page.setViewportSize(size);
       const art = trackArt(page);
       await page.goto("/");
       await page.waitForLoadState("networkidle");
-      const loaded = [...new Set([...art.clips, ...art.stills])];
-      for (const id of loaded) expect(allowed, `${size.width}×${size.height}: ${id}`).toContain(id);
+      expect(art.scene, `${size.width}×${size.height}`).toBe(false);
+      expect([...art.stills], `${size.width}×${size.height}`).toEqual([]);
     }
   });
 
-  test("plays the active clip, fades it in, and pauses the rest", async ({ page, browserName }) => {
-    test.skip(browserName !== "chromium", "Playwright's WebKit has no AV1 or H.264 to play");
+  test("shows each rank's outfit and props as you scroll, and hides the others", async ({
+    page,
+  }) => {
     await page.goto("/");
-    await scrollToStage(page, 0);
-    await expect
-      .poll(() => playing(page))
-      .toEqual([true, false, false, false, false, false, false]);
-    await scrollToStage(page, 2);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "migration");
-    await expect
-      .poll(() => playing(page))
-      .toEqual([false, false, true, false, false, false, false]);
-    const active = page.locator("[data-clip].is-active");
-    await expect(active).toHaveClass(/is-playing/);
-    await expect(active.locator("video")).toHaveCSS("opacity", "1");
+    for (const i of [0, 3, 6]) {
+      await scrollToStage(page, i);
+      await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", ORDER[i]![0]);
+      const id = STAGE_IDS[i]!;
+      await expect.poll(() => visibility(page, `outfit-${id}-torso`)).toBe("visible");
+      await expect.poll(() => visibility(page, `props-${id}`)).toBe("visible");
+      for (const other of STAGE_IDS.filter((_, j) => Math.abs(j - i) > 1)) {
+        expect(await visibility(page, `outfit-${other}-torso`), other).toBe("hidden");
+        expect(await visibility(page, `props-${other}`), other).toBe("hidden");
+      }
+      await expect(page.locator(`[data-scene] #outfit-${id}-torso`)).toHaveAttribute(
+        "opacity",
+        "1.000",
+      );
+    }
   });
 
-  test("pauses every clip once the journey leaves the screen", async ({ page, browserName }) => {
-    test.skip(browserName !== "chromium", "Playwright's WebKit has no AV1 or H.264 to play");
-    await page.goto("/");
-    await scrollToStage(page, 3);
-    await expect.poll(async () => (await playing(page)).some(Boolean)).toBe(true);
-    await page.locator("#contact").scrollIntoViewIfNeeded();
-    await expect.poll(async () => (await playing(page)).some(Boolean)).toBe(false);
-  });
-
-  test("a refused play leaves the rank's still showing, with no errors", async ({ page }) => {
+  test("a failed scene fetch leaves the silhouette and the cards, with no errors", async ({
+    page,
+  }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.addInitScript(() => {
-      HTMLMediaElement.prototype.play = () =>
-        Promise.reject(new DOMException("autoplay refused", "NotAllowedError"));
+    page.on("console", (m) => {
+      if (m.type() === "error") errors.push(m.text());
     });
+    await page.route("**/journey/scene.svg", (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: "text/html",
+        body: "<!doctype html><title>nope</title>",
+      }),
+    );
     await page.goto("/");
-    await scrollToStage(page, 1);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "wordpress");
-    const active = page.locator("[data-clip].is-active");
-    await expect
-      .poll(() =>
-        active
-          .locator("img")
-          .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
-      )
-      .toBe(true);
-    await expect(active).not.toHaveClass(/is-playing/);
-    await expect(active.locator("video")).toHaveCSS("opacity", "0");
+    await scrollToStage(page, 2);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "migration");
+    await expect(page.locator(".journey__card.is-active h3")).toHaveText(
+      "Professional Services Engineer",
+    );
+    await expect(page.locator("[data-scene] svg path")).toHaveCount(1);
+    await expect(page.locator("[data-scene] #avatar")).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
-  test("a jump straight to the last rank loads only it and its neighbours", async ({
-    page,
-  }, info) => {
-    test.skip(info.project.name !== "desktop", "one project is enough");
-    const art = trackArt(page);
+  test("a scene that arrives late paints the rank the visitor is on", async ({ page }) => {
+    await page.route("**/journey/scene.svg", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
     await page.goto("/");
-    await page.evaluate((header) => {
-      const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - header;
-      const span = el.offsetHeight - (innerHeight - header);
-      scrollTo({ top: top + span * (6.5 / 7), behavior: "instant" });
-    }, HEADER_PX);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
-    await page.waitForLoadState("networkidle");
-    for (const id of [
-      "t1-support",
-      "web-concierge",
-      "professional-services",
-      "t3-support",
-      "sysadmin",
-    ]) {
-      expect(art.stills.has(id), id).toBe(false);
-      expect(art.clips.has(id), id).toBe(false);
-    }
-    await expect.poll(() => art.stills.has("systems-architect")).toBe(true);
+    await scrollToStage(page, 4);
+    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "rack");
+    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1, { timeout: 10_000 });
+    expect(await visibility(page, "outfit-sysadmin-torso")).toBe("visible");
+    expect(await visibility(page, "outfit-t1-support-torso")).toBe("hidden");
   });
 
-  test("passing through on the skip link loads none of the ranks it only passes", async ({
-    page,
-  }, info) => {
-    test.skip(info.project.name !== "desktop", "one project is enough");
+  test("keeps the scene under the CSP: no inline styles, attributes only", async ({ page }) => {
     await page.goto("/");
-    await scrollToStage(page, 0);
-    await expect
-      .poll(() => page.evaluate(() => document.querySelectorAll("[data-clip].is-primed").length))
-      .toBe(2);
-    const art = trackArt(page);
-    const skip = page.getByRole("link", { name: "Skip the career journey" });
-    await skip.focus();
-    await skip.press("Enter");
-    await expect
-      .poll(() =>
-        page.evaluate(() => document.querySelector("#skills")!.getBoundingClientRect().top),
-      )
-      .toBeLessThan(200);
-    // Longer than SETTLE_MS: a rank that was going to load would have started by now.
-    await page.waitForTimeout(500);
-    // The last rank decelerates out of view past SETTLE_MS, so it and its neighbour may load; the ranks in between must not.
-    for (const id of ["professional-services", "t3-support", "sysadmin"]) {
-      expect(art.stills.has(id), id).toBe(false);
-      expect(art.clips.has(id), id).toBe(false);
-    }
+    await scrollToStage(page, 1);
+    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
+    expect(await page.locator("[data-scene] [style]").count()).toBe(0);
+    await expect(page.locator("[data-scene] #part-arm-right")).toHaveAttribute(
+      "transform",
+      /^rotate\(/,
+    );
   });
 });
 
@@ -361,12 +331,12 @@ test.describe("reduced motion", () => {
     await expect(page.locator(".journey-fallback .timeline__title")).toHaveCount(7);
   });
 
-  test("never requests a clip, even scrolled to the end", async ({ page }) => {
+  test("never requests the scene, even scrolled to the end", async ({ page }) => {
     const art = trackArt(page);
     await page.goto("/");
     await page.evaluate(() => scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
     await page.waitForLoadState("networkidle");
-    expect([...art.clips]).toEqual([]);
+    expect(art.scene).toBe(false);
   });
 
   test("shows each rank's still beside its timeline entry", async ({ page }) => {
@@ -389,8 +359,10 @@ test.describe("without JavaScript", () => {
   });
 
   test("shows the static timeline", async ({ page }) => {
+    const art = trackArt(page);
     await page.goto("/");
     await expect(page.locator("[data-journey]")).toBeHidden();
     await expect(page.locator(".journey-fallback .timeline")).toBeVisible();
+    expect(art.scene).toBe(false);
   });
 });

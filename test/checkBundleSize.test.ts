@@ -21,15 +21,6 @@ function fakeDist(files: Record<string, number>): string {
 
 const run = (cwd: string) => spawnSync("node", [SCRIPT], { cwd, encoding: "utf8" });
 
-/** Adds files under dist/client/journey to the fake build. */
-function withClips(dist: string, clips: Record<string, number>): string {
-  mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
-  for (const [name, bytes] of Object.entries(clips)) {
-    writeFileSync(join(dist, "dist/client/journey", name), Buffer.alloc(bytes, 1));
-  }
-  return dist;
-}
-
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -54,30 +45,12 @@ describe("check-bundle-size", () => {
     expect(res.status).toBe(1);
   });
 
-  it("passes clips within their limits, ignoring the scene beside them", () => {
+  it("fails a stray file in journey/ (only the scene belongs there)", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    const res = run(
-      withClips(dist, {
-        "sysadmin-1280.webm": 600 * 1024,
-        "sysadmin-640.mp4": 300 * 1024,
-        "scene.svg": 10 * 1024,
-      }),
-    );
-    expect(res.stdout).toMatch(/ok {3}Journey clips: 2 files/);
-    expect(res.status).toBe(0);
-  });
-
-  it("fails a clip over its limit, naming it", () => {
-    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    const res = run(withClips(dist, { "sysadmin-640.webm": 251 * 1024 }));
-    expect(res.stdout).toContain("FAIL sysadmin-640.webm");
-    expect(res.status).toBe(1);
-  });
-
-  it("fails a file in journey/ that is not one of the four encodes", () => {
-    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    const res = run(withClips(dist, { "sysadmin-1920.webm": 10 }));
-    expect(res.stdout).toContain("FAIL sysadmin-1920.webm");
+    mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+    writeFileSync(join(dist, "dist/client/journey/sysadmin-640.mp4"), Buffer.alloc(10, 1));
+    const res = run(dist);
+    expect(res.stdout).toContain("FAIL stray journey file: sysadmin-640.mp4");
     expect(res.status).toBe(1);
   });
 

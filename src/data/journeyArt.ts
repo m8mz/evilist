@@ -1,6 +1,6 @@
-// The journey's art per career stage (spec §7): the picked Higgsfield still, which is the poster
-// under each clip and the timeline's picture, and the clip's four encodes that
-// scripts/encode-clip.mjs writes to public/journey/. Keyed by CareerStage.id.
+// The journey's art per career stage: the rank's picture for the reduced-motion timeline (a
+// composite rendered from the vector scene by scripts/render-rank-stills.mjs) and what it shows.
+// Keyed by CareerStage.id. The animated stage draws public/journey/scene.svg instead.
 import type { ImageMetadata } from "astro";
 import linuxEngineer from "../images/journey/linux-engineer.webp";
 import professionalServices from "../images/journey/professional-services.webp";
@@ -52,24 +52,3 @@ export const stageArt: Readonly<Record<string, StageArt>> = {
       "the same engineer in a long open coat in a datacenter aisle, rows of server racks and violet shadow energy around him",
   },
 };
-
-export interface ClipSource {
-  src: string;
-  type: string;
-  media?: string;
-}
-
-// The codec strings match scripts/encode-clip.mjs: AV1 main profile, 8-bit; H.264 High 4.0.
-const WEBM = 'video/webm; codecs="av01.0.05M.08"';
-const MP4 = 'video/mp4; codecs="avc1.640028"';
-const WIDE = "(min-width: 48rem)";
-
-/** A stage's clip encodes, in the order <video> should try them. */
-export function clipSources(stageId: string): ClipSource[] {
-  return [
-    { src: `/journey/${stageId}-1280.webm`, type: WEBM, media: WIDE },
-    { src: `/journey/${stageId}-1280.mp4`, type: MP4, media: WIDE },
-    { src: `/journey/${stageId}-640.webm`, type: WEBM },
-    { src: `/journey/${stageId}-640.mp4`, type: MP4 },
-  ];
-}

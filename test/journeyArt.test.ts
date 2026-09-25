@@ -1,11 +1,6 @@
-import { existsSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CLIP_VARIANTS } from "../scripts/clip-variants.mjs";
 import { career } from "../src/data/career";
-import { clipSources, stageArt } from "../src/data/journeyArt";
-
-const WEBM = 'video/webm; codecs="av01.0.05M.08"';
-const MP4 = 'video/mp4; codecs="avc1.640028"';
+import { stageArt } from "../src/data/journeyArt";
 
 describe("journey art", () => {
   it("gives every career stage, and only those, a 16:9 still and an illustration subject", () => {
@@ -18,24 +13,8 @@ describe("journey art", () => {
     }
   });
 
-  it("lists a clip's four encodes: the 1280 pair from 48rem first, WebM before MP4", () => {
-    expect(clipSources("sysadmin")).toEqual([
-      { src: "/journey/sysadmin-1280.webm", type: WEBM, media: "(min-width: 48rem)" },
-      { src: "/journey/sysadmin-1280.mp4", type: MP4, media: "(min-width: 48rem)" },
-      { src: "/journey/sysadmin-640.webm", type: WEBM },
-      { src: "/journey/sysadmin-640.mp4", type: MP4 },
-    ]);
-  });
-
-  it("has every encode in public/journey, each within its limit", () => {
-    for (const stage of career) {
-      for (const { src } of clipSources(stage.id)) {
-        const path = `public${src}`;
-        expect(existsSync(path), path).toBe(true);
-        const [, width, ext] = src.match(/-(\d+)\.(webm|mp4)$/)!;
-        const variant = CLIP_VARIANTS.find((v) => v.width === Number(width) && v.ext === ext)!;
-        expect(statSync(path).size, path).toBeLessThanOrEqual(variant.maxBytes);
-      }
-    }
+  it("exports no clip sources any more", async () => {
+    const art = await import("../src/data/journeyArt");
+    expect(Object.keys(art).sort()).toEqual(["stageArt"]);
   });
 });
