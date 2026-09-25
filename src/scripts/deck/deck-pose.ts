@@ -143,7 +143,8 @@ export interface PoseInput {
   hover: readonly number[];
   /** A monotonic clock in ms. */
   time: number;
-  /** When each card last landed (ms), or null while it is not presented. */
+  /** When each card last landed (ms): set on the first landed frame, kept until the card's pull
+   * returns to 0 (the caller nulls it when the card is racked again). */
   landedAt: readonly (number | null)[];
   intro: IntroState | null;
 }
@@ -283,8 +284,10 @@ function decorateLanded(
     pose.rotX += f.rotX * lf;
   }
   if (pose.landed) {
+    // `landedAt == null` is the first landed frame: the caller hasn't recorded it yet (that's how
+    // it knows to), so it must report "landing", not skip straight to "presented".
     pose.phase =
-      landedAt != null && time - landedAt < params.print.landingMs ? "landing" : "presented";
+      landedAt == null || time - landedAt < params.print.landingMs ? "landing" : "presented";
   } else {
     pose.phase = leaving ? "leaving" : "pulling";
   }
@@ -303,14 +306,14 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
     const leaving = i === pulls.active && pulls.k > 0;
     const rest = restPose(i, pulls.active, pulls.k, input.layout, params);
     const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params, !leaving);
-    if (pose.pull <= 0) {
-      if (input.layout.mode === "desktop") {
-        const h = clamp01(input.hover[i] ?? 0);
-        pose.z += params.hover.z * h;
-        pose.y -= params.hover.y * h;
-      }
-      return pose;
+    if (input.layout.mode === "desktop") {
+      // The hover lift fades out over the pull instead of cutting off the instant a hovered card
+      // starts moving, so picking it up never pops.
+      const h = clamp01(input.hover[i] ?? 0);
+      pose.z += params.hover.z * h * (1 - pose.pull);
+      pose.y -= params.hover.y * h * (1 - pose.pull);
     }
+    if (pose.pull <= 0) return pose;
     decorateLanded(pose, input.tilt, input.time, input.landedAt[i] ?? null, leaving, params);
     return pose;
   });

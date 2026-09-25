@@ -187,7 +187,9 @@ describe("deckPose on desktop", () => {
   it("presents the active card flat, lifted 60 px toward the viewer, at the presented anchor", () => {
     const c = deckPose(input({ p: at(3, 0.5) })).cards[3]!;
     expect(c.landed).toBe(true);
-    expect(c.phase).toBe("presented");
+    // landedAt[3] is still null (the default `none`): this is the first landed frame, before the
+    // caller has had a chance to record it, so the phase is "landing", not "presented" yet.
+    expect(c.phase).toBe("landing");
     expect(c.x).toBeCloseTo(desktopLayout.presented.x, 6);
     expect(c.y).toBeCloseTo(desktopLayout.presented.y, 6);
     expect(c.z).toBeCloseTo(60, 6);
@@ -260,6 +262,21 @@ describe("deckPose on desktop", () => {
     expect(s.cards[2]!.z).toBeCloseTo(60, 6); // the presented card ignores hover
   });
 
+  it("fades the hover lift by (1 − pull) instead of cutting off the instant a card starts pulling", () => {
+    const p = at(0, 0.8); // card 1's pull ≈ 0.148 (below rotDelay, still early in the pull)
+    const s = deckPose(input({ p, hover: [0, 1, 0, 0, 0, 0, 0] }));
+    const c = s.cards[1]!;
+    expect(c.pull).toBeCloseTo(easeInOutCubic((0.8 - 0.7) / 0.3), 6);
+    const withoutHover = deckPose(input({ p, hover: [0, 0, 0, 0, 0, 0, 0] })).cards[1]!;
+    expect(c.z - withoutHover.z).toBeCloseTo(6 * (1 - c.pull), 6);
+    expect(c.y - withoutHover.y).toBeCloseTo(-3 * (1 - c.pull), 6);
+
+    const landed = deckPose(input({ p: at(2, 0.5), hover: [0, 0, 1, 0, 0, 0, 0] })).cards[2]!; // pull 1: hover adds nothing
+    const landedNoHover = deckPose(input({ p: at(2, 0.5) })).cards[2]!;
+    expect(landed.z).toBeCloseTo(landedNoHover.z, 6);
+    expect(landed.y).toBeCloseTo(landedNoHover.y, 6);
+  });
+
   it("floats the presented card once landed, fading the amplitude in over 1.5 s", () => {
     const rest = deckPose(
       input({ p: at(2, 0.5), time: 5000, landedAt: [null, null, 5000, ...none.slice(3)] }),
@@ -287,6 +304,45 @@ describe("deckPose on desktop", () => {
     );
     expect(deckPose(input({ p: at(2, 0.5), time: 5800, landedAt: landed })).cards[2]!.phase).toBe(
       "presented",
+    );
+  });
+
+  it("reports landing (not presented) on the first landed frame, while landedAt is still null", () => {
+    // The caller hasn't recorded landedAt yet on this very frame — that's how it knows this is the
+    // first landed frame and to record it now — so the phase must not jump straight to "presented".
+    const s = deckPose(input({ p: at(2, 0.5), time: 5000, landedAt: none }));
+    expect(s.cards[2]!.landed).toBe(true);
+    expect(s.cards[2]!.phase).toBe("landing");
+  });
+
+  it("fades tilt and float on a leaving card by lf instead of cutting them off at pull 0.985 (Finding 3)", () => {
+    // Card 0 is leaving (k = 0.22 into the handoff to rank 1); by easeInOutCubic's symmetry
+    // (e(0.22) = 1 - e(0.78)) its pull is ≈ 0.957 — the same magnitude Finding 2 uses for the
+    // incoming card — so lf ≈ 0.57, not the 0 a hard cutoff at landed (pull 0.985) would give.
+    const p = at(0, 0.7 + 0.3 * 0.22);
+    const time = 5000 + 1500; // float's 1.5 s fade-in is complete (a = 1)
+    const landedAt = [5000, null, null, null, null, null, null];
+    const pull = 1 - easeInOutCubic(0.22);
+    expect(pull).toBeCloseTo(0.9574, 4);
+    const lf = clamp01((pull - DECK_PARAMS.pull.settleStart) / (1 - DECK_PARAMS.pull.settleStart));
+    expect(lf).toBeCloseTo(0.574, 3);
+
+    const base = deckPose(input({ p, time, landedAt })).cards[0]!;
+    expect(base.landed).toBe(false);
+    expect(base.phase).toBe("leaving");
+
+    const tilted = deckPose(input({ p, time, landedAt, tilt: { x: 0, y: 10 } })).cards[0]!;
+    expect(tilted.rotY - base.rotY).toBeCloseTo(10 * lf, 6);
+
+    const noLanding = deckPose(input({ p, time, landedAt: none })).cards[0]!;
+    const F = DECK_PARAMS.float;
+    expect(base.y - noLanding.y).toBeCloseTo(
+      lf * F.y.amp * Math.sin((2 * Math.PI * time) / F.y.periodMs),
+      6,
+    );
+    expect(base.rotZ - noLanding.rotZ).toBeCloseTo(
+      lf * F.rotZ.amp * Math.sin((2 * Math.PI * time) / F.rotZ.periodMs),
+      6,
     );
   });
 
