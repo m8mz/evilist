@@ -4,6 +4,16 @@
 // Colours are the site's tokens (test/deckPalette.test.ts keeps them in sync) plus violet, which
 // ADR 0003/0004 allow inside the journey art.
 import type { RankLabel } from "../../data/career";
+import {
+  acquired,
+  formatRange,
+  setNumber,
+  tenure,
+  xp,
+  xpBlocks,
+  type CareerStage,
+} from "../../data/career";
+import { deckArtById, type DeckArt } from "../../data/deck";
 
 export const CARD_W = 520;
 export const CARD_H = 728;
@@ -150,4 +160,237 @@ export function paintPlaceholder(
     ctx.fill();
   }
   ctx.restore();
+}
+
+export interface CardModel {
+  stage: CareerStage;
+  art: DeckArt;
+  dates: string;
+  tenure: string;
+  xp: number;
+  blocks: number;
+  acquired: string[];
+  setNumber: string;
+}
+
+/** Everything a card prints, computed once per stage for a fixed `now` (the build date). */
+export function cardModel(stage: CareerStage, now: Date): CardModel {
+  const art = deckArtById[stage.id];
+  if (!art) throw new Error(`No deck art for ${stage.id}`);
+  const value = xp(stage, now);
+  return {
+    stage,
+    art,
+    dates: formatRange(stage.start, stage.end),
+    tenure: tenure(stage, now),
+    xp: value,
+    blocks: xpBlocks(value),
+    acquired: acquired(stage),
+    setNumber: setNumber(stage),
+  };
+}
+
+/** The print-in's steps: name plate, header, on_arrival, acquired, xp, tenure, footer. */
+export const PRINT_STEPS = 7;
+
+/** Greedy word wrap by the context's current font. */
+export function wrapText(ctx: Ctx, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(candidate).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+export function xpGlyphs(blocks: number, total = 10): { lit: string; dark: string } {
+  const lit = Math.min(total, Math.max(0, blocks));
+  return { lit: "▮".repeat(lit), dark: "▯".repeat(total - lit) };
+}
+
+/**
+ * The body layer: carbon, the void window with the portrait cover-fitted (or the placeholder),
+ * a scrim over the window's bottom 30% so the name plate reads, and the divider.
+ */
+export function paintBody(
+  ctx: Ctx,
+  w: number,
+  h: number,
+  card: CardModel,
+  portrait: CanvasImageSource | null,
+): void {
+  const winH = h * WINDOW;
+  ctx.fillStyle = COLORS.carbon;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = COLORS.void;
+  ctx.fillRect(0, 0, w, winH);
+  if (portrait) {
+    const iw = (portrait as { width: number }).width;
+    const ih = (portrait as { height: number }).height;
+    const scale = Math.max(w / iw, winH / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, winH);
+    ctx.clip();
+    ctx.drawImage(portrait, (w - dw) / 2, 0, dw, dh);
+    ctx.restore();
+  } else {
+    paintPlaceholder(ctx, 0, 0, w, winH, card.art.eyeColor);
+  }
+  const scrim = ctx.createLinearGradient(0, winH * 0.7, 0, winH);
+  scrim.addColorStop(0, "rgba(0,0,0,0)");
+  scrim.addColorStop(1, "rgba(0,0,0,0.7)");
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, winH * 0.7, w, winH * 0.3);
+  ctx.fillStyle = COLORS.iron;
+  ctx.fillRect(0, winH, w, 1);
+}
+
+/** `$ key` in ember and ash at (x, y); returns the x after the key. */
+function key(ctx: Ctx, label: string, x: number, y: number, px: number): number {
+  ctx.font = font(px);
+  ctx.fillStyle = COLORS.ember;
+  ctx.fillText("$", x, y);
+  const dollar = ctx.measureText("$ ").width;
+  ctx.fillStyle = COLORS.ash;
+  ctx.fillText(label, x + dollar, y);
+  return x + dollar + ctx.measureText(label).width;
+}
+
+/**
+ * The text layer for the first `lines` print steps (0–7). Clears first. Returns the lowest y it
+ * drew, so a caller (and the tests) can see whether the sheet fits.
+ */
+export function paintText(
+  ctx: Ctx,
+  w: number,
+  h: number,
+  card: CardModel,
+  lines: number,
+  cursor = false,
+): { bottom: number } {
+  const s = w / CARD_W;
+  const winH = h * WINDOW;
+  const left = 12 * s;
+  const right = w - 12 * s;
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  let bottom = 0;
+  if (lines < 1) return { bottom };
+
+  // 1. The name plate and the quote, in the window.
+  ctx.fillStyle = COLORS.paper;
+  ctx.font = font(14 * s);
+  ctx.fillText(card.stage.shortTitle ?? card.stage.title, left, winH - 26 * s);
+  ctx.fillStyle = COLORS.fog;
+  ctx.font = font(10 * s);
+  ctx.fillText(`${card.stage.org} · ${card.dates}`, left, winH - 12 * s);
+  ctx.font = font(10 * s, 400, true);
+  ctx.textAlign = "right";
+  ctx.shadowColor = COLORS.void;
+  ctx.shadowBlur = 8 * s;
+  let qy = 48 * s;
+  for (const line of wrapText(ctx, `“${card.stage.log}”`, w * 0.42)) {
+    ctx.fillText(line, w - 14 * s, qy);
+    qy += 14 * s;
+  }
+  ctx.shadowBlur = 0;
+  ctx.textAlign = "left";
+  bottom = winH - 12 * s;
+  if (lines < 2) return { bottom };
+
+  // 2. The header.
+  let y = winH + 20 * s;
+  ctx.font = font(9 * s);
+  ctx.fillStyle = COLORS.ash;
+  ctx.fillText("~/journey", left, y);
+  const after = left + ctx.measureText("~/journey ").width;
+  key(ctx, `status --rank ${card.stage.rank}`, after, y, 9 * s);
+  bottom = y;
+  if (lines < 3) return { bottom };
+
+  // 3. on_arrival
+  y += 14 * s;
+  key(ctx, "on_arrival", left, y, 9 * s);
+  y += 12 * s;
+  ctx.font = font(10 * s);
+  ctx.fillStyle = COLORS.fog;
+  for (const line of wrapText(ctx, card.stage.summary, right - left)) {
+    ctx.fillText(line, left, y);
+    y += 15 * s;
+  }
+  bottom = y - 15 * s;
+  if (lines < 4) return { bottom };
+
+  // 4. acquired: tags in slate boxes, wrapping.
+  y += 2 * s;
+  key(ctx, "acquired", left, y, 9 * s);
+  y += 13 * s;
+  ctx.font = font(9 * s);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = COLORS.slate;
+  let tx = left;
+  for (const tag of card.acquired) {
+    const tw = ctx.measureText(tag).width + 8 * s;
+    if (tx + tw > right) {
+      tx = left;
+      y += 14 * s;
+    }
+    ctx.strokeRect(tx + 0.5, y - 9.5 * s, tw, 12 * s);
+    ctx.fillStyle = COLORS.ash;
+    ctx.fillText(tag, tx + 4 * s, y);
+    tx += tw + 3 * s;
+  }
+  bottom = y + 2.5 * s;
+  if (lines < 5) return { bottom };
+
+  // 5. xp
+  y += 16 * s;
+  const glyphs = xpGlyphs(card.blocks);
+  let gx = key(ctx, "xp", left, y, 9 * s) + 6 * s;
+  ctx.font = font(10 * s);
+  ctx.fillStyle = COLORS.ember;
+  if (glyphs.lit) ctx.fillText(glyphs.lit, gx, y);
+  gx += ctx.measureText(glyphs.lit).width;
+  ctx.fillStyle = COLORS.slate;
+  if (glyphs.dark) ctx.fillText(glyphs.dark, gx, y);
+  gx += ctx.measureText(glyphs.dark).width + 6 * s;
+  ctx.font = font(9 * s);
+  ctx.fillStyle = COLORS.ash;
+  ctx.fillText(`${Math.round(card.xp * 100)}%`, gx, y);
+  bottom = y;
+  if (lines < 6) return { bottom };
+
+  // 6. tenure, with the cursor.
+  y += 14 * s;
+  const vx = key(ctx, "tenure", left, y, 9 * s) + 6 * s;
+  ctx.font = font(10 * s);
+  ctx.fillStyle = COLORS.paper;
+  ctx.fillText(card.tenure, vx, y);
+  if (cursor) {
+    ctx.fillStyle = COLORS.ember;
+    ctx.fillText("▮", vx + ctx.measureText(`${card.tenure} `).width, y);
+  }
+  bottom = y;
+  if (lines < 7) return { bottom };
+
+  // 7. The footer.
+  ctx.font = font(9 * s);
+  ctx.fillStyle = COLORS.steel;
+  ctx.fillText(card.setNumber, left, h - 12 * s);
+  ctx.textAlign = "right";
+  ctx.fillText(card.stage.rankLabel, right, h - 12 * s);
+  ctx.textAlign = "left";
+  return { bottom: h - 12 * s };
 }

@@ -7,10 +7,18 @@ import {
   COLORS,
   font,
   paintBack,
+  paintBody,
   paintChip,
   paintFrame,
   paintPlaceholder,
+  paintText,
+  PRINT_STEPS,
+  cardModel,
+  wrapText,
+  xpGlyphs,
+  WINDOW,
 } from "../src/scripts/deck/deck-paint";
+import { career } from "../src/data/career";
 import { fakeContext, fakeImage, type Op } from "./helpers/fakeCanvas";
 
 /** Every recorded box and text anchor lies inside a w × h canvas. */
@@ -133,6 +141,181 @@ describe("paintPlaceholder", () => {
       expect(cx).toBeLessThan(CARD_W);
       expect(cy).toBeGreaterThan(0);
       expect(cy).toBeLessThan(CARD_H * 0.52);
+    }
+  });
+});
+
+const NOW = new Date(2026, 8, 25);
+const byId = (id: string) =>
+  cardModel(
+    career.find((s) => s.id === id)!,
+    NOW,
+  );
+
+describe("cardModel", () => {
+  it("assembles everything the card prints", () => {
+    const s = byId("linux-engineer");
+    expect(s.art.rank).toBe("S");
+    expect(s.dates).toBe("Oct 2019 – May 2021");
+    expect(s.tenure).toBe("19 months");
+    expect(s.xp).toBeCloseTo(57 / 115, 6);
+    expect(s.blocks).toBe(5);
+    expect(s.acquired).toHaveLength(9);
+    expect(s.setNumber).toBe("EVL-06/07");
+  });
+});
+
+describe("wrapText and xpGlyphs", () => {
+  it("wraps greedily by words within the width", () => {
+    const ctx = fakeContext();
+    ctx.font = font(10);
+    // 0.6 em advance: 10 px font → 6 px per character; 60 px fits ten characters.
+    expect(wrapText(ctx, "one two three four", 60)).toEqual(["one two", "three four"]);
+    expect(wrapText(ctx, "supercalifragilistic", 60)).toEqual(["supercalifragilistic"]);
+    expect(wrapText(ctx, "", 60)).toEqual([]);
+  });
+
+  it("lights the blocks from the left", () => {
+    expect(xpGlyphs(5)).toEqual({ lit: "▮▮▮▮▮", dark: "▯▯▯▯▯" });
+    expect(xpGlyphs(10)).toEqual({ lit: "▮▮▮▮▮▮▮▮▮▮", dark: "" });
+    expect(xpGlyphs(0)).toEqual({ lit: "", dark: "▯▯▯▯▯▯▯▯▯▯" });
+  });
+});
+
+describe("paintBody", () => {
+  it("paints carbon, a void window, the divider and the placeholder when there is no portrait", () => {
+    const ctx = fakeContext();
+    paintBody(ctx, CARD_W, CARD_H, byId("t1-support"), null);
+    const fills = ctx.rects();
+    expect(fills[0]).toEqual({ x: 0, y: 0, w: CARD_W, h: CARD_H, color: COLORS.carbon });
+    expect(fills[1]).toEqual({ x: 0, y: 0, w: CARD_W, h: CARD_H * WINDOW, color: COLORS.void });
+    expect(ctx.ops.some((o) => o.op === "ellipse")).toBe(true);
+    expect(ctx.fillsWith("#6b4a2f").length).toBeGreaterThan(0);
+    const divider = fills.find((r) => r.color === COLORS.iron && r.h === 1);
+    expect(divider).toEqual({ x: 0, y: CARD_H * WINDOW, w: CARD_W, h: 1, color: COLORS.iron });
+    expectInside(ctx.ops, CARD_W, CARD_H);
+  });
+
+  it("cover-fits a 3:2 portrait into the 11:8 window, anchored top-centre, under a scrim", () => {
+    const ctx = fakeContext();
+    paintBody(ctx, CARD_W, CARD_H, byId("linux-engineer"), fakeImage(800, 533));
+    const draw = ctx.ops.find((o) => o.op === "drawImage")!;
+    const [, dx, dy, dw, dh] = draw.args as [unknown, number, number, number, number];
+    const winH = CARD_H * WINDOW;
+    const scale = Math.max(CARD_W / 800, winH / 533);
+    expect(dw).toBeCloseTo(800 * scale, 6);
+    expect(dh).toBeCloseTo(533 * scale, 6);
+    expect(dy).toBe(0);
+    expect(dx + dw / 2).toBeCloseTo(CARD_W / 2, 6);
+    expect(ctx.ops.some((o) => o.op === "clip")).toBe(true);
+    expect(ctx.ops.some((o) => o.op === "ellipse")).toBe(false);
+    const scrim = ctx.ops.filter((o) => o.op === "fillRect" && o.fillStyle === "gradient");
+    expect(scrim).toHaveLength(1);
+    const [sx, sy, sw, sh] = scrim[0]!.args as number[];
+    expect([sx, sy, sw, sh]).toEqual([0, winH * 0.7, CARD_W, winH * 0.3]);
+  });
+});
+
+describe("paintText", () => {
+  it("draws nothing at 0 lines and everything at 7, in print order", () => {
+    const none = fakeContext();
+    expect(paintText(none, CARD_W, CARD_H, byId("linux-engineer"), 0).bottom).toBe(0);
+    expect(none.texts()).toEqual([]);
+
+    const all = fakeContext();
+    paintText(all, CARD_W, CARD_H, byId("linux-engineer"), PRINT_STEPS);
+    const texts = all.texts();
+    const idx = (needle: string) => texts.findIndex((t) => t.includes(needle));
+    expect(idx("Linux Engineer")).toBeGreaterThanOrEqual(0);
+    expect(idx("Caris Life Sciences · Oct 2019 – May 2021")).toBeGreaterThan(idx("Linux Engineer"));
+    expect(idx("status --rank 6")).toBeGreaterThan(idx("Caris"));
+    expect(idx("on_arrival")).toBeGreaterThan(idx("status"));
+    expect(idx("acquired")).toBeGreaterThan(idx("on_arrival"));
+    expect(idx("xp")).toBeGreaterThan(idx("acquired"));
+    expect(idx("tenure")).toBeGreaterThan(idx("xp"));
+    expect(idx("EVL-06/07")).toBeGreaterThan(idx("tenure"));
+    expect(texts.at(-1)).toBe("S");
+  });
+
+  it("puts the quote in the window, right-aligned, italic fog, within 42% of the width", () => {
+    const ctx = fakeContext();
+    paintText(ctx, CARD_W, CARD_H, byId("linux-engineer"), 1);
+    const quote = ctx.ops.filter((o) => o.op === "fillText" && o.textAlign === "right");
+    expect(quote.length).toBeGreaterThanOrEqual(2);
+    expect(quote.join("")).toBeDefined();
+    const words = quote.map((o) => String(o.args[0]));
+    expect(words[0]!.startsWith("“")).toBe(true);
+    expect(words.at(-1)!.endsWith("”")).toBe(true);
+    for (const o of quote) {
+      expect(o.font).toMatch(/^italic 400 10px/);
+      expect(o.fillStyle).toBe(COLORS.fog);
+      expect(o.args[1]).toBe(CARD_W - 14);
+      expect(String(o.args[0]).length * 6).toBeLessThanOrEqual(CARD_W * 0.42);
+      expect(o.args[2] as number).toBeLessThan(CARD_H * WINDOW - 40);
+    }
+  });
+
+  it("prints each acquired skill in a slate box, eight of them and +6 for S", () => {
+    const ctx = fakeContext();
+    paintText(ctx, CARD_W, CARD_H, byId("linux-engineer"), 4);
+    const boxes = ctx.rects("strokeRect").filter((r) => r.color === COLORS.slate);
+    expect(boxes).toHaveLength(9);
+    expect(ctx.texts()).toContain("+6");
+    expect(ctx.texts()).toContain("Ansible");
+  });
+
+  it("lights the xp blocks in ember and the rest in slate, then the percentage", () => {
+    const ctx = fakeContext();
+    paintText(ctx, CARD_W, CARD_H, byId("linux-engineer"), 5);
+    const lit = ctx.ops.find((o) => o.op === "fillText" && o.args[0] === "▮▮▮▮▮")!;
+    const dark = ctx.ops.find((o) => o.op === "fillText" && o.args[0] === "▯▯▯▯▯")!;
+    expect(lit.fillStyle).toBe(COLORS.ember);
+    expect(dark.fillStyle).toBe(COLORS.slate);
+    expect(ctx.texts()).toContain("50%");
+  });
+
+  it("adds the ember cursor after the tenure only when asked", () => {
+    const off = fakeContext();
+    paintText(off, CARD_W, CARD_H, byId("linux-engineer"), 6, false);
+    expect(off.texts()).not.toContain("▮");
+    const on = fakeContext();
+    paintText(on, CARD_W, CARD_H, byId("linux-engineer"), 6, true);
+    const cursor = on.ops.filter((o) => o.op === "fillText" && o.args[0] === "▮");
+    expect(cursor).toHaveLength(1);
+    expect(cursor[0]!.fillStyle).toBe(COLORS.ember);
+    expect(on.texts().indexOf("▮")).toBe(on.texts().indexOf("19 months") + 1);
+  });
+
+  it("stays inside the card and above the footer for every stage at the smallest size", () => {
+    const w = Math.round(320 * (5 / 7));
+    const h = 320;
+    for (const stage of career) {
+      for (const lines of [0, 1, 2, 3, 4, 5, 6, 7]) {
+        const ctx = fakeContext();
+        const { bottom } = paintText(ctx, w, h, cardModel(stage, NOW), lines, true);
+        expectInside(ctx.ops, w, h);
+        if (lines >= 2 && lines < PRINT_STEPS) {
+          expect(bottom, `${stage.id} at ${lines} lines`).toBeLessThanOrEqual(
+            h - 20 * (w / CARD_W),
+          );
+        }
+      }
+    }
+  });
+
+  it("stays inside the card at the reference and double sizes too", () => {
+    for (const [w, h] of [
+      [CARD_W, CARD_H],
+      [CARD_W * 2, CARD_H * 2],
+    ]) {
+      for (const stage of career) {
+        const ctx = fakeContext();
+        paintText(ctx, w!, h!, cardModel(stage, NOW), PRINT_STEPS, true);
+        expectInside(ctx.ops, w!, h!);
+        const body = fakeContext();
+        paintBody(body, w!, h!, cardModel(stage, NOW), fakeImage(800, 533));
+        expectInside(body.ops, w!, h!);
+      }
     }
   });
 });
