@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { career } from "../src/data/career";
 
 const TITLES = [
   "T1 Tech Support",
@@ -59,6 +60,25 @@ test("the resume prints on white with outlined, unfilled chips", async ({ page }
   await expect(s).toHaveCSS("color", "rgb(17, 17, 17)");
   await expect(page.locator(".band__prompt")).toBeHidden();
   await expect(page.locator(".resume__actions")).toBeHidden();
+});
+
+test("the resume shows every highlight, and prints only each role's strongest", async ({
+  page,
+}) => {
+  await page.goto("/resume");
+  const jobs = page.locator(".job");
+  const newestFirst = [...career].reverse();
+  for (const [i, stage] of newestFirst.entries()) {
+    await expect(jobs.nth(i).locator(".job__highlights li:visible"), stage.id).toHaveText(
+      stage.highlights,
+    );
+  }
+  await page.emulateMedia({ media: "print" });
+  for (const [i, stage] of newestFirst.entries()) {
+    await expect(jobs.nth(i).locator(".job__highlights li:visible"), stage.id).toHaveText(
+      stage.highlights.slice(0, stage.printHighlights),
+    );
+  }
 });
 
 test("notes list links to readable posts", async ({ page }) => {

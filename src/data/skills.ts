@@ -17,15 +17,33 @@ export const skillDomains: readonly SkillDomain[] = [
   },
   {
     name: "Virtualization and storage",
-    items: ["Proxmox VE", "Proxmox Backup Server", "Ceph", "Synology", "HPE iLO"],
+    items: [
+      "Proxmox VE",
+      "Proxmox Backup Server",
+      "Ceph",
+      "Synology",
+      "HPE iLO",
+      "VMware",
+      "Nutanix",
+      "Veeam",
+    ],
   },
   {
     name: "Network and security",
-    items: ["FortiGate", "pfSense", "Arista", "WireGuard", "Wazuh", "FreeIPA and LDAP"],
+    items: [
+      "FortiGate",
+      "pfSense",
+      "Arista",
+      "WireGuard",
+      "Wazuh",
+      "ModSecurity",
+      "CSF and firewalld",
+      "FreeIPA, LDAP and Active Directory",
+    ],
   },
   {
     name: "Automation and code",
-    items: ["Ansible", "Jenkins", "GitHub Actions", "Go", "Python", "Bash", "Django"],
+    items: ["Ansible", "Jenkins", "GitHub Actions", "Go", "Python", "Bash", "Perl", "Django"],
   },
   {
     name: "Containers and data",
@@ -33,7 +51,7 @@ export const skillDomains: readonly SkillDomain[] = [
   },
   {
     name: "Observability",
-    items: ["Grafana", "Prometheus", "SensuGo", "ELK", "LibreNMS"],
+    items: ["Grafana", "Prometheus", "SensuGo", "ELK", "LibreNMS", "Nagios", "Zabbix"],
   },
   {
     name: "Linux and web",

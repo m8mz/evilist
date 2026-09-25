@@ -54,6 +54,67 @@ describe("career data", () => {
       expect(text).not.toContain(banned);
     }
   });
+
+  it("prints at least one highlight per stage, and never more than it has", () => {
+    for (const s of career) {
+      expect(Number.isInteger(s.printHighlights), s.id).toBe(true);
+      expect(s.printHighlights, s.id).toBeGreaterThanOrEqual(1);
+      expect(s.printHighlights, s.id).toBeLessThanOrEqual(s.highlights.length);
+    }
+  });
+
+  it("never repeats a highlight within a stage", () => {
+    for (const s of career) expect(new Set(s.highlights).size, s.id).toBe(s.highlights.length);
+  });
+
+  it("carries the LinkedIn detail, with the original highlights still first (spec §6.1)", () => {
+    const byId = new Map(career.map((s) => [s.id, s]));
+    const architect = byId.get("systems-architect")!;
+    const linux = byId.get("linux-engineer")!;
+    const sysadmin = byId.get("sysadmin")!;
+    const concierge = byId.get("web-concierge")!;
+
+    expect(architect.highlights).toHaveLength(8);
+    expect(architect.highlights[0]).toBe(
+      "Hold a 99.99% uptime target with BGP failover between two datacenters",
+    );
+    expect(architect.highlights.at(-1)).toBe(
+      "Lead strategic technical projects and align technology with business goals",
+    );
+
+    expect(linux.highlights).toHaveLength(9);
+    expect(linux.highlights[0]).toBe(
+      "Streamlined deployment, automation, and integration with Ansible and Jenkins",
+    );
+    expect(linux.highlights[3]).toBe("Administered HPC systems for research workloads");
+    for (const skill of [
+      "Bash",
+      "Python",
+      "Perl",
+      "HPC",
+      "VMware",
+      "Nutanix",
+      "Veeam",
+      "Nagios",
+      "Zabbix",
+      "Active Directory",
+    ]) {
+      expect(linux.skills).toContain(skill);
+    }
+
+    expect(sysadmin.highlights).toHaveLength(7);
+    expect(sysadmin.highlights[1]).toBe(
+      "Wrote automation in Bash, Perl, PHP, JavaScript and Python",
+    );
+    expect(sysadmin.highlights.join(" ")).not.toContain("Wrote Bash tooling");
+    for (const skill of ["ModSecurity", "CSF", "ClamAV", "IPMI"]) {
+      expect(sysadmin.skills).toContain(skill);
+    }
+
+    expect(concierge.summary).toContain("Website Builder");
+    expect(concierge.highlights).toHaveLength(4);
+    expect(concierge.highlights).toContain("Managed 40–60 clients on my own schedule");
+  });
 });
 
 describe("yearsOfExperience", () => {

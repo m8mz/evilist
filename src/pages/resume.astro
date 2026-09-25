@@ -1,7 +1,8 @@
 ---
 // The resume (spec §7.2): the same data and sections, drawn with the terminal primitives. A rank
-// chip per role, org and dates as key: value rows, 1px iron dividers. The print styles also render
-// the PDF (`pnpm build:pdf`): white page, black text, chips outlined and never filled.
+// chip per role, org and dates as key: value rows, 1px iron dividers. Every highlight shows on
+// screen; paper keeps each role's first `printHighlights`. The print styles also render the PDF
+// (`pnpm build:pdf`): white page, black text, chips outlined and never filled.
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Section from "../components/ui/Section.astro";
 import Button from "../components/ui/Button.astro";
@@ -75,8 +76,8 @@ const skills = skillDomains.map((d) => ({ key: d.name, value: d.items.join(", ")
             />
             <p class="job__summary">{stage.summary}</p>
             <ul class="job__highlights">
-              {stage.highlights.map((h) => (
-                <li>{h}</li>
+              {stage.highlights.map((h, i) => (
+                <li class:list={{ "no-print": i >= stage.printHighlights }}>{h}</li>
               ))}
             </ul>
           </li>
