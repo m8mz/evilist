@@ -15,7 +15,7 @@ page instead of an exhibit on it, and gives the site more personality and more s
   of Marcus's stack on the right, and the portrait tilting slightly with the cursor.
 - The header carries Marcus's own `evil_logo.webp` and spans the full width.
 - The journey becomes a full-width anime sequence (Higgsfield stills animated into loops): an
-  original dark anti-hero who ranks up from E to S, in the Jujutsu Kaisen / Solo Leveling register.
+  original dark anti-hero who ranks up from E to S+, in the Jujutsu Kaisen / Solo Leveling register.
 - The rack still becomes a parallax band; the topology diagram goes.
 - The roles carry the detail from Marcus's public LinkedIn that the site left out.
 
@@ -36,6 +36,7 @@ Audience and goals are unchanged: employers first, clients second.
 | Journey medium            | One Higgsfield loop per rank (7 clips), video on every device, lazy-loaded.                                                   |
 | Journey character         | Fully original (not a likeness of Marcus or of any existing character).                                                       |
 | Journey colour            | Violet shadow energy on top of dark + ember, growing with rank. Violet lives only in the art, never in UI tokens.             |
+| Rank ladder               | E, D, C, B, A, S, S+ (no E+; Marcus, 2026-09-24). Every role after T1 moves up one; the current role is S+ (§6.4).            |
 | Rack parallax             | Motion `scroll()` (works in every browser), transform only.                                                                   |
 | Resume length             | `/resume` shows every highlight; the PDF prints a curated subset and stays exactly two pages.                                 |
 | LinkedIn technology names | Publishable (Marcus's own public profile). Still no customers, hostnames, IPs or partner names.                               |
@@ -189,15 +190,16 @@ lights"`), `object-fit: cover`, 124% of the band's height, plus the 20% carbon s
 ### 6.1 Career data (`src/data/career.ts`)
 
 Highlights stay ordered strongest first. A new field `printHighlights: number` says how many the
-PDF prints (S: 5, A: 3, B: 3, others: 2). Additions:
+PDF prints (BankSITE: 5, Caris: 3, Systems Administrator: 3, others: 2). Additions (ranks as in
+§6.4):
 
-- **S · BankSITE**, after the current five:
+- **S+ · BankSITE**, after the current five:
   - Design and run the full stack across two physical datacenters and the cloud: virtualization,
     networking, containers and security, from planning to hands-on operations
   - Manage the infrastructure and its configuration as code, cutting downtime and tightening
     security
   - Lead strategic technical projects and align technology with business goals
-- **A · Caris Life Sciences** (the current three stay first):
+- **S · Caris Life Sciences** (the current three stay first):
   - Administered HPC systems for research workloads
   - Ran monitoring with Nagios, Sensu, Zabbix and Wazuh
   - Ran disk and tape backups (Backup Exec, Veeam) and wrote the disaster-recovery plans
@@ -206,7 +208,7 @@ PDF prints (S: 5, A: 3, B: 3, others: 2). Additions:
   - Supported Confluence, Jira, GitLab, Bitbucket, Mirth Connect, JBoss, GlassFish, MySQL,
     MariaDB, PostgreSQL, the ELK stack, LAMP and Node
   - skills gain: Bash, Python, Perl, HPC, VMware, Nutanix, Veeam, Nagios, Zabbix, Active Directory
-- **B · Systems Administrator**:
+- **A · Systems Administrator**:
   - Hardened servers with ModSecurity and OWASP rules, iptables, CSF and firewalld, and ClamAV
     with in-house definitions and scan containers
   - Identified and mitigated DDoS attacks; cleaned up spam and malware; kept servers PCI compliant
@@ -218,7 +220,7 @@ PDF prints (S: 5, A: 3, B: 3, others: 2). Additions:
   - the existing "Wrote Bash tooling…" becomes "Wrote automation in Bash, Perl, PHP, JavaScript
     and Python"
   - skills gain: ModSecurity, CSF, ClamAV, IPMI
-- **E+ · Web Concierge**: summary names Website Builder alongside WordPress, Joomla, Drupal and
+- **D · Web Concierge**: summary names Website Builder alongside WordPress, Joomla, Drupal and
   Weebly; highlights gain "Managed 40–60 clients on my own schedule" and "Helped start the WP Live
   department in the Tempe office, focused on WordPress".
 
@@ -238,11 +240,33 @@ Observability + Nagios, Zabbix; Automation and code + Perl.
   highlight.
 - JSON-LD and the PDF read the same data, as today.
 
+### 6.4 Rank ladder (Marcus, 2026-09-24)
+
+The ladder is E, D, C, B, A, S, S+: E+ is gone and S+ sits above S. Every role after T1 moves up
+one.
+
+| Role                                                | Was | Now |
+| --------------------------------------------------- | --- | --- |
+| T1 Tech Support                                     | E   | E   |
+| Web Concierge (WP Live)                             | E+  | D   |
+| Professional Services Engineer                      | D   | C   |
+| T3 Tech Support                                     | C   | B   |
+| Systems Administrator                               | B   | A   |
+| Linux Engineer                                      | A   | S   |
+| Sr. Systems Architect and Director of IT Operations | S   | S+  |
+
+- `RankLabel` in `career.ts` is the one list of ranks; `RankChip` takes its type from it.
+- Only S+, the current role, carries the accent (the chip's `rank-chip--top` modifier, formerly
+  `rank-chip--s`). S is paper on graphite like every other rank.
+- The hero's chip reads S+ (label "S+ rank: Sr. Systems Architect"); the journey's h2 becomes
+  "From E-rank to S+ rank"; the headings of the "Ten years" note follow the new labels.
+- Stage ids, `rank` numbers (1–7), order and activities are unchanged.
+
 ## 7. Journey (replaces Axiom §6.2 avatar and scene; amends §8.2)
 
 ### 7.1 Layout
 
-- The `~/journey` prompt, h2 "From E-rank to S-rank" and the lede stay in the centred column. The
+- The `~/journey` prompt, h2 "From E-rank to S+ rank" and the lede stay in the centred column. The
   pinned stage breaks out to full viewport width. Scroll mechanics (`scripts/journey.ts`,
   `stageForProgress`, track height), the rank rail, the skip link and the `JourneyTimeline`
   fallback are unchanged.
@@ -265,22 +289,22 @@ Original, never a likeness of Marcus or of any existing character.
 - Never: red eyes, glowing red, fangs, face markings, scars, a blindfold, or any existing
   character's signature marks, crests or outfits.
 - Colour: ember from the scene's own lights, plus violet shadow energy that grows with rank (none
-  at E; faint wisps at D; violet smoke at his feet at B; a full shadow army shaped like server racks
-  at S).
+  at E; faint wisps at C; violet smoke at his feet at A; a full shadow army shaped like server racks
+  at S+).
 - Outfit ranks up too: black hoodie and headset at E → long black high-collar coat with ember
-  piping at the cuffs at S.
+  piping at the cuffs at S+.
 
 ### 7.3 Shots (16:9, character centred so a portrait crop keeps him)
 
 | Rank | Activity     | Scene                                                                                   |
 | ---- | ------------ | --------------------------------------------------------------------------------------- |
 | E    | `headset`    | Night support desk, headset on, monitors glowing ember with no readable content.        |
-| E+   | `wordpress`  | Shaping an abstract website wireframe of floating blocks above a laptop.                |
-| D    | `migration`  | Carrying a glowing data cube along a light path between two server towers.              |
-| C    | `escalation` | Standing firm before a wall of ember alert lights, shadows rising at his feet.          |
-| B    | `rack`       | Cold aisle, one hand on an open rack, violet smoke curling around him.                  |
-| A    | `pipeline`   | Directing a pipeline of floating modules while shadow hands assemble them.              |
-| S    | `datacenter` | Between two datacenter halls, coat moving, a violet shadow army of server racks behind. |
+| D    | `wordpress`  | Shaping an abstract website wireframe of floating blocks above a laptop.                |
+| C    | `migration`  | Carrying a glowing data cube along a light path between two server towers.              |
+| B    | `escalation` | Standing firm before a wall of ember alert lights, shadows rising at his feet.          |
+| A    | `rack`       | Cold aisle, one hand on an open rack, violet smoke curling around him.                  |
+| S    | `pipeline`   | Directing a pipeline of floating modules while shadow hands assemble them.              |
+| S+   | `datacenter` | Between two datacenter halls, coat moving, a violet shadow army of server racks behind. |
 
 Clip motion: small and loopable only — hair and coat, energy swirling, LEDs blinking, a slight
 camera push that returns. No cuts, no large actions. No audio.
@@ -292,7 +316,7 @@ camera push that returns. No cuts, no large actions. No audio.
 2. **Stage stills:** 7 stages × 2 variants, 16:9, 2k, with the chosen sheet as the reference image
    (~28 credits, batches of ≤ 5). Marcus picks seven.
 3. **Clips:** `seedance_2_0`, 5 s, 1080p, `generate_audio: false`, the stage still as both
-   `start_image` and `end_image` so the loop closes. The S-rank clip runs first as a pilot to check
+   `start_image` and `end_image` so the loop closes. The S+ clip runs first as a pilot to check
    loop quality and the actual credit cost; the other six are quoted before they run.
 
 Every prompt, job ID, pick and credit spend goes into `docs/imagery.md` (a new "Journey" section
@@ -321,7 +345,8 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
 ## 8. Rules that change
 
 - **Ember** (amends Axiom §3.2 item 4): add "the hero network's lit nodes, edges and echoes";
-  drop "the topology pulse dot" and the journey SVG scene items (deleted).
+  drop "the topology pulse dot" and the journey SVG scene items (deleted). "The S rank chip"
+  becomes "the S+ rank chip" (§6.4).
 - **Colour exceptions** (new ADR `docs/decisions/0003-colour-exceptions.md`): yellow only in the
   logo image; violet only inside the journey art. Neither becomes a token; `test/tokens.test.ts`
   and the migration test stay as they are.
@@ -361,11 +386,11 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
 
 ## 10. Phases and acceptance
 
-| Phase | Branch                  | Scope                                                            | Acceptance                                                                                                                                                                  |
-| ----- | ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `feat/hero-v2`          | §3, §4, §8 (ember, ADR 0003, motion), docs                       | Header and hero as specified at all four widths; htop band, facts and arrow field gone; unit, component and e2e tests green; `/` within budget; baselines regenerated.      |
-| 2     | `feat/content-parallax` | §5, §6                                                           | Topology gone; rack band parallaxes and stays still under reduced motion; `/resume` shows every highlight; PDF two pages and fresh; baselines regenerated.                  |
-| 3     | `feat/journey-anime`    | §7, §6.3 journey cards, §8 (imagery), remaining `CLAUDE.md` edit | Seven picked stills and clips, encoded within limits; journey full width; lazy loading and playback verified; `JourneyScene` gone; imagery log complete; baselines updated. |
+| Phase | Branch                  | Scope                                                            | Acceptance                                                                                                                                                                              |
+| ----- | ----------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `feat/hero-v2`          | §3, §4, §8 (ember, ADR 0003, motion), docs                       | Header and hero as specified at all four widths; htop band, facts and arrow field gone; unit, component and e2e tests green; `/` within budget; baselines regenerated.                  |
+| 2     | `feat/content-parallax` | §5, §6                                                           | Ranks run E → S+ everywhere; topology gone; rack band parallaxes and stays still under reduced motion; `/resume` shows every highlight; PDF two pages and fresh; baselines regenerated. |
+| 3     | `feat/journey-anime`    | §7, §6.3 journey cards, §8 (imagery), remaining `CLAUDE.md` edit | Seven picked stills and clips, encoded within limits; journey full width; lazy loading and playback verified; `JourneyScene` gone; imagery log complete; baselines updated.             |
 
 Step 1 of §7.4 (the character sheet) may run during Phase 1, since Marcus's picks take calendar
 time; nothing from it lands in the repo until Phase 3.
@@ -385,7 +410,7 @@ before merge and before the next phase.
 
 - **Character consistency across seven stills.** Mitigation: the chosen character sheet as the
   reference image for every stage, two variants per stage, targeted re-rolls.
-- **Loop seams.** Same start and end frame usually closes the loop; the S-rank pilot proves it
+- **Loop seams.** Same start and end frame usually closes the loop; the S+ pilot proves it
   before the other six run.
 - **Repo weight.** About 10 MB of clips in git. Acceptable for a personal site; revisit (LFS or
   object storage) only if clips are regenerated often.
