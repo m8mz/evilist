@@ -1,7 +1,7 @@
 // Single source of truth for the career timeline: home journey, resume page, JSON-LD, resume PDF.
 // Public-safe facts only: no customer names, hostnames, IPs, or vendor/partner names.
 
-export type RankLabel = "E" | "E+" | "D" | "C" | "B" | "A" | "S";
+export type RankLabel = "E" | "D" | "C" | "B" | "A" | "S" | "S+";
 export type Activity =
   "headset" | "wordpress" | "migration" | "escalation" | "rack" | "pipeline" | "datacenter";
 
@@ -49,7 +49,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "web-concierge",
     rank: 2,
-    rankLabel: "E+",
+    rankLabel: "D",
     title: "Web Concierge (WP Live)",
     org: ENDURANCE,
     location: PHOENIX,
@@ -67,7 +67,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "professional-services",
     rank: 3,
-    rankLabel: "D",
+    rankLabel: "C",
     title: "Professional Services Engineer",
     org: ENDURANCE,
     location: PHOENIX,
@@ -84,7 +84,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "t3-support",
     rank: 4,
-    rankLabel: "C",
+    rankLabel: "B",
     title: "T3 Tech Support",
     org: ENDURANCE,
     location: PHOENIX,
@@ -101,7 +101,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "sysadmin",
     rank: 5,
-    rankLabel: "B",
+    rankLabel: "A",
     title: "Systems Administrator",
     org: ENDURANCE,
     location: PHOENIX,
@@ -119,7 +119,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "linux-engineer",
     rank: 6,
-    rankLabel: "A",
+    rankLabel: "S",
     title: "Linux Engineer",
     org: "Caris Life Sciences",
     location: PHOENIX,
@@ -138,7 +138,7 @@ export const career: readonly CareerStage[] = [
   {
     id: "systems-architect",
     rank: 7,
-    rankLabel: "S",
+    rankLabel: "S+",
     title: "Sr. Systems Architect and Director of IT Operations",
     shortTitle: "Sr. Systems Architect",
     org: "BankSITE® Services",

@@ -45,3 +45,11 @@ describe("retired design tokens", () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe("the retired E+ rank (the ladder is E → S+ since hero v2 Phase 2)", () => {
+  it("appears nowhere in src", () => {
+    // \b keeps htop's "TIME+" column header from matching.
+    const hits = sourceFiles("src").filter((file) => /\bE\+/.test(readFileSync(file, "utf8")));
+    expect(hits).toEqual([]);
+  });
+});

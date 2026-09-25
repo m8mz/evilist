@@ -82,11 +82,11 @@ test.describe("hero", () => {
     expect(overflow).toEqual([]);
   });
 
-  test("frames the portrait as a terminal window with the S-rank chip", async ({ page }) => {
+  test("frames the portrait as a terminal window with the S+ chip", async ({ page }) => {
     await page.goto("/");
     const frame = page.locator(".hero .term");
     await expect(frame.locator(".term__title")).toHaveText("marcus@evilist:~");
-    await expect(frame.getByRole("img", { name: "S-rank: Sr. Systems Architect" })).toHaveCount(1);
+    await expect(frame.getByRole("img", { name: "S+ rank: Sr. Systems Architect" })).toHaveCount(1);
     await expect(page.locator(".hero .seal")).toHaveCount(0);
   });
 

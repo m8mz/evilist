@@ -1,10 +1,10 @@
 ---
-// Rank as a terminal tag: `[ S ]`. Only S carries the accent (ember fill, void text); every other
-// rank is paper on graphite. State is shown by the glyph, not by colour.
-export type Rank = "E" | "E+" | "D" | "C" | "B" | "A" | "S";
+// Rank as a terminal tag: `[ S+ ]`. Only the top rank, S+, carries the accent (ember fill, void
+// text); every other rank is paper on graphite. State is shown by the glyph, not by colour.
+import type { RankLabel } from "../../data/career";
 
 interface Props {
-  rank: Rank;
+  rank: RankLabel;
   size?: "sm" | "md";
   label?: string;
   class?: string;
@@ -14,7 +14,7 @@ const { rank, size = "md", label = `Rank ${rank}`, class: className } = Astro.pr
 ---
 
 <span
-  class:list={["rank-chip", `rank-chip--${size}`, { "rank-chip--s": rank === "S" }, className]}
+  class:list={["rank-chip", `rank-chip--${size}`, { "rank-chip--top": rank === "S+" }, className]}
   data-rank={rank}
   role="img"
   aria-label={label}
@@ -45,7 +45,7 @@ const { rank, size = "md", label = `Rank ${rank}`, class: className } = Astro.pr
     font-size: var(--text-body);
   }
 
-  .rank-chip--s {
+  .rank-chip--top {
     border-color: var(--color-ember);
     background: var(--color-ember);
     color: var(--color-void);

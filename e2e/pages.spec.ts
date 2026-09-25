@@ -12,6 +12,7 @@ const TITLES = [
 
 test("home shows the seven-rank timeline in order", async ({ page }) => {
   await page.goto("/");
+  await expect(page.locator("#journey-title")).toHaveText("From E-rank to S+ rank");
   const titles = page.locator("#journey .timeline__title");
   await expect(titles).toHaveText(TITLES);
   await expect(page.locator("#journey [role=img]").first()).toHaveAttribute("aria-label", "Rank E");
@@ -33,15 +34,16 @@ test("resume lists every role, newest first, and offers the PDF", async ({ page,
   expect(pdf.headers()["content-type"]).toContain("application/pdf");
 });
 
-test("each role shows its rank chip and org/dates rows; only the current role is S", async ({
+test("each role shows its rank chip and org/dates rows; only the current role is S+", async ({
   page,
 }) => {
   await page.goto("/resume");
   const chips = page.locator(".job .rank-chip");
   await expect(chips).toHaveCount(7);
-  await expect(chips.first()).toHaveAttribute("aria-label", "Rank S");
+  await expect(chips.first()).toHaveAttribute("aria-label", "Rank S+");
   await expect(chips.last()).toHaveAttribute("aria-label", "Rank E");
-  await expect(page.locator(".job .rank-chip--s")).toHaveCount(1);
+  await expect(page.locator(".job .rank-chip--top")).toHaveCount(1);
+  await expect(page.locator(".job .rank-chip--top")).toHaveAttribute("aria-label", "Rank S+");
   const newest = page.locator(".job").first();
   await expect(newest.locator(".kv__key")).toHaveText(["org:", "dates:"]);
   await expect(newest.locator(".kv__value").last()).toContainText("Present");
@@ -51,7 +53,7 @@ test("the resume prints on white with outlined, unfilled chips", async ({ page }
   await page.goto("/resume");
   await page.emulateMedia({ media: "print" });
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  const s = page.locator(".job .rank-chip--s");
+  const s = page.locator(".job .rank-chip--top");
   await expect(s).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(s).toHaveCSS("border-top-color", "rgb(17, 17, 17)");
   await expect(s).toHaveCSS("color", "rgb(17, 17, 17)");

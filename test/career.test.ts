@@ -9,7 +9,7 @@ import {
   type Activity,
 } from "../src/data/career";
 
-const RANKS = ["E", "E+", "D", "C", "B", "A", "S"];
+const RANKS = ["E", "D", "C", "B", "A", "S", "S+"];
 const ACTIVITIES: Activity[] = [
   "headset",
   "wordpress",
@@ -21,7 +21,7 @@ const ACTIVITIES: Activity[] = [
 ];
 
 describe("career data", () => {
-  it("has one stage per rank, in rank order E → S", () => {
+  it("has one stage per rank, in rank order E → S+", () => {
     expect(career.map((s) => s.rankLabel)).toEqual(RANKS);
     expect(career.map((s) => s.rank)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
@@ -75,8 +75,8 @@ describe("formatRange", () => {
 });
 
 describe("currentStage", () => {
-  it("is the ongoing S-rank role", () => {
-    expect(currentStage().rankLabel).toBe("S");
+  it("is the ongoing S+ role, the top of the ladder", () => {
+    expect(currentStage().rankLabel).toBe("S+");
     expect(currentStage().end).toBeNull();
   });
 });

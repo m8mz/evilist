@@ -65,7 +65,7 @@ Marcus prefers step-by-step delivery:
 ## Design brief
 
 - Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow.
-- One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, the hero network's lit nodes, link hover, focus rings, selection, and the S `RankChip`. Nowhere else. Two exceptions live only inside images (ADR 0003): the yellow evil_logo in the header, and violet in the journey art.
+- One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, the hero network's lit nodes, link hover, focus rings, selection, and the S+ `RankChip` (the top rank). Nowhere else. Two exceptions live only inside images (ADR 0003): the yellow evil_logo in the header, and violet in the journey art.
 - Header: 64px (--header-h), full width, evil_logo.webp as the home link at 52px tall (48px on phones; alt="", the link carries the name), 18px nav links.
 - Errors and status never use ember: paper text with an ash `error:` prefix, and a 1px paper border on the invalid field.
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
@@ -86,7 +86,7 @@ Marcus prefers step-by-step delivery:
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
-- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S as terminal chips and an SVG chibi in the journey. No aura, no diagonal section cuts.
+- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an SVG chibi in the journey. No aura, no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
 - Animate only `transform`, `opacity` and `pathLength`.
 - Budgets:

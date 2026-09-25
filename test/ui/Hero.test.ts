@@ -48,7 +48,7 @@ describe("Hero", () => {
   it("keeps the framed portrait with the S chip, ready to tilt", async () => {
     const html = await render(Hero);
     expect(html).toContain("marcus@evilist:~");
-    expect(html).toContain("S-rank: Sr. Systems Architect");
+    expect(html).toContain("S+ rank: Sr. Systems Architect");
     expect(html).toMatch(/<figure class="hero__portrait"[^>]*data-tilt/);
     expect(html).not.toContain("style=");
   });
