@@ -38,7 +38,11 @@ export function readTierEnv(win: Window = window): TierEnv {
   let webgl2 = false;
   try {
     const probe = win.document.createElement("canvas");
-    webgl2 = probe.getContext("webgl2", { failIfMajorPerformanceCaveat: false }) != null;
+    const gl = probe.getContext("webgl2", { failIfMajorPerformanceCaveat: false });
+    webgl2 = gl != null;
+    // Release the throwaway context immediately so it doesn't count against mobile Safari's
+    // WebGL context budget right before the real stage creates one.
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
     webgl2 = false;
   }

@@ -89,7 +89,11 @@ export function initRail(
   };
 
   buttons.forEach((button, i) => {
-    button.addEventListener("click", () => onJump(i));
+    button.addEventListener("click", () => {
+      // The clicked button becomes the roving tabindex stop, even if it wasn't already one.
+      focusRank(i);
+      onJump(i);
+    });
     button.addEventListener("keydown", (event) => {
       const next = rankAfterKey(i, event.key, buttons.length);
       if (next === null) return;

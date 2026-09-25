@@ -51,12 +51,19 @@ export function once<T extends (...args: never[]) => void>(fn: T): T {
 
 /** Runs `fn` when the browser is idle, or after `timeoutMs` at the latest. */
 export function idle(fn: () => void, timeoutMs = 1500): void {
-  const w = window as Window & {
-    requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
-  };
-  if (typeof w.requestIdleCallback === "function")
+  const w =
+    typeof window === "undefined"
+      ? undefined
+      : (window as Window & {
+          requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+        });
+  if (typeof w?.requestIdleCallback === "function") {
     w.requestIdleCallback(fn, { timeout: timeoutMs });
-  else setTimeout(fn, 200);
+  } else {
+    // Safari has no idle callback (and node/SSR has no window at all), so run soon but never
+    // later than the caller's ceiling.
+    setTimeout(fn, Math.min(200, timeoutMs));
+  }
 }
 
 /** The build date the page carries as `data-now`, as local midnight; today when it is missing. */

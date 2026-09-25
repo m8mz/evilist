@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  idle,
   mulberry32,
   nowFrom,
   once,
@@ -62,6 +63,24 @@ describe("mulberry32", () => {
       expect(v).toBeLessThan(1);
     }
     expect(mulberry32(8)()).not.toBe(seq[0]);
+  });
+});
+
+describe("idle", () => {
+  it("falls back to setTimeout, capped at the caller's ceiling, when there is no window (node, or Safari with no requestIdleCallback)", () => {
+    vi.useFakeTimers();
+    try {
+      let called = false;
+      idle(() => {
+        called = true;
+      }, 50);
+      vi.advanceTimersByTime(49);
+      expect(called).toBe(false);
+      vi.advanceTimersByTime(1);
+      expect(called).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
