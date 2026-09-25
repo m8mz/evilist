@@ -38,10 +38,26 @@ export const COLORS = {
   back: "#0e0e0e",
 } as const;
 
-export const FONT = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+// Astro's Fonts API registers JetBrains Mono under a hashed family name (e.g.
+// "JetBrains Mono-68114cf3b8f830ba"), not this plain one. Canvas can't read CSS custom properties
+// itself, so the page reads the real family from the `--font-jetbrains` custom property at runtime
+// (Plan 2) and calls `setDeckFontFamily` with it before painting, so canvas text doesn't fall back
+// to Menlo for visitors.
+let deckFamily = "JetBrains Mono";
+
+export function setDeckFontFamily(family: string): void {
+  deckFamily = family;
+}
+
+export function deckFontFamily(): string {
+  return deckFamily;
+}
+
+const fontStack = (family: string): string =>
+  `"${family}", ui-monospace, SFMono-Regular, Menlo, monospace`;
 
 export const font = (px: number, weight: 400 | 700 = 400, italic = false): string =>
-  `${italic ? "italic " : ""}${weight} ${px}px ${FONT}`;
+  `${italic ? "italic " : ""}${weight} ${px}px ${fontStack(deckFamily)}`;
 
 type Ctx = CanvasRenderingContext2D;
 

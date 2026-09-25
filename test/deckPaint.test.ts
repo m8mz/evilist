@@ -5,6 +5,7 @@ import {
   CHIP_H,
   CHIP_W,
   COLORS,
+  deckFontFamily,
   font,
   paintBack,
   paintBody,
@@ -14,6 +15,7 @@ import {
   paintText,
   PRINT_STEPS,
   cardModel,
+  setDeckFontFamily,
   wrapText,
   xpGlyphs,
   WINDOW,
@@ -48,6 +50,23 @@ describe("font", () => {
     );
     expect(font(12, 700)).toMatch(/^700 12px/);
     expect(font(10, 400, true)).toMatch(/^italic 400 10px/);
+  });
+
+  it("builds from the family the page registers, not a hardcoded one", () => {
+    expect(deckFontFamily()).toBe("JetBrains Mono");
+    try {
+      setDeckFontFamily("JetBrains Mono-abc123");
+      expect(deckFontFamily()).toBe("JetBrains Mono-abc123");
+      expect(font(14)).toBe(
+        '400 14px "JetBrains Mono-abc123", ui-monospace, SFMono-Regular, Menlo, monospace',
+      );
+      expect(font(14)).toMatch(/^400 14px "JetBrains Mono-abc123"/);
+    } finally {
+      setDeckFontFamily("JetBrains Mono");
+    }
+    expect(font(14)).toBe(
+      '400 14px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+    );
   });
 });
 
