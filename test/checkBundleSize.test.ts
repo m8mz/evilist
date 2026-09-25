@@ -20,6 +20,15 @@ function fakeDist(files: Record<string, number>): string {
 
 const run = (cwd: string) => spawnSync("node", [SCRIPT], { cwd, encoding: "utf8" });
 
+/** Adds files under dist/client/journey to the fake build. */
+function withClips(dist: string, clips: Record<string, number>): string {
+  mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
+  for (const [name, bytes] of Object.entries(clips)) {
+    writeFileSync(join(dist, "dist/client/journey", name), Buffer.alloc(bytes, 1));
+  }
+  return dist;
+}
+
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -41,6 +50,29 @@ describe("check-bundle-size", () => {
   it("fails when a Three.js chunk is present", () => {
     const res = run(fakeDist({ "fonts/a.woff2": 42_000, "hero-aura-scene.abc.js": 10 }));
     expect(res.stdout).toContain("FAIL Three.js chunk present");
+    expect(res.status).toBe(1);
+  });
+
+  it("passes clips within their limits", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    const res = run(
+      withClips(dist, { "sysadmin-1280.webm": 600 * 1024, "sysadmin-640.mp4": 300 * 1024 }),
+    );
+    expect(res.stdout).toMatch(/ok {3}Journey clips: 2 files/);
+    expect(res.status).toBe(0);
+  });
+
+  it("fails a clip over its limit, naming it", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    const res = run(withClips(dist, { "sysadmin-640.webm": 251 * 1024 }));
+    expect(res.stdout).toContain("FAIL sysadmin-640.webm");
+    expect(res.status).toBe(1);
+  });
+
+  it("fails a file in journey/ that is not one of the four encodes", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    const res = run(withClips(dist, { "sysadmin-1920.webm": 10 }));
+    expect(res.stdout).toContain("FAIL sysadmin-1920.webm");
     expect(res.status).toBe(1);
   });
 });
