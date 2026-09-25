@@ -120,4 +120,16 @@ describe("importPortrait", () => {
     );
     expect(out).toMatch(/systems-architect: 900×600, glow [23]\.\d+% \(band 1–8%\)/);
   });
+
+  it("runs as a CLI without --out, defaulting to src/images/deck under the cwd", async () => {
+    const d = tmp();
+    await render(join(d, "ok.png"), 3);
+    const out = execFileSync(
+      process.execPath,
+      [resolve("scripts/import-portrait.mjs"), join(d, "ok.png"), "systems-architect"],
+      { cwd: d, encoding: "utf8" },
+    );
+    expect(out).toMatch(/systems-architect: 900×600, glow [23]\.\d+% \(band 1–8%\)/);
+    expect(existsSync(join(d, "src/images/deck/systems-architect.webp"))).toBe(true);
+  });
 });

@@ -91,7 +91,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   const args = process.argv.slice(2);
   const outIndex = args.indexOf("--out");
   const outDir = outIndex >= 0 ? args[outIndex + 1] : "src/images/deck";
-  const [input, id] = args.filter((_, i) => i !== outIndex && i !== outIndex + 1);
+  const positional = args.filter((v, i) => v !== "--out" && args[i - 1] !== "--out");
+  const [input, id] = positional;
   if (!input || !id) {
     console.error("usage: node scripts/import-portrait.mjs <render> <stage-id> [--out <dir>]");
     process.exit(1);
