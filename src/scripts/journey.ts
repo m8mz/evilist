@@ -1,10 +1,10 @@
 // Maps scroll progress through the journey track to the active career stage, and runs the clips.
 // Motion's scroll() tracks the journey element on scroll events; all visual changes are CSS
-// transitions on transform and opacity. Nothing is fetched until the journey reaches the screen
-// (it starts just below the fold, so a wider margin would load it with the page); then the active
-// rank, once it has held for a quarter of a second, and its neighbours are primed (poster shown,
-// clip sources set) and the active clip plays while the journey is on screen. A refused play()
-// leaves the rank's still showing.
+// transitions on transform and opacity. Nothing is fetched until the journey is on screen (past
+// the window's bottom 15%); until the stage pins, only the active rank loads; once pinned, the
+// active rank (after it holds for a quarter of a second) and its neighbours are primed (poster
+// shown, clip sources set) and the active clip plays while the journey is on screen. A refused
+// play() leaves the rank's still showing.
 import { scroll } from "motion";
 
 export function stageForProgress(progress: number, stages: number): number {
@@ -32,10 +32,11 @@ export function initJourney(): void {
   const videoOf = (i: number) => clips[i]?.querySelector("video") ?? null;
   let current = 0;
   let onScreen = false;
+  let pinned = false;
   let settle: ReturnType<typeof setTimeout> | undefined;
 
-  const prime = (index: number) => {
-    for (const i of neighbours(index, clips.length)) {
+  const prime = (index: number, withNeighbours = true) => {
+    for (const i of withNeighbours ? neighbours(index, clips.length) : [index]) {
       const clip = clips[i];
       if (clip.classList.contains("is-primed")) continue;
       clip.classList.add("is-primed");
@@ -78,16 +79,20 @@ export function initJourney(): void {
     }, SETTLE_MS);
   };
 
-  new IntersectionObserver((entries) => {
-    // The newest entry is the current state: a busy main thread can deliver an enter and a leave together.
-    onScreen = entries[entries.length - 1].isIntersecting;
-    if (onScreen) {
-      prime(current);
-      play(current);
-    } else {
-      clips.forEach((_, i) => pause(i));
-    }
-  }).observe(root);
+  // Ignores the window's bottom 15%: a strip of journey peeking up at load on a tall screen loads nothing.
+  new IntersectionObserver(
+    (entries) => {
+      // The newest entry is the current state: a busy main thread can deliver an enter and a leave together.
+      onScreen = entries[entries.length - 1].isIntersecting;
+      if (onScreen) {
+        prime(current, pinned);
+        play(current);
+      } else {
+        clips.forEach((_, i) => pause(i));
+      }
+    },
+    { rootMargin: "0px 0px -15% 0px" },
+  ).observe(root);
 
   // A back/forward-cache restore can leave the active clip paused, and the observer won't fire again.
   addEventListener("pageshow", (event) => {
@@ -100,6 +105,10 @@ export function initJourney(): void {
     (progress: number) => {
       // CSSOM writes are allowed under the CSP (only inline style attributes are blocked).
       root.style.setProperty("--progress", progress.toFixed(4));
+      if (!pinned && progress > 0) {
+        pinned = true;
+        if (onScreen) prime(current);
+      }
       show(stageForProgress(progress, cards.length));
     },
     { target: root, offset: ["start start", "end end"] },

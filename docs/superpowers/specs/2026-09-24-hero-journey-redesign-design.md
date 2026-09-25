@@ -341,8 +341,11 @@ disableremoteplayback>` with `<source data-src media="(min-width: 48rem)">` pair
 - `scripts/journey.ts` gains:
   - an `IntersectionObserver` with no margin (amended in the Phase 3 plan: the journey starts only
     48–580 px below the fold at every tested viewport, so a one-viewport margin or native lazy
-    loading would fetch it with the page and break `/`'s 600 KB budget). Once the journey is on
-    screen it primes the active rank and its neighbours: shows their posters, copies `data-src` →
+    loading would fetch it with the page and break `/`'s 600 KB budget). Its root margin ignores
+    the window's bottom 15%, and until the stage pins only the active rank is primed (on 1920×1080
+    and taller windows the journey's top edge is on screen at load; priming a neighbour there cost
+    ~350 KB). Once the journey is on screen it primes the active rank and its neighbours: shows
+    their posters, copies `data-src` →
     `src` and calls `load()` once. Nothing is fetched on page load, and a jump to the last rank
     loads at most four ranks;
   - on stage change: pause the old clip, `play()` the new one (a rejected promise leaves the still

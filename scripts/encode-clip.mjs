@@ -54,7 +54,8 @@ export function encodeClip(input, stageId, outDir = "public/journey", ffmpeg = "
     const { start, step, max } = CRF[variant.ext];
     for (let crf = start; crf <= max; crf += step) {
       const res = spawnSync(ffmpeg, ffmpegArgs(input, output, variant, crf), { encoding: "utf8" });
-      if (res.status !== 0) throw new Error(`ffmpeg failed on ${output}: ${res.stderr}`);
+      if (res.status !== 0)
+        throw new Error(`ffmpeg failed on ${output}: ${res.error?.message ?? res.stderr}`);
       const bytes = statSync(output).size;
       if (bytes <= variant.maxBytes) return { output, bytes, crf };
     }

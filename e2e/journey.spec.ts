@@ -217,6 +217,8 @@ test.describe("journey clips", () => {
     test.skip(info.project.name === "reduced-motion", "covered below");
   });
 
+  // At the project and Lighthouse sizes the journey starts only 31–91 px below the fold: a lede that
+  // wraps one more line would put its art into the page load, and this test would catch it.
   test("fetches no clip or still before the journey reaches the screen", async ({ page }) => {
     const art = trackArt(page);
     await page.goto("/");
@@ -224,6 +226,23 @@ test.describe("journey clips", () => {
     expect([...art.clips, ...art.stills]).toEqual([]);
     await scrollToStage(page, 0);
     await expect.poll(() => art.stills.has("t1-support")).toBe(true);
+  });
+
+  test("on tall desktop windows, the page loads at most the first rank's art", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "desktop windows");
+    for (const [size, allowed] of [
+      [{ width: 1920, height: 1080 }, []],
+      [{ width: 2560, height: 1300 }, ["t1-support"]],
+    ] as const) {
+      await page.setViewportSize(size);
+      const art = trackArt(page);
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      const loaded = [...new Set([...art.clips, ...art.stills])];
+      for (const id of loaded) expect(allowed, `${size.width}×${size.height}: ${id}`).toContain(id);
+    }
   });
 
   test("plays the active clip, fades it in, and pauses the rest", async ({ page, browserName }) => {

@@ -71,7 +71,7 @@ Marcus prefers step-by-step delivery:
 - Contrast: ember fills carry **void** text (paper on ember is 3.3:1). Every text colour must pass 4.5:1 on void, carbon and graphite; `test/tokens.test.ts` enforces it. Steel `#606060` is for borders and decoration, never text; use ash `#848484` for tags and key labels.
 - Type: JetBrains Mono for everything, through the Fonts API with the **Fontsource** provider (`--font-jetbrains`, exposed as the `--font-mono` token). Headings are weight 400: hierarchy comes from size. 2px radius everywhere; 9999px only on tiny dots.
 - Sections open with a `~/path` `Prompt` eyebrow and are separated by 1px iron rules.
-- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them, and the journey's clips (`seedance_2_0`); prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim); import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
+- Imagery: SVG in code for anything diagrammatic or animated. Higgsfield stills (`nano_banana_pro`) only where the spec (§8.2) places them, and the journey's clips (`seedance_2_0`); prompts and job IDs go in `docs/imagery.md`. Serve stills through `Still` (alt text always starts "Illustration:"), except the rack, which runs full bleed in `ParallaxBand` (same alt rule, same 20% scrim), and the journey's posters, which are raw `<Picture>` layers in `Journey.astro` under the clips (same alt rule, no scrim); import new renders with `scripts/import-still.mjs`. Higgsfield takes at most 5 jobs per batch.
 - CSP gotchas:
   - no inline `style=` attributes; use classes or data attributes
   - no `is:inline` scripts
@@ -88,7 +88,7 @@ Marcus prefers step-by-step delivery:
 
 - Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield stills animated into loops). No aura, no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
-- Animate only `transform`, `opacity` and `pathLength`.
+- Animate only `transform` and `opacity`.
 - Budgets:
   - initial JS on `/`: ≤ 100 KB gz
   - Motion: ≤ 30 KB gz
