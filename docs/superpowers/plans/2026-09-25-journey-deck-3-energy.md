@@ -2389,3 +2389,10 @@ Rulings made while the plan ran, so the plan reads true against the code:
   (`bloom.radius`/`threshold`); the halo's depth edge against the racked backs (a group-parented glow
   plane would tilt with the card and sit close again); the mid boost when the bloom chunk fails on
   high; the size gate's `Portraits: none referenced` branch has no test.
+- Controller tuning pass (2026-09-26, after the final review's dispatch): the bloom quad samples
+  UnrealBloomPass's own composite target (the blur alone) instead of the composer's read buffer, because
+  adding the glow objects a second time washed the whole stage at S+; the 1.6× glow gain applies on both
+  tiers (the bloom's threshold leaves the violet sprite and seams alone, so the gain is the base look);
+  bloom defaults are strength 0.45, radius 0.5, threshold 0.5 (UnrealBloomPass returns a large smooth
+  source at about three times its strength, and threshold 0.5 keeps the violet, luminance under 0.2, out
+  of the blur). The S halo stays at the spec's scale and reads understated; its size is a Plan 5 knob.

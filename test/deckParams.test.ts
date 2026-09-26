@@ -19,7 +19,7 @@ describe("deck params", () => {
     expect(DECK_PARAMS.camera.fov).toBe(26);
     expect(DECK_PARAMS.energy.sPlusRamp).toBe(0.75);
     expect(DECK_PARAMS.smoke.pool).toBe(140);
-    expect(DECK_PARAMS.bloom.strength).toBe(0.9);
+    expect(DECK_PARAMS.bloom.strength).toBe(0.45);
   });
 
   it("keeps the handoff inside a rank and the lift and eases positive", () => {

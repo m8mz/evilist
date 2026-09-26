@@ -3,7 +3,7 @@
 - **Date:** 2026-09-25 (revised the same day after Marcus's deep review)
 - **Status:** Approved 2026-09-25. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character) and 3 (energy) implemented; ADR 0004 written with Plan 2.
 - **Implementation notes (Plan 1 reviews):** the intro clock is an accumulated `elapsed` (no derived speed); a card's `landedAt` persists until it is racked again (`pull <= 0`), never cleared on leaving; the canvas font family is read from `--font-jetbrains` at runtime (the Fonts API registers a hashed name). Where §7 disagrees, these win.
-- **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the fog's radius is passed in stage-height units; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
+- **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the quad adds the blur alone (the glow objects are already on the canvas), the glow set renders at 1.6× on both tiers, and the bloom's threshold of 0.5 leaves the violet sprite and seams to that gain so only the pale eyes and flames bloom; the fog's radius is passed in stage-height units; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
 - **Supersedes:** `2026-09-25-vector-journey-design.md` (the traced SVG scene) and the journey
   parts of `2026-09-24-hero-journey-redesign-design.md`
 - **Decisions this creates:** ADR 0004 (Three.js, lighting, bloom, glow and smoke inside the
@@ -359,12 +359,14 @@ strength, aspect. About sixty lines of GLSL; no textures.
 at the centre, on the floor line under the presented card and under a pulling card, following x; its
 opacity falls with the lift (`× (1 − 0.5 × z / z_max)`). Racked cards cast none.
 
-**Bloom.** High tier only, in `deck-bloom.ts` (a second lazy chunk): `EffectComposer` with a
-selective pass rendering only bloom-layer objects (glow masks, seams, glow sprites) through
-`UnrealBloomPass(strength 0.9, radius 0.6, threshold 0)` at half resolution, composited additively
-over the base render (the official selective-bloom pattern). Text never blooms because it is not on
-the layer. Mid tier: no composer; the same objects render additively with 1.6× opacity so the eyes
-and seams still read as lit.
+**Bloom.** High tier only, in `deck-bloom.ts` (a second lazy chunk): the scene renders to the
+canvas as on mid, then an `EffectComposer` renders only bloom-layer objects (glow masks, seams, glow
+sprites, selected by the camera's layer mask, occluded by depth-only card proxies) through
+`UnrealBloomPass(strength 0.45, radius 0.5, threshold 0.5)` at half resolution, and a full-screen
+quad adds the blur alone over the canvas (as implemented; the plan's original two-composer mix
+re-added the glow objects and washed the stage). Text never blooms because it is not on the layer.
+Both tiers render the glow set at 1.6× opacity; the threshold leaves the violet sprite and seams to
+that gain, so the bloom is the halo of the pale eyes and flames.
 
 **Tiers** (decided once at script start; a missing `deviceMemory` or `hardwareConcurrency` counts
 as passing, since Safari and Firefox don't report them):

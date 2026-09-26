@@ -235,7 +235,10 @@ export function defaultDeckParams(): DeckParams {
     glow: { scaleS: 4.2, scaleSPlusBase: 7, scaleSPlusRamp: 9, flareScale: 1.4 },
     seam: { sMin: 0.1, sMax: 0.25, sPlusMin: 0.2, sPlusMax: 0.5, periodMs: 3200 },
     shadow: { widthFactor: 1.15, heightFactor: 0.35, opacity: 0.55, liftFade: 0.5 },
-    bloom: { strength: 0.9, radius: 0.6, threshold: 0 },
+    // Threshold 0.5 keeps the soft violet sprite and seams out of the blur (their luminance stays
+    // under 0.2); only the pale eyes and S+ flames bloom. UnrealBloomPass returns a large smooth
+    // source at about three times its strength, so 0.45 reads as a halo, not a wash.
+    bloom: { strength: 0.45, radius: 0.5, threshold: 0.5 },
     tiers: { dprHigh: 2, dprMid: 1.5, disposeAfterMs: 30_000 },
   };
 }

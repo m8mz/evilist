@@ -68,9 +68,10 @@ export function mountBloom(
   width: number,
   height: number,
 ): BloomHandle {
-  // RenderPass draws into the composer's read buffer and UnrealBloomPass adds its blur there, and
-  // neither swaps, so renderTarget2 holds the glow after every render (as in Three's selective
-  // bloom example).
+  // RenderPass draws the glow objects into the composer's read buffer and UnrealBloomPass blurs
+  // them; neither swaps. The overlay samples the pass's own composite target (the blur alone, before
+  // the pass adds it back over the objects), because the objects are already on the canvas from the
+  // main render: adding them a second time washed the whole stage at S+.
   const composer = new EffectComposer(renderer);
   composer.renderToScreen = false;
   const bloomPass = new UnrealBloomPass(
@@ -85,7 +86,7 @@ export function mountBloom(
   composer.setSize(width, height);
 
   const overlay = new ShaderMaterial({
-    uniforms: { tBloom: { value: composer.renderTarget2.texture } },
+    uniforms: { tBloom: { value: bloomPass.renderTargetsHorizontal[0]?.texture ?? null } },
     vertexShader: OVERLAY_VERTEX,
     fragmentShader: OVERLAY_FRAGMENT,
     blending: AdditiveBlending,

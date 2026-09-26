@@ -1,6 +1,7 @@
 // The energy's objects (deck spec §5 "glow mask", "seam"; §8 lights, glow, smoke, fog, shadow): built
 // once per mount, driven every frame from deck-energy.ts's numbers and deck-smoke-sprites.ts's pool.
-// Everything that glows sits on BLOOM_LAYER for deck-bloom.ts; with no composer, mid renders it 1.6×.
+// Everything that glows sits on BLOOM_LAYER for deck-bloom.ts and renders at GLOW_GAIN on both tiers;
+// the high tier's bloom adds only the blur of the brightest parts on top.
 import {
   AdditiveBlending,
   CanvasTexture,
@@ -37,7 +38,9 @@ import { canvasTexture, SmokeSprites } from "./deck-smoke-sprites";
 
 export const BLOOM_LAYER = 1;
 const PX = 1 / 100;
-const MID_BOOST = 1.6;
+// Opacity gain on the glow set. The spec gave it to the mid tier to stand in for the bloom, but the
+// bloom's threshold leaves the violet glow alone, so the gain is the base look on both tiers.
+const GLOW_GAIN = 1.6;
 const LIGHT_AHEAD = 1.6; // world units in front of the energetic card
 const FOG_Z = -0.5;
 const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge; the falloff hides the margin
@@ -119,7 +122,7 @@ export class DeckEffects {
     this.scene = opts.scene;
     this.params = opts.params;
     this.kinds = opts.kinds;
-    this.boost = opts.tier === "mid" ? MID_BOOST : 1;
+    this.boost = GLOW_GAIN;
     this.highTier = opts.tier === "high";
     const n = opts.kinds.length;
     const P = this.params;
