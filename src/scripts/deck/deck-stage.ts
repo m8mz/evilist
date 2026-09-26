@@ -323,6 +323,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const N = count;
   let targetP = 0;
   let p = 0;
+  // The first frame after a mount (or re-mount) must render the scroll target directly, never
+  // smooth up from `p = 0`, or a deep-scrolled visitor sees the deck riffle through every rank
+  // (and the rail's aria-live region announce each one) before it catches up.
+  let firstFrameDone = false;
   let pointerAt: { x: number; y: number } | null = null;
   const tilt = { x: 0, y: 0 };
   const tiltTarget = { x: 0, y: 0 };
@@ -459,8 +463,11 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const input = { p, labels, layout, tilt, hover, time, landedAt, intro };
     let pose = deckPose(input, params);
     if (intro && pose.intro === null) intro = null;
-    // Freeze draws one frame: seed `landedAt` for any card landing now, then recompute once.
-    if (freeze) {
+    // Freeze draws one frame: seed `landedAt` for any card landing now, then recompute once. A
+    // late (or deep-scrolled) mount's first rendered frame does the same, so the presented card's
+    // text is already printed instead of printing in — but only when no intro is running; the
+    // intro's own deal-in must animate from scratch.
+    if (freeze || (!firstFrameDone && !intro)) {
       let seeded = false;
       for (let i = 0; i < count; i++) {
         if (pose.cards[i]?.landed && landedAt[i] === null) {
@@ -507,6 +514,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
 
     renderer.render(scene, camera);
     emitState(pose);
+    firstFrameDone = true;
     if (!readyDone) {
       readyDone = true;
       readyResolve?.();
@@ -557,7 +565,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     ready,
     setProgress(value) {
       targetP = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
-      if (freeze) p = targetP;
+      if (freeze || !firstFrameDone) p = targetP;
       requestRender();
     },
     pointer(clientX, clientY) {
