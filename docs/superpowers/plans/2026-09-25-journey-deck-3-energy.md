@@ -2097,13 +2097,17 @@ it("budgets the bloom chunk on its own row and keeps it out of the deck row", ()
   const dist = fakeDist();
   withScene(dist);
   withDeck(dist);
-  writeFileSync(join(dist, "client/_astro/deck-bloom.abc.js"), "x".repeat(20_000));
+  // Without a bloom chunk the run fails on the missing row, but the deck row still prints.
+  const before = /Deck lazy JS \(gz\): ([\d.]+) KB/.exec(run(dist).stdout)?.[1];
+  writeFileSync(
+    join(dist, "client/_astro/deck-bloom.abc.js"),
+    randomBytes(20_000).toString("base64"),
+  );
   const out = run(dist);
   expect(out.status).toBe(0);
   expect(out.stdout).toMatch(/ok {3}Bloom chunk \(gz\): .* \(budget 40 KB\)/);
-  const deckRow = /Deck lazy JS \(gz\): ([\d.]+) KB/.exec(out.stdout);
-  const bloomRow = /Bloom chunk \(gz\): ([\d.]+) KB/.exec(out.stdout);
-  expect(Number(deckRow?.[1])).toBeLessThan(Number(bloomRow?.[1]) + 1); // the deck row excludes the bloom bytes
+  // The bloom bytes are not counted twice: the deck row is what it was before the chunk existed.
+  expect(/Deck lazy JS \(gz\): ([\d.]+) KB/.exec(out.stdout)?.[1]).toBe(before);
 });
 
 it("fails when the bloom chunk is missing or over 40 KB", () => {
