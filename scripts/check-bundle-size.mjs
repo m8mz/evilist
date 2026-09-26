@@ -5,14 +5,27 @@
 //   in the fallback face with every other gate green.
 // - The journey deck: Three.js and the stage live in lazy chunks (the JS no page references
 //   directly), under their own budget, and never in the home page's initial graph (deck spec §11).
+// - The high-tier bloom composer (deck-bloom.<hash>.js) is its own lazy chunk with its own budget,
+//   excluded from the deck row above it.
 // - Journey scene: only scene.svg may live in dist/client/journey, gzipped within its budget
 //   (until Phase 6 retires it).
+// - Served portrait renditions: the largest 1x/2x rendition and glow mask the home page's rail
+//   buttons reference (data-portrait-1x/2x/glow), raw bytes (already-compressed webp).
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 const KB = 1024;
-const BUDGETS = { initialHome: 100 * KB, fonts: 120 * KB, scene: 300 * KB, deck: 170 * KB };
+const BUDGETS = {
+  initialHome: 100 * KB,
+  fonts: 120 * KB,
+  scene: 300 * KB,
+  deck: 170 * KB,
+  bloom: 40 * KB,
+  portrait1x: 40 * KB,
+  portrait2x: 120 * KB,
+  glow: 10 * KB,
+};
 const FONT_FLOOR = 20 * KB; // JetBrains Mono 400 + 700 + italic 400, latin: ~65 KB
 const gz = (path) => gzipSync(readFileSync(path)).length;
 
@@ -82,15 +95,25 @@ const lazy = readdirSync("dist/client/_astro")
   .filter((f) => f.endsWith(".js"))
   .map((f) => `/_astro/${f}`)
   .filter((f) => !referenced.has(f));
-const lazyBytes = lazy.reduce((sum, f) => sum + gz(`dist/client${f}`), 0);
+const bloomChunks = lazy.filter((f) => /deck-bloom/.test(f));
+const deckChunks = lazy.filter((f) => !/deck-bloom/.test(f));
+const deckBytes = deckChunks.reduce((sum, f) => sum + gz(`dist/client${f}`), 0);
+const bloomBytes = bloomChunks.reduce((sum, f) => sum + gz(`dist/client${f}`), 0);
 
 const rows = [
   ["Initial JS on / (gz)", initialBytes, BUDGETS.initialHome, 0],
   ["Fonts (woff2)", fontBytes, BUDGETS.fonts, FONT_FLOOR],
-  ["Deck lazy JS (gz)", lazyBytes, BUDGETS.deck, 0],
+  ["Deck lazy JS (gz)", deckBytes, BUDGETS.deck, 0],
 ];
 
 let failed = false;
+if (bloomChunks.length) {
+  rows.push(["Bloom chunk (gz)", bloomBytes, BUDGETS.bloom, 0]);
+} else {
+  console.log("FAIL deck-bloom chunk missing: the composer was inlined into the stage");
+  failed = true;
+}
+
 const scenePath = "dist/client/journey/scene.svg";
 if (existsSync(scenePath)) {
   rows.push(["Journey scene (gz)", gz(scenePath), BUDGETS.scene, 0]);
@@ -98,6 +121,33 @@ if (existsSync(scenePath)) {
   console.log("FAIL Journey scene (gz): missing");
   failed = true;
 }
+
+const PORTRAIT_CLASSES = [
+  ["Portraits 1x (largest)", /data-portrait-1x="([^"]+)"/g, BUDGETS.portrait1x],
+  ["Portraits 2x (largest)", /data-portrait-2x="([^"]+)"/g, BUDGETS.portrait2x],
+  ["Glow masks (largest)", /data-glow="([^"]+)"/g, BUDGETS.glow],
+];
+let anyPortraits = false;
+for (const [name, re, budget] of PORTRAIT_CLASSES) {
+  const paths = [...home.matchAll(re)].map((m) => m[1]);
+  if (!paths.length) continue;
+  anyPortraits = true;
+  let largest = 0;
+  for (const p of paths) {
+    const filePath = `dist/client${p}`;
+    if (!existsSync(filePath)) {
+      console.log(`FAIL portrait file missing: ${p}`);
+      failed = true;
+      continue;
+    }
+    largest = Math.max(largest, statSync(filePath).size);
+  }
+  rows.push([name, largest, budget, 0]);
+}
+if (!anyPortraits) {
+  console.log("ok   Portraits: none referenced");
+}
+
 for (const [name, bytes, budget, floor] of rows) {
   const ok = bytes <= budget && bytes >= floor;
   failed ||= !ok;

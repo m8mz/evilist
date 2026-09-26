@@ -9,11 +9,18 @@ import { afterEach, describe, expect, it } from "vitest";
 const SCRIPT = resolve("scripts/check-bundle-size.mjs");
 let root: string | undefined;
 
-/** A minimal fake build: dist/client/index.html plus the given files under dist/client/_astro. */
-function fakeDist(files: Record<string, number>): string {
+/**
+ * A minimal fake build: dist/client/index.html plus the given files under dist/client/_astro.
+ * Fonts default to a passing set, so callers who only care about deck/bloom/portrait rows can
+ * call `fakeDist()` with no arguments.
+ */
+function fakeDist(files: Record<string, number> = { "fonts/a.woff2": 42_000 }): string {
   root = mkdtempSync(join(tmpdir(), "size-"));
   mkdirSync(join(root, "dist/client/_astro/fonts"), { recursive: true });
-  writeFileSync(join(root, "dist/client/index.html"), "<!doctype html><title>x</title>");
+  writeFileSync(
+    join(root, "dist/client/index.html"),
+    "<!doctype html><title>x</title><body></body>",
+  );
   for (const [path, bytes] of Object.entries(files)) {
     writeFileSync(join(root, "dist/client/_astro", path), Buffer.alloc(bytes, 1));
   }
@@ -33,6 +40,11 @@ function withDeck(dist: string, bytes = 10 * 1024, name = "deck-stage.abc.js"): 
   writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(bytes, 1));
 }
 
+/** Writes a small lazy deck-bloom chunk (no page references it) so the bloom row stays green. */
+function withBloom(dist: string, bytes = 5 * 1024, name = "deck-bloom.abc.js"): void {
+  writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(bytes, 1));
+}
+
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -43,6 +55,7 @@ describe("check-bundle-size", () => {
     const dist = fakeDist({ "fonts/a.woff2": 21_000, "fonts/b.woff2": 21_000 });
     withScene(dist);
     withDeck(dist);
+    withBloom(dist);
     const res = run(dist);
     expect(res.stdout).toContain("ok   Fonts (woff2)");
     expect(res.status).toBe(0);
@@ -57,6 +70,7 @@ describe("check-bundle-size", () => {
   it("passes a lazy deck-stage chunk under 170 KB gz and reports it", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     withScene(dist);
+    withBloom(dist);
     writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(150 * 1024));
     const res = run(dist);
     expect(res.stdout).toMatch(/ok {3}Deck lazy JS \(gz\): 15\d\.\d KB \(budget 170 KB\)/);
@@ -97,6 +111,7 @@ describe("check-bundle-size", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000, "contact.ghi.js": 300 * 1024 });
     withScene(dist);
     withDeck(dist);
+    withBloom(dist);
     mkdirSync(join(dist, "dist/client/contact"), { recursive: true });
     writeFileSync(
       join(dist, "dist/client/contact/index.html"),
@@ -124,6 +139,7 @@ describe("check-bundle-size", () => {
     mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
     writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(200 * 1024));
     withDeck(dist);
+    withBloom(dist);
     const res = run(dist);
     expect(res.stdout).toMatch(/ok {3}Journey scene \(gz\): 20\d\.\d KB \(budget 300 KB\)/);
     expect(res.status).toBe(0);
@@ -165,6 +181,7 @@ describe("check-bundle-size", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     withScene(dist);
     withDeck(dist);
+    withBloom(dist);
     const entryPath = join(dist, "dist/client/_astro/entry.abc.js");
     const helperPath = join(dist, "dist/client/_astro/helper.xyz.js");
     writeFileSync(helperPath, randomBytes(50 * 1024));
@@ -180,5 +197,60 @@ describe("check-bundle-size", () => {
       new RegExp(`ok {3}Initial JS on / \\(gz\\): ${expectedKb.toFixed(1)} KB`),
     );
     expect(res.status).toBe(0);
+  });
+
+  it("budgets the bloom chunk on its own row and keeps it out of the deck row", () => {
+    const dist = fakeDist();
+    withScene(dist);
+    withDeck(dist);
+    // Without a bloom chunk the run fails on the missing row, but the deck row still prints.
+    const before = /Deck lazy JS \(gz\): ([\d.]+) KB/.exec(run(dist).stdout)?.[1];
+    writeFileSync(
+      join(dist, "dist/client/_astro/deck-bloom.abc.js"),
+      randomBytes(20_000).toString("base64"),
+    );
+    const out = run(dist);
+    expect(out.status).toBe(0);
+    expect(out.stdout).toMatch(/ok {3}Bloom chunk \(gz\): .* \(budget 40 KB\)/);
+    // The bloom bytes are not counted twice: the deck row is what it was before the chunk existed.
+    expect(/Deck lazy JS \(gz\): ([\d.]+) KB/.exec(out.stdout)?.[1]).toBe(before);
+  });
+
+  it("fails when the bloom chunk is missing or over 40 KB", () => {
+    const dist = fakeDist();
+    withScene(dist);
+    withDeck(dist);
+    expect(run(dist).stdout).toContain("FAIL deck-bloom chunk missing");
+    writeFileSync(
+      join(dist, "dist/client/_astro/deck-bloom.abc.js"),
+      randomBytes(60_000).toString("base64"),
+    );
+    const out = run(dist);
+    expect(out.status).toBe(1);
+    expect(out.stdout).toMatch(/FAIL Bloom chunk/);
+  });
+
+  it("measures the served portrait renditions named by the home page", () => {
+    const dist = fakeDist();
+    withScene(dist);
+    withDeck(dist);
+    writeFileSync(join(dist, "dist/client/_astro/deck-bloom.abc.js"), "x".repeat(2_000));
+    const html = readFileSync(join(dist, "dist/client/index.html"), "utf8").replace(
+      "</body>",
+      `<button data-deck-rank data-portrait-1x="/_astro/e.1x.webp" data-portrait-2x="/_astro/e.2x.webp" data-glow="/_astro/e.g.webp"></button></body>`,
+    );
+    writeFileSync(join(dist, "dist/client/index.html"), html);
+    writeFileSync(join(dist, "dist/client/_astro/e.1x.webp"), Buffer.alloc(30_000));
+    writeFileSync(join(dist, "dist/client/_astro/e.2x.webp"), Buffer.alloc(100_000));
+    writeFileSync(join(dist, "dist/client/_astro/e.g.webp"), Buffer.alloc(5_000));
+    let out = run(dist);
+    expect(out.status).toBe(0);
+    expect(out.stdout).toMatch(/ok {3}Portraits 1x \(largest\): 29\.3 KB \(budget 40 KB\)/);
+    expect(out.stdout).toMatch(/ok {3}Portraits 2x \(largest\): 97\.7 KB \(budget 120 KB\)/);
+    expect(out.stdout).toMatch(/ok {3}Glow masks \(largest\): 4\.9 KB \(budget 10 KB\)/);
+    writeFileSync(join(dist, "dist/client/_astro/e.2x.webp"), Buffer.alloc(130_000));
+    out = run(dist);
+    expect(out.status).toBe(1);
+    expect(out.stdout).toMatch(/FAIL Portraits 2x/);
   });
 });
