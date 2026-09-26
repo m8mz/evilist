@@ -119,6 +119,9 @@ export class DeckTextures {
     layer.canvas.width = w;
     layer.canvas.height = h;
     paint();
+    // Three (r186+) allocates immutable GPU storage on first upload (texStorage2D); disposing
+    // before the next upload forces a fresh allocation at the new size instead of a stale one.
+    layer.texture.dispose();
     this.dirty(layer);
   }
 

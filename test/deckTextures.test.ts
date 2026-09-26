@@ -11,6 +11,7 @@ const cards = career.map((s) => cardModel(s, NOW));
 interface FakeTexture {
   needsUpdate: boolean;
   disposed: boolean;
+  disposeCount: number;
   canvas: { width: number; height: number; ctx: FakeContext };
 }
 
@@ -26,10 +27,15 @@ function factory() {
       const t: FakeTexture = {
         needsUpdate: false,
         disposed: false,
+        disposeCount: 0,
         canvas: canvas as unknown as FakeTexture["canvas"],
       };
       made.push(t);
-      return Object.assign(t, { dispose: () => (t.disposed = true) }) as unknown as Texture;
+      const dispose = () => {
+        t.disposed = true;
+        t.disposeCount++;
+      };
+      return Object.assign(t, { dispose }) as unknown as Texture;
     },
   };
   return { f, made };
@@ -59,6 +65,27 @@ describe("DeckTextures", () => {
     expect(t.setSize(460, 2)).toBe(true); // 24% wider: repaint at the new size
     expect(made[0]!.canvas.width).toBe(920);
     expect(paints()).toBeGreaterThan(before);
+  });
+
+  it("disposes a layer's old texture on resize, so three reallocates GPU storage at the new size", () => {
+    const { f, made } = factory();
+    const t = new DeckTextures(cards, f);
+    t.setSize(370, 2);
+    t.body(0);
+    t.frame();
+    const body = made[0]!;
+    const frameLayer = made[1]!;
+    expect(body.disposeCount).toBe(0);
+    expect(frameLayer.disposeCount).toBe(0);
+    expect(t.setSize(460, 2)).toBe(true); // 24% wider: triggers the resize
+    expect(body.disposeCount).toBe(1);
+    expect(frameLayer.disposeCount).toBe(1);
+    // The same canvas and texture handle are reused and repainted, not replaced by a new one.
+    expect(made).toHaveLength(2);
+    expect(body.canvas.width).toBe(920);
+    expect(frameLayer.canvas.width).toBe(920);
+    expect(t.body(0)).toBe(body as unknown as Texture);
+    expect(t.frame()).toBe(frameLayer as unknown as Texture);
   });
 
   it("shares one frame and one back, and paints the mark into the back when it arrives", () => {

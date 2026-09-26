@@ -36,7 +36,12 @@ describe("the deck painters' palette", () => {
       "#0b0b0b",
       "#0d0d0d",
       "#050505",
+      "#9080ff", // deck-stage's rim light: a violet sheen colour baked into the stage, not a token
+      "#1b1b1b", // deck-stage's slab edge colour
+      "#ffffff", // deck-stage's light/emissive-map recipe base: pure white, not a design token
     ]);
+    // Three.js colours are numeric (0xrrggbb), so the scan matches both forms and canonicalises
+    // to "#rrggbb" before checking the allow-list.
     for (const file of [
       "deck-paint.ts",
       "deck-pose.ts",
@@ -50,8 +55,9 @@ describe("the deck painters' palette", () => {
       "deck-stage.ts",
     ]) {
       const text = readFileSync(`src/scripts/deck/${file}`, "utf8");
-      for (const hex of text.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
-        expect(allowed.has(hex.toLowerCase()), `${hex} in ${file}`).toBe(true);
+      for (const hex of text.match(/(?:#|0x)[0-9a-fA-F]{6}\b/g) ?? []) {
+        const canonical = `#${hex.slice(-6)}`.toLowerCase();
+        expect(allowed.has(canonical), `${hex} in ${file}`).toBe(true);
       }
     }
   });

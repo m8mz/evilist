@@ -1,7 +1,5 @@
-// The journey deck's WebGL stage (deck spec §5–§9): seven laminated card meshes in a Three.js
-// scene, driven by the pure pose model each frame. This module is a dynamic import, so Three.js
-// never sits in the page's initial graph. Colour management is fixed: no tone mapping, sRGB out,
-// faces on the emissive recipe, so every painted token survives the renderer exactly.
+// The journey deck's WebGL stage (deck spec §5–§9): seven laminated card meshes driven by the pure
+// pose model each frame. Lazy import; fixed colour management, so every token survives the renderer.
 import {
   AmbientLight,
   CanvasTexture,
@@ -100,12 +98,11 @@ function loadImage(url: string | null): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.decoding = "async";
-    img.onload = () => {
+    img.onload = () =>
       img.decode().then(
         () => resolve(img),
         () => resolve(img),
       );
-    };
     img.onerror = () => resolve(null);
     img.src = url;
   });
@@ -146,7 +143,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   envSource.mapping = EquirectangularReflectionMapping;
   envSource.colorSpace = SRGBColorSpace;
   const pmrem = new PMREMGenerator(renderer);
-  const envMap = pmrem.fromEquirectangular(envSource).texture;
+  const envTarget = pmrem.fromEquirectangular(envSource);
+  const envMap = envTarget.texture;
   pmrem.dispose();
   envSource.dispose();
 
@@ -162,12 +160,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const textures = new DeckTextures(
     cards,
     {
-      canvas: (w, h) => {
-        const c = document.createElement("canvas");
-        c.width = w;
-        c.height = h;
-        return c;
-      },
+      canvas: (w, h) => Object.assign(document.createElement("canvas"), { width: w, height: h }),
       texture: (c) => {
         const t = new CanvasTexture(c);
         t.colorSpace = SRGBColorSpace;
@@ -245,8 +238,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const bodyMat = laminated(textures.body(i), energetic);
     const body = new Mesh(unit, bodyMat);
     const frame = new Mesh(unit, unlit(textures.frame()));
-    // Text planes start blank; a card gets a slot texture only while it is presented.
-    const text = new Mesh(unit, unlit(textures.blank()));
+    const text = new Mesh(unit, unlit(textures.blank())); // blank until a card is presented
     const chip = new Mesh(unit, unlit(textures.chip(i)));
     const backMat = laminated(textures.back(), false);
     const back = new Mesh(unit, backMat);
@@ -276,6 +268,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   });
   const floor = new Mesh(unit, new MeshBasicMaterial({ color: COLORS.iron }));
   scene.add(floor);
+  const slabs = meshes.map((m) => m.slab); // precomputed once; hitAt filters by group visibility
 
   /* ---------- Layout, part 2: size the meshes ---------- */
   function applyLayout(): void {
@@ -307,10 +300,11 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     floor.position.set(0, toY(layout.floorY), -0.001);
   }
   applyLayout();
+  let assetsSettled = !freeze; // freeze must not render (or resolve `ready`) before assets settle
   const resizer = new ResizeObserver(() => {
     computeLayout();
     applyLayout();
-    requestRender();
+    if (assetsSettled) requestRender();
   });
   resizer.observe(stage);
 
@@ -319,9 +313,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const portraitLoads = opts.portraits.map((p, i) =>
     loadImage(pickRendition(dpr, p.x1, p.x2)).then((img) => {
       if (img) textures.setPortrait(i, img);
-      return loadImage(p.glow).then((g) => {
-        glows[i] = g; // Plan 3 turns these into the glow-mask planes
-      });
+      return loadImage(p.glow).then((g) => (glows[i] = g)); // glow-mask planes (Plan 3)
     }),
   );
   const markLoad = loadImage(opts.markUrl).then((img) => textures.setMark(img));
@@ -355,10 +347,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const r = canvas.getBoundingClientRect();
     ndc.set(((clientX - r.left) / r.width) * 2 - 1, -(((clientY - r.top) / r.height) * 2 - 1));
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(
-      meshes.map((m) => m.slab),
-      false,
-    );
+    const targets = slabs.filter((s) => s.parent?.visible);
+    const hits = raycaster.intersectObjects(targets, false);
     const hit = hits[0];
     return hit ? (hit.object.userData.index as number) : null;
   }
@@ -420,11 +410,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   }
 
   function emitState(pose: StagePose): void {
-    const byPull = (best: number, c: (typeof pose.cards)[number], i: number) =>
-      c.pull > (pose.cards[best]?.pull ?? 0) ? i : best;
-    const presentedCard = pose.cards[pose.cards.reduce(byPull, 0)];
+    const presentedCard = pose.cards.reduce((a, b) => (b.pull > a.pull ? b : a));
     const rank = labels[pose.active];
-    if (!presentedCard || !rank) return;
+    if (!rank) return;
     const state: StageState = {
       state: intro ? "intro" : "scroll",
       rank,
@@ -449,8 +437,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     lastNow = now;
     const time = clock();
 
-    // The intro clock accumulates dt (never `now - startedAt`), so fast-forwarding only changes
-    // the rate going forward; in freeze mode dt is 0, so the intro never runs.
     if (intro) {
       intro.elapsed += dt * (targetP > 0.5 / N ? params.intro.fastForward : 1);
     }
@@ -464,23 +450,33 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       cam.x = smooth(cam.x, camTarget.x, dt, params.camera.parallaxTau);
       cam.y = smooth(cam.y, camTarget.y, dt, params.camera.parallaxTau);
       for (let i = 0; i < count; i++) {
-        const current = hover[i] ?? 0;
-        const target = hoverTarget[i] ?? 0;
-        const tau = target > current ? params.hover.inMs : params.hover.outMs;
-        hover[i] = smooth(current, target, dt, tau);
+        const cur = hover[i] ?? 0;
+        const tgt = hoverTarget[i] ?? 0;
+        hover[i] = smooth(cur, tgt, dt, tgt > cur ? params.hover.inMs : params.hover.outMs);
       }
     }
 
-    const pose = deckPose({ p, labels, layout, tilt, hover, time, landedAt, intro }, params);
+    const input = { p, labels, layout, tilt, hover, time, landedAt, intro };
+    let pose = deckPose(input, params);
     if (intro && pose.intro === null) intro = null;
+    // Freeze draws one frame: seed `landedAt` for any card landing now, then recompute once.
+    if (freeze) {
+      let seeded = false;
+      for (let i = 0; i < count; i++) {
+        if (pose.cards[i]?.landed && landedAt[i] === null) {
+          landedAt[i] = time - 10_000;
+          seeded = true;
+        }
+      }
+      if (seeded) pose = deckPose(input, params);
+    }
     updateTargets(pose);
 
     for (let i = 0; i < count; i++) {
       const c = pose.cards[i];
       const m = meshes[i];
       if (!c || !m) continue;
-      // Cleared only once racked again (`pull <= 0`), never the instant `landed` flips false, so
-      // the pose model keeps fading the float and tilt through the leaving pull.
+      // Cleared only once racked again (`pull <= 0`), never the instant `landed` flips false.
       if (c.landed && landedAt[i] === null) landedAt[i] = freeze ? time - 10_000 : time;
       if (c.pull <= 0 && landedAt[i] !== null) landedAt[i] = null;
       applyText(i, c.phase, time);
@@ -490,11 +486,13 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       const translucent = c.opacity < 0.999;
       for (const mat of m.layerMats) {
         if (mat.transparent !== translucent || mat.opacity !== c.opacity) {
-          if (mat !== m.frame.material && mat !== m.text.material && mat !== m.chip.material) {
+          const fixed =
+            mat === m.frame.material || mat === m.text.material || mat === m.chip.material;
+          if (!fixed && mat.transparent !== translucent) {
             mat.transparent = translucent;
+            mat.needsUpdate = true;
           }
           mat.opacity = c.opacity;
-          mat.needsUpdate = false;
         }
       }
       m.group.visible = c.opacity > 0.001;
@@ -534,6 +532,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     event.preventDefault();
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+    clearTimeout(lostTimer);
     lostTimer = setTimeout(() => {
       if (!disposed) opts.onContextLost();
     }, 2000);
@@ -546,10 +545,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   canvas.addEventListener("webglcontextrestored", onRestored);
 
   /* ---------- Start ---------- */
-  // The first frame waits for the assets in freeze mode (a still must be complete); otherwise it
-  // starts at once and the portraits fade in as they land.
-  if (freeze) await assets;
-  else void assets.then(() => requestRender());
+  if (freeze) {
+    await assets;
+    assetsSettled = true;
+  } else {
+    void assets.then(() => requestRender());
+  }
   requestRender();
 
   return {
@@ -591,7 +592,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       unit.dispose();
       (floor.material as Material).dispose();
       textures.dispose();
-      envMap.dispose();
+      envTarget.dispose();
       renderer.dispose();
     },
   };
