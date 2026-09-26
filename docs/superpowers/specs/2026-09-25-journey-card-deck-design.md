@@ -81,8 +81,10 @@ The section keeps its place on the home page between Work and About.
 - `src/components/journey/Journey.astro` renders:
   - `.journey[data-deck]`, the track: `height: calc(7 × 70lvh + 100dvh − var(--header-h))` while
     the deck is active, `auto` in fallback; each rank's span is in `lvh` so a phone's toolbar
-    showing or hiding never moves the deck's progress under a still page. It carries the state
-    attributes (§9).
+    showing or hiding barely moves the deck's progress under a still page (about a tenth of a
+    rank remains, from the page-height term; a real-device log of `innerHeight` against
+    `document.documentElement.clientHeight` decides whether `svh` there makes it exact). It
+    carries the state attributes (§9).
   - `.journey__stage`, the sticky box at `top: var(--header-h)`, `height: calc(100dvh −
 var(--header-h))`, containing:
     - `<canvas data-deck-gl aria-hidden="true">`, full bleed, `position: absolute; inset: 0`.

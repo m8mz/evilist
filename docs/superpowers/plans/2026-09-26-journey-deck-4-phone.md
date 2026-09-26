@@ -18,7 +18,7 @@
 - Line caps: `deck-stage.ts` ≤ 600 (it is 588; Task 2 takes it below 520 before Task 3 adds), `deck-input.ts` ≤ 170, `deck-gestures.ts` ≤ 90, `index.ts` ≤ 360.
 - Budgets unchanged: deck chunk ≤ 170 KB gz (146 today), bloom ≤ 40 KB, initial JS ≤ 100 KB; the gesture code lives in `index.ts` (initial graph, a few hundred bytes gz) and the input class in the deck chunk.
 - `deviceorientation` is listened to only after a tap on the presented card; `DeviceOrientationEvent.requestPermission()` is called at most once per page load, inside the tap's user gesture; a denial or a throw ends the matter silently (spec §7, §13).
-- Vertical touch movement always belongs to the page: the canvas declares `touch-action: pan-y`, and the swipe is judged only at pointer up (spec §7).
+- Vertical touch movement always belongs to the page: the canvas declares `touch-action: pan-y pinch-zoom`, and the swipe is judged only at pointer up (spec §7).
 - Every gate: `pnpm format && pnpm lint && pnpm check && pnpm test`; Tasks 3–6 add `pnpm build && pnpm size && pnpm test:e2e`; Task 6 adds `pnpm test:visual` (the six baselines must pass unchanged).
 - Never dispatch two implementers at once; the controller records BASE before each dispatch.
 

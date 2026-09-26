@@ -206,8 +206,8 @@ export function initDeck(): void {
     });
     canvas.addEventListener("pointerleave", () => handle?.pointer(null, null));
 
-    // Touch (spec §7). The canvas's touch-action is pan-y, so the browser owns vertical pans and
-    // cancels the pointer; what reaches pointerup is a horizontal gesture or a tap.
+    // Touch (spec §7). The canvas's touch-action is pan-y pinch-zoom, so the browser owns vertical
+    // pans and pinches and cancels the pointer; what reaches pointerup is a horizontal gesture or a tap.
     let touchStart: { id: number; x: number; y: number } | null = null;
     // Set by pointerup for a tap on the presented card; the click that follows consumes it below.
     let tapOnPresented = false;
