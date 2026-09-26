@@ -1,27 +1,22 @@
-// The energy's objects (deck spec §5 "glow mask", "seam"; §8 lights, glow, smoke, fog, shadow):
-// built once per mount, driven every frame from the pure numbers in deck-energy.ts and the pool in
-// deck-smoke.ts. Everything that glows sits on BLOOM_LAYER for deck-bloom.ts; the mid tier has no
-// composer and instead renders those objects at 1.6× opacity.
+// The energy's objects (deck spec §5 "glow mask", "seam"; §8 lights, glow, smoke, fog, shadow): built
+// once per mount, driven every frame from deck-energy.ts's numbers and deck-smoke-sprites.ts's pool.
+// Everything that glows sits on BLOOM_LAYER for deck-bloom.ts; with no composer, mid renders it 1.6×.
 import {
   AdditiveBlending,
   CanvasTexture,
   Color,
-  Group,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
   PointLight,
-  Scene,
   ShaderMaterial,
   Sprite,
   SpriteMaterial,
   SRGBColorSpace,
-  Texture,
-  type IUniform,
 } from "three";
+import type { Group, Scene, Texture } from "three";
 import {
   breath,
-  burstCount,
   coverFit,
   flare,
   fogFor,
@@ -31,30 +26,27 @@ import {
   proportion,
   seamOpacity,
   shadowFor,
-  smokeRate,
-  smokeSideSpeed,
   type EnergyKind,
 } from "./deck-energy";
 import { FOG_FRAGMENT, FOG_VERTEX, fogUniforms, type FogUniforms } from "./deck-fog";
-import {
-  COLORS,
-  paintPuff,
-  paintRadial,
-  paintSeam,
-  PUFF_SIZE,
-  RADIAL_SIZE,
-  WINDOW,
-} from "./deck-paint";
+import { COLORS, paintRadial, paintSeam, RADIAL_SIZE, WINDOW } from "./deck-paint";
 import type { DeckParams } from "./deck-params";
 import type { CardPhase } from "./deck-pose";
-import { SmokePool, type SmokeEmitter } from "./deck-smoke";
-import { mulberry32 } from "./deck-util";
+import { canvasTexture, SmokeSprites } from "./deck-smoke-sprites";
 
 export const BLOOM_LAYER = 1;
 const PX = 1 / 100;
 const MID_BOOST = 1.6;
 const LIGHT_AHEAD = 1.6; // world units in front of the energetic card
 const FOG_Z = -0.5;
+const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge; the falloff hides the margin
+const SPRITE_AHEAD = 0.05; // world units the glow sprite sits in front of the card's face
+const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
+const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
+const SEAM_DENSITY = 2; // seam canvas px per CSS px, independent of dpr, for a crisp line at any zoom
+const VISIBLE_MIN = 0.001; // below this opacity or fog strength, hide the object outright
+const SHADOW_VISIBLE_MIN = 0.01; // a contact shadow fainter than this reads as a rendering artefact
+const MIPMAP = 1.33; // every texture here mipmaps; deck-textures.ts uses the same 4/3 chain factor
 
 export interface EffectsOptions {
   scene: Scene;
@@ -94,22 +86,6 @@ export interface EffectsLayout {
   floorY: number;
 }
 
-function canvasTexture(
-  size: number,
-  paint: (ctx: CanvasRenderingContext2D) => void,
-  srgb: boolean,
-): Texture {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas unavailable");
-  paint(ctx);
-  const texture = new CanvasTexture(canvas);
-  if (srgb) texture.colorSpace = SRGBColorSpace;
-  return texture;
-}
-
 export class DeckEffects {
   private readonly scene: Scene;
   private readonly params: DeckParams;
@@ -119,23 +95,19 @@ export class DeckEffects {
   private readonly glowMats: MeshBasicMaterial[];
   private readonly glows: (Mesh | null)[];
   private readonly glowImages: (HTMLImageElement | null)[];
-  private readonly seams: (Mesh | null)[];
+  private readonly seams: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[];
   private readonly seamCanvases: (HTMLCanvasElement | null)[];
   private readonly light: PointLight;
   private readonly sprite: Sprite;
   private readonly spriteMat: SpriteMaterial;
-  private readonly pool: SmokePool;
-  private readonly puffs: Sprite[];
-  private readonly puffTextures: Texture[];
+  private readonly smoke: SmokeSprites;
   private readonly fog: Mesh;
   private readonly fogMat: ShaderMaterial;
   private readonly fogUniforms: FogUniforms;
+  private fogT0: number | null = null;
   private readonly shadows: Sprite[];
   private readonly textures: Texture[] = [];
-  private readonly burstDone: boolean[];
   private layout: EffectsLayout | null = null;
-  private readonly emitter: SmokeEmitter = { x: 0, y: 0, z: 0, halfW: 1, halfH: 1, k: 1 };
-  private prewarmed = false;
 
   constructor(opts: EffectsOptions) {
     this.scene = opts.scene;
@@ -158,9 +130,8 @@ export class DeckEffects {
     );
     this.glows = new Array<Mesh | null>(n).fill(null);
     this.glowImages = new Array<HTMLImageElement | null>(n).fill(null);
-    this.seams = new Array<Mesh | null>(n).fill(null);
+    this.seams = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
     this.seamCanvases = new Array<HTMLCanvasElement | null>(n).fill(null);
-    this.burstDone = new Array<boolean>(n).fill(false);
 
     this.light = new PointLight(new Color(COLORS.violet), 0, 8, 2);
     this.scene.add(this.light);
@@ -171,9 +142,9 @@ export class DeckEffects {
       true,
     );
     this.textures.push(glowTexture);
+    // No `color` tint: the radial is already violet, and tinting it violet again gives a blue.
     this.spriteMat = new SpriteMaterial({
       map: glowTexture,
-      color: new Color(COLORS.violet),
       transparent: true,
       opacity: 0,
       blending: AdditiveBlending,
@@ -184,41 +155,30 @@ export class DeckEffects {
     this.sprite.visible = false;
     this.scene.add(this.sprite);
 
-    // Smoke: three puff textures, a pool of sprites sized by the tier.
-    this.puffTextures = [0, 1, 2].map((variant) =>
-      canvasTexture(PUFF_SIZE, (ctx) => paintPuff(ctx, PUFF_SIZE, mulberry32(100 + variant)), true),
-    );
-    this.textures.push(...this.puffTextures);
     const capacity = opts.tier === "mid" ? P.smoke.poolMid : P.smoke.pool;
-    this.pool = new SmokePool(capacity, opts.rng, P.smoke.opacityMin, P.smoke.opacityMax);
-    this.puffs = this.pool.puffs.map(() => {
-      const mat = new SpriteMaterial({
-        map: this.puffTextures[0] ?? null,
-        color: new Color(COLORS.violet),
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-      });
-      const s = new Sprite(mat);
-      s.visible = false;
-      this.scene.add(s);
-      return s;
-    });
+    this.smoke = new SmokeSprites(opts.scene, P, capacity, opts.rng);
 
     // Fog: one full-stage plane behind everything.
     const violet = new Color(COLORS.violet);
+    const uniforms = fogUniforms([violet.r, violet.g, violet.b]);
     this.fogMat = new ShaderMaterial({
-      uniforms: fogUniforms([violet.r, violet.g, violet.b]) as unknown as Record<string, IUniform>,
+      uniforms,
       vertexShader: FOG_VERTEX,
       fragmentShader: FOG_FRAGMENT,
-      transparent: true,
+      // premultipliedAlpha pairs AdditiveBlending with (ONE, ONE); the false default uses
+      // (SRC_ALPHA, ONE) and squares the shader's own premultiplied alpha.
+      premultipliedAlpha: true,
+      // Not transparent: that list draws after (and over) the presented card. renderOrder -1 heads
+      // the opaque list instead, so cards and the floor draw over the far-field fog, as spec'd.
+      transparent: false,
       blending: AdditiveBlending,
       depthWrite: false,
       depthTest: false,
     });
-    this.fogUniforms = this.fogMat.uniforms as unknown as FogUniforms;
+    this.fogUniforms = uniforms;
     this.fog = new Mesh(this.unit, this.fogMat);
     this.fog.position.z = FOG_Z;
+    this.fog.renderOrder = -1;
     this.fog.visible = false;
     this.scene.add(this.fog);
 
@@ -246,6 +206,7 @@ export class DeckEffects {
 
   /** Adds the card's glow plane (blank until setGlow) and, on S and S+, its back seam. */
   attach(index: number, group: Group): void {
+    if (this.glows[index]) return; // a second attach for one index would otherwise leak the first
     const mat = this.glowMats[index];
     if (!mat) return;
     const glow = new Mesh(this.unit, mat);
@@ -289,8 +250,8 @@ export class DeckEffects {
       mat.needsUpdate = true;
       return;
     }
+    // Not pushed to `textures`: `glowMats` counts and disposes the mask once, on its own.
     const texture = new CanvasTexture(image);
-    this.textures.push(texture);
     mat.alphaMap = texture;
     mat.needsUpdate = true;
     if (this.layout) this.placeCard(index);
@@ -299,11 +260,9 @@ export class DeckEffects {
   setLayout(layout: EffectsLayout): void {
     this.layout = layout;
     for (let i = 0; i < this.glows.length; i++) this.placeCard(i);
-    this.fog.scale.set(layout.stageW, layout.stageH, 1);
+    this.fog.scale.set(layout.stageW * FOG_MARGIN, layout.stageH * FOG_MARGIN, 1);
     this.fogUniforms.uAspect.value = layout.stageW / layout.stageH;
-    this.emitter.halfW = layout.w / 2;
-    this.emitter.halfH = layout.h / 2;
-    this.emitter.k = proportion(layout.cardWPx);
+    this.smoke.setLayout(layout.w / 2, layout.h / 2, proportion(layout.cardWPx));
   }
 
   /** The glow plane over the portrait window with paintBody's cover fit; the seam over the back. */
@@ -319,55 +278,39 @@ export class DeckEffects {
       const image = this.glowImages[index];
       const mat = this.glowMats[index];
       if (image && mat?.alphaMap) {
-        const fit = coverFit(
-          L.w,
-          winH,
-          image.naturalWidth || image.width,
-          image.naturalHeight || image.height,
-        );
-        mat.alphaMap.repeat.set(fit.repeatX, fit.repeatY);
-        mat.alphaMap.offset.set(fit.offsetX, fit.offsetY);
+        const iw = image.naturalWidth || image.width;
+        const ih = image.naturalHeight || image.height;
+        if (iw > 0 && ih > 0) {
+          const fit = coverFit(L.w, winH, iw, ih);
+          mat.alphaMap.repeat.set(fit.repeatX, fit.repeatY);
+          mat.alphaMap.offset.set(fit.offsetX, fit.offsetY);
+        }
       }
     }
     const seam = this.seams[index];
     const canvas = this.seamCanvases[index];
     if (seam && canvas) {
-      const w = Math.max(2, Math.round(L.cardWPx * 2));
+      const w = Math.max(2, Math.round(L.cardWPx * SEAM_DENSITY));
       const h = Math.max(2, Math.round((L.h / L.w) * w));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         if (ctx) paintSeam(ctx, w, h);
-        const mat = seam.material as MeshBasicMaterial;
+        const mat = seam.material;
+        // Three allocates immutable GPU storage on first upload; dispose before the next one forces
+        // a fresh allocation at the new size (deck-textures.ts's resizeLayer does the same).
+        mat.map?.dispose();
         if (mat.map) mat.map.needsUpdate = true;
       }
       seam.scale.set(L.w, L.h, 1);
-      seam.position.z = -(L.front + 0.001);
+      seam.position.z = -(L.front + SEAM_GAP);
     }
   }
 
   /** Runs the smoke `frames` frames from the given state (the frozen deck's cloud). */
   prewarm(frame: EffectsFrame, frames: number): void {
-    if (this.prewarmed) return;
-    this.prewarmed = true;
-    const kind = frame.kind;
-    if (!kind || frame.energyIndex === null) return;
-    const card = frame.cards[frame.energyIndex];
-    if (!card) return;
-    this.pointEmitter(card);
-    const rate = smokeRate(kind, frame.energy, this.params);
-    const side = smokeSideSpeed(kind, frame.energy, this.params);
-    for (let i = 0; i < frames; i++) {
-      this.pool.emit(this.emitter, rate, side, 1);
-      this.pool.step(1);
-    }
-  }
-
-  private pointEmitter(card: EffectCard): void {
-    this.emitter.x = card.group.position.x;
-    this.emitter.y = card.group.position.y;
-    this.emitter.z = card.group.position.z;
+    this.smoke.prewarm(frame, frames);
   }
 
   /** Positions and shows shadow slot `n`, or hides it when there is no card at that rank of pull. */
@@ -380,9 +323,9 @@ export class DeckEffects {
     }
     const sh = shadowFor(card.pull, card.zPx, cardWPx, this.params);
     s.scale.set(sh.w, sh.h, 1);
-    s.position.set(card.group.position.x, floorY, 0.02);
+    s.position.set(card.group.position.x, floorY, SHADOW_Z);
     s.material.opacity = sh.opacity;
-    s.visible = sh.opacity > 0.01;
+    s.visible = sh.opacity > SHADOW_VISIBLE_MIN;
   }
 
   update(frame: EffectsFrame): void {
@@ -402,15 +345,14 @@ export class DeckEffects {
       if (c && glow && mat) {
         const o = glowOpacity(c.phase, c.sinceLandMs, c.sinceLeaveMs, P) * this.boost;
         mat.opacity = Math.min(1, o);
-        glow.visible = o > 0.001 && mat.alphaMap !== null;
+        glow.visible = o > VISIBLE_MIN && mat.alphaMap !== null;
       }
       const seam = this.seams[i];
       const k = this.kinds[i];
       if (c && seam && k) {
-        const m = seam.material as MeshBasicMaterial;
+        const m = seam.material;
         m.opacity = Math.min(1, seamOpacity(k, frame.time, P) * this.boost);
       }
-      if (c && c.pull <= 0) this.burstDone[i] = false;
     }
 
     // The light and the glow sprite follow the energetic card.
@@ -418,62 +360,29 @@ export class DeckEffects {
       const pos = energetic.group.position;
       this.light.position.set(pos.x, pos.y, pos.z + LIGHT_AHEAD);
       this.light.intensity = pointLightIntensity(kind, energy, br, fl.light, P);
-      this.sprite.position.set(pos.x, pos.y, pos.z - 0.05);
+      this.sprite.position.set(pos.x, pos.y, pos.z - SPRITE_AHEAD);
       const scale = glowSpriteScale(kind, energy, L.cardWPx, P) * fl.glow;
       this.sprite.scale.set(scale, scale, 1);
       this.spriteMat.opacity = Math.min(1, energy * this.boost);
-      this.sprite.visible = energy > 0.001;
-      // Landing burst, once per landing.
-      if (energyIndex !== null && energetic.sinceLandMs !== null && !this.burstDone[energyIndex]) {
-        this.burstDone[energyIndex] = true;
-        this.pointEmitter(energetic);
-        this.pool.spawn(this.emitter, burstCount(kind, P), smokeSideSpeed(kind, energy, P));
-      }
+      this.sprite.visible = energy > VISIBLE_MIN;
     } else {
       this.light.intensity = 0;
       this.sprite.visible = false;
     }
 
-    // Smoke.
-    if (kind && energetic && frame.frames > 0) {
-      this.pointEmitter(energetic);
-      this.pool.emit(
-        this.emitter,
-        smokeRate(kind, energy, P),
-        smokeSideSpeed(kind, energy, P),
-        frame.frames,
-      );
-    }
-    if (frame.frames > 0) this.pool.step(frame.frames);
-    const shown = kind ? energy : 0;
-    for (let i = 0; i < this.puffs.length; i++) {
-      const p = this.pool.puffs[i];
-      const s = this.puffs[i];
-      if (!p || !s) continue;
-      if (!p.alive) {
-        s.visible = false;
-        continue;
-      }
-      const m = s.material;
-      const o = SmokePool.opacity(p, shown);
-      s.visible = o > 0.002;
-      m.opacity = o;
-      m.rotation = p.rot;
-      const tex = this.puffTextures[p.variant] ?? null;
-      if (m.map !== tex) m.map = tex;
-      m.color.set(p.tint === 1 ? COLORS.puffLight : COLORS.violet);
-      const sc = SmokePool.scale(p);
-      s.scale.set(sc, sc, 1);
-      s.position.set(p.x, p.y, p.z);
-    }
+    this.smoke.update(frame, energetic);
 
     // Fog.
     const level = fogFor(kind, energy, fl.fog, P);
     const u = this.fogUniforms;
-    if (kind && energetic && level.strength > 0.001) {
+    if (kind && energetic && level.strength > VISIBLE_MIN) {
       const pos = energetic.group.position;
-      u.uTime.value = frame.time;
-      u.uCentre.value = [pos.x / L.stageW + 0.5, pos.y / L.stageH + 0.5];
+      // Mount-relative: the caller's clock is epoch ms live, or frozen ms deep under deck-freeze,
+      // and both scales lose precision the raw uniform can't afford. Zero at first use fixes both.
+      this.fogT0 ??= frame.time;
+      u.uTime.value = frame.time - this.fogT0;
+      u.uCentre.value[0] = pos.x / L.stageW + 0.5;
+      u.uCentre.value[1] = pos.y / L.stageH + 0.5;
       u.uRadius.value = level.radius / L.stageH;
       u.uStrength.value = level.strength;
       this.fog.visible = true;
@@ -500,36 +409,42 @@ export class DeckEffects {
   }
 
   estimateBytes(): number {
-    let bytes = 0;
+    let bytes = this.smoke.estimateBytes();
     for (const t of this.textures) {
       const img = t.image as { width?: number; height?: number } | undefined;
-      bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4;
+      bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4 * MIPMAP;
     }
     for (const mat of this.glowMats) {
       const img = mat.alphaMap?.image as { width?: number; height?: number } | undefined;
-      bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4;
+      bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4 * MIPMAP;
     }
     return bytes;
   }
 
   dispose(): void {
-    this.scene.remove(this.light, this.sprite, this.fog, ...this.puffs, ...this.shadows);
+    this.smoke.dispose();
+    this.scene.remove(this.light, this.sprite, this.fog, ...this.shadows);
     for (const g of this.glows) g?.removeFromParent();
     for (const s of this.seams) {
       if (!s) continue;
       s.removeFromParent();
-      (s.material as MeshBasicMaterial).dispose();
+      s.material.dispose();
     }
     for (const m of this.glowMats) {
       m.alphaMap?.dispose();
       m.dispose();
     }
     this.spriteMat.dispose();
-    for (const p of this.puffs) p.material.dispose();
     for (const s of this.shadows) s.material.dispose();
     this.fogMat.dispose();
     for (const t of this.textures) t.dispose();
     this.unit.dispose();
     this.light.dispose();
+    // Drop every reference so nothing stays reachable and a post-dispose estimateBytes() reads zero.
+    this.textures.length = 0;
+    this.glows.fill(null);
+    this.seams.fill(null);
+    this.glowImages.fill(null);
+    this.layout = null;
   }
 }

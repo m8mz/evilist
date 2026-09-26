@@ -35,7 +35,9 @@ void main() {
 
 export const FOG_FRAGMENT = /* glsl */ `
 precision mediump float;
-uniform float uTime;
+// highp: mediump overflows and goes NaN on fp16 GPUs about 65 s after a mount-relative clock starts,
+// and GLSL ES 3.00 guarantees highp precision in fragment shaders, so it costs nothing to ask for it.
+uniform highp float uTime;
 uniform vec2 uCentre;
 uniform float uRadius;
 uniform float uStrength;
@@ -69,5 +71,10 @@ void main() {
   float falloff = 1.0 - smoothstep(0.0, max(uRadius, 1e-4), d);
   float a = uStrength * n * falloff;
   gl_FragColor = vec4(uColor * a, a);
+  // A custom ShaderMaterial never runs the built-in linearToOutputTexel step; on the mid tier there
+  // is no OutputPass either, so without this the fog would write linear colour straight to the sRGB
+  // canvas. Three resolves this chunk to a no-op into a linear render target and to linear->sRGB on
+  // screen, so it is correct on both tiers.
+  #include <colorspace_fragment>
 }
 `;

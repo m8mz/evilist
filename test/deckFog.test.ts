@@ -5,7 +5,7 @@ describe("the fog shader", () => {
   it("declares every uniform the stage drives", () => {
     for (const name of ["uTime", "uCentre", "uRadius", "uStrength", "uAspect", "uColor"]) {
       expect(FOG_FRAGMENT).toContain(`uniform`);
-      expect(FOG_FRAGMENT).toMatch(new RegExp(`uniform\\s+\\w+\\s+${name};`));
+      expect(FOG_FRAGMENT).toMatch(new RegExp(`uniform\\s+(?:\\w+\\s+)?\\w+\\s+${name};`));
     }
     expect(FOG_VERTEX).toContain("gl_Position");
   });
