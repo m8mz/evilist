@@ -1,31 +1,60 @@
 ---
-// Static career timeline, with each rank's still: the no-JS and reduced-motion version of the
-// journey, and what search engines and screen readers read.
+// Static career timeline: the no-JS, reduced-motion and no-WebGL version of the journey, and the
+// accessible twin of the card deck (deck spec §3). It prints everything a card paints, against
+// the same build date, so a screen reader hears what the canvas shows.
 import RankChip from "../ui/RankChip.astro";
 import Still from "../ui/Still.astro";
 import Tag from "../ui/Tag.astro";
-import { career, formatRange } from "../../data/career";
+import { acquired, career, formatRange, tenure, xp } from "../../data/career";
+import { deckArtById } from "../../data/deck";
+import { deckPortrait } from "../../data/deckImages";
 import { stageArt } from "../../data/journeyArt";
+import { nowFrom } from "../../scripts/deck/deck-util";
+
+interface Props {
+  /** The build date, yyyy-mm-dd. Tenure and XP are computed against it. */
+  now?: string;
+}
+
+const { now } = Astro.props;
+const date = nowFrom(now);
 ---
 
 <ol class="timeline" role="list">
-  {career.map((stage) => (
-    <li class="timeline__stage" data-stage={stage.id}>
-      <RankChip rank={stage.rankLabel} size="md" />
-      <div class="timeline__body">
-        <h3 class="timeline__title">{stage.title}</h3>
-        <p class="timeline__meta">{stage.org}</p>
-        <Tag class="timeline__dates">{formatRange(stage.start, stage.end)}</Tag>
-        <p class="timeline__summary">{stage.summary}</p>
-      </div>
-      <Still
-        src={stageArt[stage.id].still}
-        subject={stageArt[stage.id].subject}
-        sizes="(min-width: 48rem) 18rem, 80vw"
-        class="timeline__still"
-      />
-    </li>
-  ))}
+  {career.map((stage) => {
+    const portrait = deckPortrait(stage.id);
+    const still = portrait ?? stageArt[stage.id]!.still;
+    const subject = portrait ? deckArtById[stage.id]!.subject : stageArt[stage.id]!.subject;
+    return (
+      <li class="timeline__stage" data-stage={stage.id}>
+        <RankChip rank={stage.rankLabel} size="md" />
+        <div class="timeline__body">
+          <h3 class="timeline__title">{stage.title}</h3>
+          <p class="timeline__meta">{stage.org}</p>
+          <Tag class="timeline__dates">{formatRange(stage.start, stage.end)}</Tag>
+          <p class="timeline__summary">{stage.summary}</p>
+          <dl class="timeline__stats">
+            <dt>Tenure</dt>
+            <dd>{tenure(stage, date)}</dd>
+            <dt>XP</dt>
+            <dd>{Math.round(xp(stage, date) * 100)}%</dd>
+          </dl>
+          <ul class="timeline__skills" role="list" aria-label="Skills acquired">
+            {acquired(stage).map((skill) => (
+              <li>{skill}</li>
+            ))}
+          </ul>
+          <p class="timeline__log">“{stage.log}”</p>
+        </div>
+        <Still
+          src={still}
+          subject={subject}
+          sizes="(min-width: 48rem) 18rem, 80vw"
+          class="timeline__still"
+        />
+      </li>
+    );
+  })}
 </ol>
 
 <style>
@@ -90,5 +119,46 @@ import { stageArt } from "../../data/journeyArt";
 
   .timeline__summary {
     margin-top: 0.5rem;
+  }
+
+  .timeline__stats {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 1rem;
+    margin-top: 0.75rem;
+    font-size: var(--text-caption);
+  }
+
+  .timeline__stats dt {
+    color: var(--color-ash);
+  }
+
+  .timeline__stats dd {
+    margin: 0;
+    color: var(--color-paper);
+  }
+
+  .timeline__skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .timeline__skills li {
+    padding: 0 0.375rem;
+    border: 1px solid var(--color-slate);
+    border-radius: var(--radius);
+    color: var(--color-ash);
+    font-size: var(--text-caption);
+    line-height: 1.6;
+  }
+
+  .timeline__log {
+    margin-top: 0.75rem;
+    color: var(--color-fog);
+    font-style: italic;
   }
 </style>
