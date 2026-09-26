@@ -46,7 +46,7 @@ const configFontVars = [
 /** Custom properties set at runtime rather than in tokens.css. */
 const PROVIDED = new Set([
   ...configFontVars, // set by <Font cssVariable> in Head.astro
-  "--progress", // set on [data-journey] by scripts/journey.ts
+  "--progress", // set on [data-deck] by src/scripts/deck/index.ts
   "--net-scale", // set on [data-network] by scripts/stack-network.ts
 ]);
 

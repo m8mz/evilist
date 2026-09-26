@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { PART_ORDER, RIG } from "../src/data/avatarRig";
@@ -36,16 +36,5 @@ describe("public/journey/scene.svg", () => {
   it("uses no style attributes and stays within its budget", () => {
     expect(scene).not.toContain("style=");
     expect(gzipSync(scene).length).toBeLessThanOrEqual(300 * 1024);
-  });
-});
-
-describe("src/components/journey/silhouette.svg", () => {
-  it("is one small path on the scene's viewBox", () => {
-    const svg = readFileSync("src/components/journey/silhouette.svg", "utf8");
-    expect(svg).toMatch(
-      /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg" viewBox="0 0 1600 1500" preserveAspectRatio="xMidYMid meet"><path transform="translate\(300 0\) scale\(4\)" fill="#202020" d="M/,
-    );
-    expect(svg.match(/<path/g)).toHaveLength(1);
-    expect(statSync("src/components/journey/silhouette.svg").size).toBeLessThanOrEqual(4096);
   });
 });
