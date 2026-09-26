@@ -43,7 +43,7 @@ export const deckArt: readonly DeckArt[] = [
   {
     id: "web-concierge",
     rank: "D",
-    outfit: "a dark company polo still a size too big, sleeves pushed up, no headset",
+    outfit: "a black company polo still a size too big, sleeves pushed up, no headset",
     eyes: "slightly narrower, a cold grey glint",
     eyeColor: "#7a8088",
     expression: "focused, the start of a smile, the hair pushed off his brow",
@@ -68,13 +68,13 @@ export const deckArt: readonly DeckArt[] = [
     id: "t3-support",
     rank: "B",
     outfit:
-      "a fitted black shirt with the sleeves rolled over solid forearms, a coiled patch cable over one shoulder",
+      "a fitted black shirt with the sleeves rolled over solid forearms, a coiled ethernet cable over one shoulder, its RJ45 plug hanging in view",
     eyes: "steel grey with a faint violet rim on the iris",
     eyeColor: "#8a7fb8",
     expression: "tired but sharp, a hard-won calm",
     posture: "jaw set, shoulders squared",
     subject:
-      "the journey character at rank B, sleeves rolled over solid forearms, a coiled patch cable over one shoulder, tired sharp eyes with a faint violet rim, jaw set",
+      "the journey character at rank B, sleeves rolled over solid forearms, a coiled ethernet cable over one shoulder, tired sharp eyes with a faint violet rim, jaw set",
     glowBand: band("t3-support"),
   },
   {
@@ -94,20 +94,20 @@ export const deckArt: readonly DeckArt[] = [
     id: "linux-engineer",
     rank: "S",
     outfit:
-      "a tailored black suit cut close to his figure: a long black coat with sharp lapels over a black shirt buttoned to the collar, no tie, one ember-orange stitched seam along the lapel edge",
+      "a tailored black suit cut close to his figure: a long black coat with sharp lapels over a white shirt buttoned to the collar, no tie, one ember-orange stitched seam along the lapel edge",
     eyes: "violet iris, glowing",
     eyeColor: "#9d7cf0",
     expression: "calm authority, the hint of a smirk, the hair swept back and sharp",
     posture: "chin level, slight three-quarter turn, broad shoulders filling the coat",
     subject:
-      "the journey character at rank S, in a tailored black suit with a long coat over a black shirt, glowing violet eyes, calm authority with the hint of a smirk",
+      "the journey character at rank S, in a tailored black suit with a long coat over a white shirt, glowing violet eyes, calm authority with the hint of a smirk",
     glowBand: band("linux-engineer"),
   },
   {
     id: "systems-architect",
     rank: "S+",
     outfit:
-      "the long black coat open over the black shirt, violet energy visible inside it and at the shoulders, violet light catching the coat's edges",
+      "the long black coat open over a black shirt that matches it, violet energy visible inside it and at the shoulders, violet light catching the coat's edges",
     eyes: "white-violet, the glow breaking past the lids",
     eyeColor: "#e6ddff",
     expression: "serene, unbothered, every line of the face sharp",

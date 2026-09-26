@@ -427,3 +427,31 @@ Batch 10 results: t1-support 88bb09fb on WHITE (good render), abb2de49 on a blac
 ### White fields: keyed on import (2026-09-25)
 
 About 40% of portrait renders came back on white across 24 jobs, whatever the prompt said. `scripts/import-portrait.mjs` now keys a white field to black before measuring and writing: a flood fill from the borders over near-white pixels, dilated two pixels to swallow the anti-aliased fringe, so enclosed whites (eyes, teeth, badges) stay. The CLI reports `(white field keyed)` when it fires.
+
+### Step 5 — portraits, batch two: A, S, S+ (2026-09-25)
+
+Rendered on the new rows while Marcus reviews E–B, so the whole arc can be judged at once. Same scaffold; A asks for flat unlit violet irises only, S for glowing irises with a little spill onto the lids, S+ for energy inside the open coat, at the shoulders and along the coat's edges.
+
+Batch 11 ids: sysadmin 5c5cb9eb-7e33-491b-9874-dd37115d204e, linux-engineer c9d22e9f-39ed-4322-ab5d-ae56675aa353, systems-architect a09346a9-ce7b-4dbc-89bf-fa5650613044.
+
+Batch 11 results: sysadmin on black, broad frame, violet irises, half-smile, glow 0.14% (band 0.1–1%) — PASS; linux-engineer on black, the tailored suit with the ember lapel seam and glowing violet eyes, glow 0.21% (band floor 0.3%) — held for the band ruling; systems-architect glow 6.81% (band 1–8%) — PASS pending Marcus's eye.
+
+### Step 4c — black cloth, the white shirt at S, the ethernet cable at B (2026-09-25)
+
+Marcus after the arc batch: the suit and the shirts must be black, not the warm charcoal that read as brown (the hoodie at E stays grey); S wears a white shirt under the black suit; S+ a black shirt matching the open coat; B's cable is an ethernet cable with the RJ45 plug in view. A graphite background is acceptable to him if black cloth needs it to separate. Batch 12 tests D and S each way: true black cloth on the black field (900ea7a4 D, b1714145 S) and on a graphite (#191919) field (4b6b5939 D, 2323e959 S).
+Batch 12 results: D in true black on the black field separates cleanly (charcoal highlights and the thin seam hold the silhouette), glow 0.02% — the black field stays; D on graphite also fine but not needed; S came back on white with grey smudge artifacts (keyed, unusable), the suit with the white shirt itself right.
+
+Batch 13 (true black cloth on the black field, the rows as amended): professional-services 1fc647be-5000-4098-ba8c-4257f5975c76, t3-support c6485d25-7a61-4c38-968c-016231f0bad4 (ethernet cable, RJ45 named), sysadmin 30efc2ee-1a4d-42d5-bd58-af4d066679df, linux-engineer 1cc9869a-1ce9-44b4-b710-3d71f98982c1 (white shirt), systems-architect 3f34b14e-7d9e-4e7d-b7d2-e51e563204f6 (black shirt matching the coat).
+
+Batch 13 results: sysadmin on black, true black shirt, glow 0.94% (band 0.1–1%) — PASS; linux-engineer 1cc9869a on white (keyed), black suit, white shirt, glowing eyes, no artifacts, glow 1.43% (band 0.3–2%) — PASS; t3-support on black, ethernet cable with the RJ45 plug, violet rims, glow 0.32% (band 0.05–0.5%) — PASS; systems-architect on black, superb but the smoke sweeps the frame, glow 11.02% (ceiling 8%) — held as the alternative, re-rolled with the energy kept close to the body (batch 14: 3f34b14e's successor below); professional-services pending. The graphite S (2323e959) was not needed: the black field stays.
+
+Batch 14: systems-architect d61d53f2-610e-449b-b527-804cad7dbf4d (energy kept close to the body, the right third pure black).
+
+Batch 14 result: systems-architect d61d53f2 on black, coat and shirt black, flames held at the shoulders, glow 5.33% (band 1–8%) — PASS. Batch 15: professional-services resubmitted as 1fc647be stalled past ten minutes.
+
+Batch 15 id: professional-services 6b5a149f-4d36-4055-8f01-308d4a4423d8.
+
+Batch 13/15 results for professional-services: 1fc647be on black, purple cast on the shirt, glow 0.67%; 6b5a149f on black, glow 0.31% — both outside C's ≤ 0.05% ceiling. Batch 16 (×2, the shirt and strap specified as zero-saturation greyscale black):
+6693a39b-ce6e-4724-97f8-ae6957e07473, 000c285f-c242-49e4-b641-e8fec61dfb9b.
+
+Batch 16 results: both C renders on black in greyscale black, 6693a39b glow 0.02%, 000c285f glow 0.03% — both PASS; controller's pick 000c285f (the head turned a touch). With these, every rank of the black set sits inside its existing band: E 0.00, D 0.02, C 0.03, B 0.32, A 0.94, S 1.43, S+ 5.33 (percent). No band change is needed for this set; note for the tuning plan that B's and A's floors are met by the model's residual cloth tint as much as by the eyes.
