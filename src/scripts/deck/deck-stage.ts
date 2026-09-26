@@ -26,6 +26,7 @@ import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-card
 import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
 import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
+import { StageInput } from "./deck-input";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
 import { COLORS, PRINT_STEPS, type CardModel } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
@@ -252,13 +253,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   // smooth up from `p = 0`, or a deep-scrolled visitor sees the deck riffle through every rank
   // (and the rail's aria-live region announce each one) before it catches up.
   let firstFrameDone = false;
-  let pointerAt: { x: number; y: number } | null = null;
-  const tilt = { x: 0, y: 0 };
-  const tiltTarget = { x: 0, y: 0 };
-  const hover = new Array<number>(count).fill(0);
-  const hoverTarget = new Array<number>(count).fill(0);
-  const cam = { x: 0, y: 0 };
-  const camTarget = { x: 0, y: 0 };
+  const input = new StageInput(count, params);
   const landedAt: (number | null)[] = new Array(count).fill(null);
   const leaveAt: (number | null)[] = new Array(count).fill(null);
   const effectCards: EffectCard[] = meshes.map((m) => ({
@@ -300,33 +295,22 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   }
 
   function updateTargets(pose: StagePose): void {
-    if (!pointerAt || !layout) {
-      tiltTarget.x = tiltTarget.y = 0;
-      camTarget.x = camTarget.y = 0;
-      hoverTarget.fill(0);
-      canvas.classList.remove("is-pointer");
-      return;
-    }
+    if (!layout) return;
     const r = canvas.getBoundingClientRect();
-    const px = pointerAt.x - r.left;
-    const py = pointerAt.y - r.top;
-    const presented = pose.cards.findIndex((c) => c.landed);
-    if (presented >= 0) {
-      const nx = Math.max(-1, Math.min(1, (px - layout.presented.x) / (layout.cardW / 2)));
-      const ny = Math.max(-1, Math.min(1, (py - layout.presented.y) / (layout.cardH / 2)));
-      tiltTarget.x = params.tilt.maxX * ny;
-      tiltTarget.y = params.tilt.maxY * nx;
-    } else {
-      tiltTarget.x = tiltTarget.y = 0;
-    }
-    if (opts.tier === "high") {
-      camTarget.x = ((px / stageW) * 2 - 1) * params.camera.parallax;
-      camTarget.y = -((py / stageH) * 2 - 1) * params.camera.parallax;
-    }
-    const hit = layout.mode === "desktop" ? hitAt(pointerAt.x, pointerAt.y) : null;
-    const racked = hit !== null && (pose.cards[hit]?.pull ?? 1) <= 0;
-    hoverTarget.fill(0);
-    if (racked && hit !== null) hoverTarget[hit] = 1;
+    const racked = input.updateTargets({
+      presentedX: layout.presented.x,
+      presentedY: layout.presented.y,
+      cardW: layout.cardW,
+      cardH: layout.cardH,
+      stageW,
+      stageH,
+      rect: { left: r.left, top: r.top },
+      mode: layout.mode,
+      parallax: opts.tier === "high",
+      presented: pose.cards.findIndex((c) => c.landed),
+      racked: (i) => (pose.cards[i]?.pull ?? 1) <= 0,
+      hitAt,
+    });
     canvas.classList.toggle("is-pointer", racked);
   }
 
@@ -397,19 +381,20 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       p = targetP;
     } else {
       p = smooth(p, targetP, dt, params.scroll.tau);
-      tilt.x = smooth(tilt.x, tiltTarget.x, dt, params.tilt.tau);
-      tilt.y = smooth(tilt.y, tiltTarget.y, dt, params.tilt.tau);
-      cam.x = smooth(cam.x, camTarget.x, dt, params.camera.parallaxTau);
-      cam.y = smooth(cam.y, camTarget.y, dt, params.camera.parallaxTau);
-      for (let i = 0; i < count; i++) {
-        const cur = hover[i] ?? 0;
-        const tgt = hoverTarget[i] ?? 0;
-        hover[i] = smooth(cur, tgt, dt, tgt > cur ? params.hover.inMs : params.hover.outMs);
-      }
+      input.step(dt);
     }
 
-    const input = { p, labels, layout, tilt, hover, time, landedAt, intro };
-    let pose = deckPose(input, params);
+    const poseInput = {
+      p,
+      labels,
+      layout,
+      tilt: input.tilt,
+      hover: input.hover,
+      time,
+      landedAt,
+      intro,
+    };
+    let pose = deckPose(poseInput, params);
     if (intro && pose.intro === null) intro = null;
     // Freeze draws one frame: seed `landedAt` for any card landing now, then recompute once. A
     // late (or deep-scrolled) mount's first rendered frame does the same, so the presented card's
@@ -423,7 +408,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
           seeded = true;
         }
       }
-      if (seeded) pose = deckPose(input, params);
+      if (seeded) pose = deckPose(poseInput, params);
     }
     updateTargets(pose);
 
@@ -473,8 +458,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const floorScale = pose.intro ? pose.intro.floor : 1;
     floor.scale.x = stageW * PX * floorScale;
     floor.position.x = -stageW * PX * 0.5 + floor.scale.x / 2;
-    camera.position.x = cam.x;
-    camera.position.y = cam.y;
+    camera.position.x = input.cam.x;
+    camera.position.y = input.cam.y;
     camera.lookAt(0, 0, 0);
 
     effectsFrame.time = time;
@@ -519,6 +504,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     event.preventDefault();
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
+    input.reset();
     clearTimeout(lostTimer);
     lostTimer = setTimeout(() => {
       if (!disposed) opts.onContextLost();
@@ -549,7 +535,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       requestRender();
     },
     pointer(clientX, clientY) {
-      pointerAt = clientX === null || clientY === null ? null : { x: clientX, y: clientY };
+      input.pointer(clientX, clientY);
       requestRender();
     },
     hit: hitAt,
@@ -569,6 +555,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     dispose() {
       disposed = true;
       if (raf) cancelAnimationFrame(raf);
+      input.reset();
       clearTimeout(lostTimer);
       resizer.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
