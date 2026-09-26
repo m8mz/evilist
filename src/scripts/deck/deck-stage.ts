@@ -165,9 +165,20 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const toX = (px: number) => (px - stageW / 2) * PX;
   const toY = (py: number) => -(py - stageH / 2) * PX;
 
-  function computeLayout(): void {
+  // Split from computeLayout(): the ResizeObserver below runs this synchronously on every callback
+  // (cheap), then debounces the layout and textures (spec §6). On phones the stage is 100dvh, so a
+  // URL-bar collapse resizes it constantly; without the split the canvas squashed non-uniformly.
+  function measureStage(): void {
     stageW = Math.max(1, stage.clientWidth);
     stageH = Math.max(1, stage.clientHeight);
+    renderer.setSize(stageW, stageH, false);
+    camera.aspect = stageW / stageH;
+    camera.position.z = (stageH * PX) / 2 / Math.tan((params.camera.fov / 2) * DEG);
+    camera.updateProjectionMatrix();
+  }
+
+  function computeLayout(): void {
+    measureStage();
     const mode: DeckMode = desktopQuery
       ? desktopQuery.matches
         ? "desktop"
@@ -181,10 +192,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const columnLeft = columnRect.width > 0 ? columnRect.left - stageRect.left : fallback.left;
     const columnW = columnRect.width > 0 ? columnRect.width : fallback.width;
     layout = deckLayout({ stageW, stageH, columnLeft, columnW, mode, count }, params.layout);
-    renderer.setSize(stageW, stageH, false);
-    camera.aspect = stageW / stageH;
-    camera.position.z = (stageH * PX) / 2 / Math.tan((params.camera.fov / 2) * DEG);
-    camera.updateProjectionMatrix();
     textures.setSize(layout.cardW, dpr);
   }
   computeLayout();
@@ -244,7 +251,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       if (assetsSettled) requestRender();
     }, params.layout.relayoutDebounceMs);
   };
-  const resizer = new ResizeObserver(scheduleRelayout);
+  const resizer = new ResizeObserver(() => {
+    // Sizes at once; scheduleRelayout still debounces the layout and textures below.
+    measureStage();
+    if (assetsSettled) requestRender();
+    scheduleRelayout();
+  });
   resizer.observe(stage);
   const onOrientation = (): void => scheduleRelayout();
   portraitQuery?.addEventListener("change", onOrientation);
