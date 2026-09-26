@@ -3,14 +3,16 @@
 // Three import, so the shader is unit-testable; deck-effects.ts wraps them in a ShaderMaterial.
 // Coordinates: the plane's uv with x scaled by the stage's aspect, so distances are circular on
 // screen; uCentre in uv, uRadius in stage-height units.
-export interface FogUniforms {
+// A type literal gets an implicit index signature, so Three's ShaderMaterial accepts it as its
+// uniforms map without a cast, while an interface does not.
+export type FogUniforms = {
   uTime: { value: number };
   uCentre: { value: [number, number] };
   uRadius: { value: number };
   uStrength: { value: number };
   uAspect: { value: number };
   uColor: { value: [number, number, number] };
-}
+};
 
 export function fogUniforms(color: [number, number, number]): FogUniforms {
   return {
@@ -63,7 +65,8 @@ void main() {
           + 0.30 * vnoise(q * 6.0 + vec2(7.3, -rise * 3.0))
           + 0.15 * vnoise(q * 12.0 + vec2(3.1, -rise * 5.0));
   float d = distance(q, vec2(uCentre.x * uAspect, uCentre.y));
-  float falloff = 1.0 - smoothstep(0.0, uRadius, d);
+  // smoothstep with equal edges is undefined (NaN on most GPUs) and the factory's neutral radius is 0, so the guard keeps a tiny radius that evaluates to no fog.
+  float falloff = 1.0 - smoothstep(0.0, max(uRadius, 1e-4), d);
   float a = uStrength * n * falloff;
   gl_FragColor = vec4(uColor * a, a);
 }
