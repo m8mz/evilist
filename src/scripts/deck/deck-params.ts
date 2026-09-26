@@ -28,6 +28,8 @@ export interface LayoutParams {
   phoneExitRotY: number;
   columnFraction: number;
   columnMax: number;
+  /** Resize and orientation changes wait this long before the deck relayouts (spec §6). */
+  relayoutDebounceMs: number;
 }
 
 export interface PullParams {
@@ -54,6 +56,15 @@ export interface DeckParams {
   layout: LayoutParams;
   pull: PullParams;
   tilt: { maxX: number; maxY: number; tau: number };
+  /** Touch gestures (spec §7). */
+  gestures: {
+    /** A swipe needs at least this much horizontal travel, in CSS px. */
+    swipeMinPx: number;
+    /** …and at least this many times more horizontal than vertical travel. */
+    swipeRatio: number;
+    /** Degrees of card tilt per degree of device tilt, before the tilt clamps apply. */
+    orientationGain: number;
+  };
   float: {
     fadeInMs: number;
     y: { amp: number; periodMs: number };
@@ -151,6 +162,7 @@ export function defaultDeckParams(): DeckParams {
       phoneExitRotY: 70,
       columnFraction: 0.78,
       columnMax: 1200,
+      relayoutDebounceMs: 150,
     },
     pull: {
       handoffStart: 0.7,
@@ -164,6 +176,7 @@ export function defaultDeckParams(): DeckParams {
       rackRotY: 103,
     },
     tilt: { maxX: 8, maxY: 10, tau: 120 },
+    gestures: { swipeMinPx: 40, swipeRatio: 2, orientationGain: 0.5 },
     float: {
       fadeInMs: 1500,
       y: { amp: 4, periodMs: 4200 },
