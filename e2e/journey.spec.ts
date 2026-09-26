@@ -26,9 +26,55 @@ async function scrollToRank(page: Page, i: number) {
   );
 }
 
+/**
+ * Scrolls to the very end of the deck's own pinned scroll span (progress 1), the point where the
+ * energy of S+ tops out. Scrolling on past that, to the document's absolute bottom, carries the
+ * deck's track element out of the viewport entirely — the stage then stops rendering (it only
+ * loops while its `IntersectionObserver` calls it visible) and the pose freezes mid-transition.
+ */
+async function scrollToEnd(page: Page) {
+  await page.evaluate(
+    ({ header }) => {
+      const el = document.querySelector<HTMLElement>("[data-deck]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      const span = el.offsetHeight - (innerHeight - header);
+      scrollTo({ top: top + span, behavior: "instant" });
+    },
+    { header: HEADER_PX },
+  );
+}
+
 const track = (page: Page) => page.locator("[data-deck]");
 const ready = (page: Page) =>
   expect(track(page)).toHaveAttribute("data-deck-ready", "", { timeout: 20_000 });
+
+/** Forces `detectTier`'s reading of the device by stubbing the two Navigator properties it checks,
+ *  before any of the page's own scripts run. */
+const forceTier = (page: Page, tier: "mid" | "high") =>
+  page.addInitScript((t) => {
+    const cores = t === "high" ? 8 : 4;
+    Object.defineProperty(navigator, "hardwareConcurrency", { get: () => cores });
+    Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
+  }, tier);
+
+/**
+ * Polls `data-deck-vram` until two reads 500ms apart agree, or throws after 10s. `data-deck-ready`
+ * flips on the stage's first rendered frame, while the bloom chunk and the seven glow masks can
+ * still be arriving, so a single early read is not safe to compare across a dispose/re-mount pair.
+ */
+async function settledVram(page: Page): Promise<string> {
+  const deadline = Date.now() + 10_000;
+  let previous = await track(page).getAttribute("data-deck-vram");
+  for (;;) {
+    if (Date.now() > deadline) {
+      throw new Error(`data-deck-vram did not settle within 10s (last read: ${previous})`);
+    }
+    await page.waitForTimeout(500);
+    const current = await track(page).getAttribute("data-deck-vram");
+    if (current !== null && current === previous) return current;
+    previous = current;
+  }
+}
 
 /** Records the deck chunk and the portrait requests. */
 function trackRequests(page: Page) {
@@ -315,6 +361,105 @@ test.describe("the card deck", () => {
       )
       .toBeGreaterThanOrEqual(0.999);
     await expect(track(page)).toHaveAttribute("data-deck-rank", "S+");
+  });
+});
+
+test.describe("the card deck's energy", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(info.project.name === "reduced-motion", "covered above");
+  });
+
+  test("blooms on the high tier through its own lazy chunk, and not on the mid tier", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "coarse pointers keep phones on the mid tier");
+    await forceTier(page, "high");
+    const bloomRequest = page.waitForRequest((r) => /deck-bloom/.test(r.url()));
+    await page.goto("/");
+    await scrollToRank(page, 5);
+    await ready(page);
+    await bloomRequest;
+    await expect(track(page)).toHaveAttribute("data-deck-bloom", "on");
+
+    const mid = await page.context().newPage();
+    await forceTier(mid, "mid");
+    const requests: string[] = [];
+    mid.on("request", (r) => requests.push(r.url()));
+    await mid.goto("/");
+    await scrollToRank(mid, 5);
+    await ready(mid);
+    await mid.waitForTimeout(1500);
+    expect(requests.some((u) => /deck-bloom/.test(u))).toBe(false);
+    await expect(mid.locator("[data-deck]")).toHaveAttribute("data-deck-bloom", "off");
+    await mid.close();
+  });
+
+  test("keeps the energy at zero through E–A and reaches full energy at the end of S+", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    for (const i of [0, 2, 4]) {
+      await scrollToRank(page, i);
+      await ready(page);
+      await expect(track(page)).toHaveAttribute("data-deck-energy", "0.00");
+    }
+    await scrollToEnd(page);
+    await expect
+      .poll(async () => Number(await track(page).getAttribute("data-deck-energy")))
+      .toBeGreaterThanOrEqual(0.95);
+    const vram = Number(await track(page).getAttribute("data-deck-vram"));
+    expect(vram).toBeGreaterThan(0);
+    expect(vram).toBeLessThanOrEqual(80);
+  });
+
+  test("keeps the canvas transparent where energy is silent, and shows only a partial halo where it isn't", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "coarse pointers keep phones on the mid tier");
+    for (const tier of ["high", "mid"] as const) {
+      const p = await page.context().newPage();
+      await forceTier(p, tier);
+      await p.goto("/?deck-freeze=2026-09-25");
+      await scrollToRank(p, 0);
+      await ready(p);
+      await expect(track(p)).toHaveAttribute("data-deck-bloom", tier === "high" ? "on" : "off");
+      // Rank E carries no energy: the frozen frame's own corner read (Task 8, step 12) should come
+      // back fully transparent regardless of tier, proving the bloom overlay adds nothing where its
+      // texture is black.
+      await expect(track(p)).toHaveAttribute("data-deck-corner-alpha", "0");
+      if (tier === "high") {
+        // S+ carries full energy: on the high tier its glow can spill as far as the stage's
+        // corner, so a halo (a low, non-zero alpha) is expected there — never an opaque composite,
+        // which would read 255.
+        await scrollToRank(p, 6);
+        await ready(p);
+        const cornerAlpha = Number(await track(p).getAttribute("data-deck-corner-alpha"));
+        expect(cornerAlpha).toBeLessThan(128);
+      }
+      await p.close();
+    }
+  });
+
+  test("a dispose and re-mount leaves the texture estimate where it was", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "coarse pointers keep phones on the mid tier");
+    test.setTimeout(60_000);
+    await forceTier(page, "high");
+    await page.goto("/");
+    await scrollToRank(page, 6);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-bloom", "on");
+    const before = await settledVram(page);
+    await page.evaluate(() => scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+    // deck-params.ts's tiers.disposeAfterMs (30s) plus a one-second margin for the timer to fire.
+    await page.waitForTimeout(31_000);
+    await expect(track(page)).not.toHaveAttribute("data-deck-ready", "");
+    await scrollToRank(page, 6);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-bloom", "on");
+    const after = await settledVram(page);
+    expect(after).toBe(before);
   });
 });
 

@@ -1,5 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { HEADER_PX } from "./constants";
+
+/** Forces `detectTier`'s reading of the device by stubbing the two Navigator properties it checks,
+ *  before any of the page's own scripts run. Duplicated from `e2e/journey.spec.ts`: `constants.ts`
+ *  holds only plain values, not helpers. */
+const forceTier = (page: Page, tier: "mid" | "high") =>
+  page.addInitScript((t) => {
+    const cores = t === "high" ? 8 : 4;
+    Object.defineProperty(navigator, "hardwareConcurrency", { get: () => cores });
+    Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
+  }, tier);
 
 // Visual regression baselines. Tagged @visual: run locally with `pnpm test:visual`
 // (baselines are macOS renders; CI on Linux renders fonts differently, so CI skips these).
@@ -86,6 +96,7 @@ test.describe("visual regression @visual", () => {
     ["s-plus", 6],
   ] as const) {
     test(`journey rank ${rank.toUpperCase()}`, async ({ page }) => {
+      await forceTier(page, "high");
       await page.goto("/?deck-freeze=2026-09-25");
       await page.evaluate(
         ({ i, header }) => {
