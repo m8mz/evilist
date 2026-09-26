@@ -80,63 +80,36 @@ test.describe("visual regression @visual", () => {
     });
   });
 
-  test("journey mid-way (rank B, escalation)", async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate((header) => {
-      const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - header;
-      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (3.5 / 7));
-    }, HEADER_PX);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "escalation");
-    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
-    await expect(page.locator("[data-scene] #outfit-t3-support-torso")).toHaveAttribute(
-      "opacity",
-      "1.000",
-    );
-    await expect(page).toHaveScreenshot("journey-rank-b.png", {
-      animations: "disabled",
-      maxDiffPixelRatio: 0.01,
-      threshold: 0.02,
+  for (const [rank, index] of [
+    ["e", 0],
+    ["s", 5],
+    ["s-plus", 6],
+  ] as const) {
+    test(`journey rank ${rank.toUpperCase()}`, async ({ page }) => {
+      await page.goto("/?deck-freeze=2026-09-25");
+      await page.evaluate(
+        ({ i, header }) => {
+          const el = document.querySelector<HTMLElement>("[data-deck]")!;
+          const top = el.getBoundingClientRect().top + scrollY - header;
+          scrollTo({
+            top: top + (el.offsetHeight - innerHeight + header) * ((i + 0.5) / 7),
+            behavior: "instant",
+          });
+        },
+        { i: index, header: HEADER_PX },
+      );
+      await expect(page.locator("[data-deck]")).toHaveAttribute("data-deck-ready", "", {
+        timeout: 20_000,
+      });
+      await expect(page.locator("[data-deck]")).toHaveAttribute(
+        "data-deck-rank",
+        rank === "s-plus" ? "S+" : rank.toUpperCase(),
+      );
+      await expect(page).toHaveScreenshot(`journey-rank-${rank}.png`, {
+        animations: "disabled",
+        maxDiffPixelRatio: 0.01,
+        threshold: 0.02,
+      });
     });
-  });
-
-  test("journey start (rank E, headset)", async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate((header) => {
-      const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - header;
-      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (0.5 / 7));
-    }, HEADER_PX);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "headset");
-    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
-    await expect(page.locator("[data-scene] #outfit-t1-support-torso")).toHaveAttribute(
-      "opacity",
-      "1.000",
-    );
-    await expect(page).toHaveScreenshot("journey-rank-e.png", {
-      animations: "disabled",
-      maxDiffPixelRatio: 0.01,
-      threshold: 0.02,
-    });
-  });
-
-  test("journey end (rank S+, open coat)", async ({ page }) => {
-    await page.goto("/");
-    await page.evaluate((header) => {
-      const el = document.querySelector<HTMLElement>("[data-journey]")!;
-      const top = el.getBoundingClientRect().top + scrollY - header;
-      scrollTo(0, top + (el.offsetHeight - innerHeight + header) * (6.5 / 7));
-    }, HEADER_PX);
-    await expect(page.locator("[data-journey]")).toHaveAttribute("data-activity", "datacenter");
-    await expect(page.locator("[data-scene] #avatar")).toHaveCount(1);
-    await expect(page.locator("[data-scene] #outfit-systems-architect-torso")).toHaveAttribute(
-      "opacity",
-      "1.000",
-    );
-    await expect(page).toHaveScreenshot("journey-rank-s-plus.png", {
-      animations: "disabled",
-      maxDiffPixelRatio: 0.01,
-      threshold: 0.02,
-    });
-  });
+  }
 });
