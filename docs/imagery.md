@@ -455,3 +455,9 @@ Batch 13/15 results for professional-services: 1fc647be on black, purple cast on
 6693a39b-ce6e-4724-97f8-ae6957e07473, 000c285f-c242-49e4-b641-e8fec61dfb9b.
 
 Batch 16 results: both C renders on black in greyscale black, 6693a39b glow 0.02%, 000c285f glow 0.03% — both PASS; controller's pick 000c285f (the head turned a touch). With these, every rank of the black set sits inside its existing band: E 0.00, D 0.02, C 0.03, B 0.32, A 0.94, S 1.43, S+ 5.33 (percent). No band change is needed for this set; note for the tuning plan that B's and A's floors are met by the model's residual cloth tint as much as by the eyes.
+
+### Step 4d — no seam, the blacks swapped, the laptop at A (2026-09-25)
+
+Marcus after the black set: the ember stitching goes from every garment; the clothes must be the darkest black, so the blacks swap: true black (#000000) cloth on a dark graphite (#191919) field (the card's portrait window then reads as a graphite panel on the carbon card); A holds an open laptop up in both hands, its lid toward the viewer, instead of the keys. The bible loses its seam sentence and its field becomes graphite; the import keys a white field to graphite now. E is re-rendered too so all seven share the field.
+
+Batch 17 (graphite field, true black cloth, no seam): t1-support 04326298-f9aa-4ca7-bc59-f0e1c7a7ebbd, web-concierge e9d8dc99-dfe1-4728-be77-4db78137c007, professional-services f26a3462-7683-40ad-b294-7f59a9f10fbe, t3-support 143940bd-def1-42b5-b362-9d8d9bd2f384, sysadmin e4e49142-206b-42d6-b174-59b95f83ecd2 (the laptop). Batch 18: linux-engineer 1b04f31f-7d91-4c4d-a9b5-463a4d3ed7c7, systems-architect 5c67c2fc-879e-4e83-a79a-bf69b90bd49f.

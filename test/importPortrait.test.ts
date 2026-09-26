@@ -92,7 +92,7 @@ describe("importPortrait", () => {
     expect(channels[0]!.max).toBe(255);
   });
 
-  it("keys a white field to black and keeps whites enclosed by the subject", async () => {
+  it("keys a white field to the graphite fill and keeps whites enclosed by the subject", async () => {
     const d = tmp();
     // A white field, a dark figure in the middle with a white "eye" inside it, one grey garment
     // edge touching the field: what Nano Banana returns when it ignores the black background.
@@ -110,9 +110,9 @@ describe("importPortrait", () => {
       const i = (y * info.width + x) * info.channels;
       return [data[i]!, data[i + 1]!, data[i + 2]!];
     };
-    // The field, at a corner and beside the figure, is black now.
-    expect(Math.max(...px(5, 5))).toBeLessThan(8);
-    expect(Math.max(...px(290, 300))).toBeLessThan(8);
+    // The field, at a corner and beside the figure, is the graphite fill now.
+    expect(px(5, 5).every((c) => Math.abs(c - 25) <= 3)).toBe(true);
+    expect(px(290, 300).every((c) => Math.abs(c - 25) <= 3)).toBe(true);
     // The enclosed white and the figure's own colours are untouched.
     expect(Math.min(...px(440, 235))).toBeGreaterThan(240);
     expect(px(450, 300)[0]).toBeGreaterThan(30);

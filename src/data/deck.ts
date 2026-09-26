@@ -80,21 +80,22 @@ export const deckArt: readonly DeckArt[] = [
   {
     id: "sysadmin",
     rank: "A",
-    outfit: "a fitted black technical shirt over a broad frame, rack keys on a carabiner",
+    outfit:
+      "a fitted black technical shirt over a broad frame, an open laptop held up in both hands with its lid toward the viewer",
     eyes: "violet iris, no glow",
     eyeColor: "#7040d2",
     expression:
       "quiet confidence, a knowing half-smile, the hair swept back with one strand over the brow",
     posture: "standing tall, squared shoulders, chin level",
     subject:
-      "the journey character at rank A, broad-shouldered in a fitted black technical shirt with rack keys on a carabiner, violet eyes, a knowing half-smile",
+      "the journey character at rank A, broad-shouldered in a fitted black technical shirt with an open laptop held up in both hands with its lid toward the viewer, violet eyes, a knowing half-smile",
     glowBand: band("sysadmin"),
   },
   {
     id: "linux-engineer",
     rank: "S",
     outfit:
-      "a tailored black suit cut close to his figure: a long black coat with sharp lapels over a white shirt buttoned to the collar, no tie, one ember-orange stitched seam along the lapel edge",
+      "a tailored black suit cut close to his figure: a long black coat with sharp lapels over a white shirt buttoned to the collar, no tie",
     eyes: "violet iris, glowing",
     eyeColor: "#9d7cf0",
     expression: "calm authority, the hint of a smirk, the hair swept back and sharp",

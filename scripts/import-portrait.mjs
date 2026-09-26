@@ -22,8 +22,8 @@ export const GLOW = {
   quality: 82,
 };
 
-// A render that ignored the black background and came back on white (about 40% of Nano Banana's
-// portraits, whatever the prompt says) is keyed here rather than re-rolled: the field is whatever
+// A render that ignored the graphite background and came back on white (about 40% of Nano Banana's
+// portraits, whatever the prompt says) is keyed to the field colour here rather than re-rolled: the field is whatever
 // near-white touches the image border, dilated a little to swallow the anti-aliased fringe, so the
 // whites the subject encloses (eyes, teeth, a badge) stay.
 export const KEY = {
@@ -33,6 +33,8 @@ export const KEY = {
   borderShare: 0.6,
   /** Grow the keyed field by this many pixels into the fringe (at sourceWidth). */
   dilate: 2,
+  /** What the keyed field becomes: the graphite the portraits are rendered on. */
+  fill: [25, 25, 25],
 };
 
 /**
@@ -91,7 +93,7 @@ export function keyWhiteField(data, width, height, key = KEY) {
     grown = out;
   }
   for (let i = 0; i < grown.length; i++) {
-    if (grown[i]) data[i * 3] = data[i * 3 + 1] = data[i * 3 + 2] = 0;
+    if (grown[i]) [data[i * 3], data[i * 3 + 1], data[i * 3 + 2]] = key.fill;
   }
   return { keyed: true, borderShare };
 }
