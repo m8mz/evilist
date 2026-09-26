@@ -112,6 +112,8 @@ export interface DeckParams {
     opacityMin: number;
     opacityMax: number;
     sideSpeed: number;
+    /** Frames the frozen deck's cloud has aged before its one render. */
+    prewarmFrames: number;
   };
   fog: {
     strengthS: number;
@@ -219,6 +221,7 @@ export function defaultDeckParams(): DeckParams {
       opacityMin: 0.1,
       opacityMax: 0.22,
       sideSpeed: 1.5,
+      prewarmFrames: 240,
     },
     fog: {
       strengthS: 0.1,
