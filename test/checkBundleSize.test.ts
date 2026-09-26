@@ -27,6 +27,11 @@ function withScene(dist: string, bytes = 10 * 1024): void {
   writeFileSync(join(dist, "dist/client/journey/scene.svg"), Buffer.alloc(bytes, 1));
 }
 
+/** Writes a small lazy deck-stage chunk (no page references it) so the deck rows stay green. */
+function withDeck(dist: string, bytes = 10 * 1024, name = "deck-stage.abc.js"): void {
+  writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(bytes, 1));
+}
+
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -36,6 +41,7 @@ describe("check-bundle-size", () => {
   it("passes with self-hosted fonts inside the budget", () => {
     const dist = fakeDist({ "fonts/a.woff2": 21_000, "fonts/b.woff2": 21_000 });
     withScene(dist);
+    withDeck(dist);
     const res = run(dist);
     expect(res.stdout).toContain("ok   Fonts (woff2)");
     expect(res.status).toBe(0);
@@ -47,15 +53,63 @@ describe("check-bundle-size", () => {
     expect(res.status).toBe(1);
   });
 
-  it("fails when a Three.js chunk is present", () => {
-    const res = run(fakeDist({ "fonts/a.woff2": 42_000, "hero-aura-scene.abc.js": 10 }));
-    expect(res.stdout).toContain("FAIL Three.js chunk present");
+  it("passes a lazy deck-stage chunk under 170 KB gz and reports it", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    withScene(dist);
+    writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(150 * 1024));
+    const res = run(dist);
+    expect(res.stdout).toMatch(/ok {3}Deck lazy JS \(gz\): 15\d\.\d KB \(budget 170 KB\)/);
+    expect(res.status).toBe(0);
+  });
+
+  it("fails when the deck-stage chunk is missing (inlined into a page)", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    withScene(dist);
+    const res = run(dist);
+    expect(res.stdout).toContain("FAIL deck-stage chunk missing");
     expect(res.status).toBe(1);
+  });
+
+  it("fails when a deck or Three.js chunk is in the home page's initial graph", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000, "three.def.js": 10 });
+    withScene(dist);
+    withDeck(dist);
+    writeFileSync(
+      join(dist, "dist/client/index.html"),
+      '<!doctype html><script type="module" src="/_astro/three.def.js"></script>',
+    );
+    const res = run(dist);
+    expect(res.stdout).toContain("FAIL deck chunk in the initial graph: /_astro/three.def.js");
+    expect(res.status).toBe(1);
+  });
+
+  it("fails lazy JS over 170 KB gz", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    withScene(dist);
+    writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(200 * 1024));
+    const res = run(dist);
+    expect(res.stdout).toMatch(/FAIL Deck lazy JS \(gz\)/);
+    expect(res.status).toBe(1);
+  });
+
+  it("does not count a page's own scripts as lazy", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000, "contact.ghi.js": 300 * 1024 });
+    withScene(dist);
+    withDeck(dist);
+    mkdirSync(join(dist, "dist/client/contact"), { recursive: true });
+    writeFileSync(
+      join(dist, "dist/client/contact/index.html"),
+      '<!doctype html><script type="module" src="/_astro/contact.ghi.js"></script>',
+    );
+    const res = run(dist);
+    expect(res.stdout).toMatch(/ok {3}Deck lazy JS \(gz\)/);
+    expect(res.status).toBe(0);
   });
 
   it("fails a stray file in journey/ (only the scene belongs there)", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     withScene(dist);
+    withDeck(dist);
     writeFileSync(join(dist, "dist/client/journey/sysadmin-640.mp4"), Buffer.alloc(10, 1));
     const res = run(dist);
     expect(res.stdout).toContain("FAIL stray journey file: sysadmin-640.mp4");
@@ -68,6 +122,7 @@ describe("check-bundle-size", () => {
     // 200 KB of incompressible bytes gzips to about 200 KB: inside the budget.
     mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
     writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(200 * 1024));
+    withDeck(dist);
     const res = run(dist);
     expect(res.stdout).toMatch(/ok {3}Journey scene \(gz\): 20\d\.\d KB \(budget 300 KB\)/);
     expect(res.status).toBe(0);
