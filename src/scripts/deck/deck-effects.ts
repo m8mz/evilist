@@ -44,6 +44,7 @@ const SPRITE_BEHIND = 0.05; // world units the glow sprite sits behind the card,
 const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
 const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
 const SEAM_DENSITY = 2; // seam canvas px per CSS px, independent of dpr, for a crisp line at any zoom
+const OCCLUDER_INSET = 0.0005; // just inside the front face: the glow plane at front + 0.002 stays ahead of it, everything behind the card falls behind it
 const VISIBLE_MIN = 0.001; // below this opacity or fog strength, hide the object outright
 const SHADOW_VISIBLE_MIN = 0.01; // a contact shadow fainter than this reads as a rendering artefact
 const MIPMAP = 1.33; // every texture here mipmaps; deck-textures.ts uses the same 4/3 chain factor
@@ -90,6 +91,7 @@ export class DeckEffects {
   private readonly scene: Scene;
   private readonly params: DeckParams;
   private readonly boost: number;
+  private readonly highTier: boolean;
   private readonly kinds: (EnergyKind | null)[];
   private readonly unit = new PlaneGeometry(1, 1);
   private readonly glowMats: MeshBasicMaterial[];
@@ -97,6 +99,7 @@ export class DeckEffects {
   private readonly glowImages: (HTMLImageElement | null)[];
   private readonly seams: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[];
   private readonly seamCanvases: (HTMLCanvasElement | null)[];
+  private readonly occluders: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[]; // high tier only: depth-only proxies so the bloom pass, which draws no cards, still occludes
   private readonly light: PointLight;
   private readonly sprite: Sprite;
   private readonly spriteMat: SpriteMaterial;
@@ -114,6 +117,7 @@ export class DeckEffects {
     this.params = opts.params;
     this.kinds = opts.kinds;
     this.boost = opts.tier === "mid" ? MID_BOOST : 1;
+    this.highTier = opts.tier === "high";
     const n = opts.kinds.length;
     const P = this.params;
 
@@ -132,6 +136,7 @@ export class DeckEffects {
     this.glowImages = new Array<HTMLImageElement | null>(n).fill(null);
     this.seams = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
     this.seamCanvases = new Array<HTMLCanvasElement | null>(n).fill(null);
+    this.occluders = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
 
     this.light = new PointLight(new Color(COLORS.violet), 0, 8, 2);
     this.scene.add(this.light);
@@ -237,6 +242,12 @@ export class DeckEffects {
       this.seams[index] = seam;
       this.seamCanvases[index] = canvas;
     }
+    if (this.highTier) {
+      const proxy = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ colorWrite: false }));
+      proxy.layers.set(BLOOM_LAYER); // layer 1 only: invisible to the main render and the raycaster
+      group.add(proxy);
+      this.occluders[index] = proxy;
+    }
     if (this.layout) this.placeCard(index);
   }
 
@@ -287,6 +298,11 @@ export class DeckEffects {
         }
       }
     }
+    const occluder = this.occluders[index];
+    if (occluder) {
+      occluder.scale.set(L.w, L.h, 1);
+      occluder.position.z = L.front - OCCLUDER_INSET;
+    }
     const seam = this.seams[index];
     const canvas = this.seamCanvases[index];
     if (seam && canvas) {
@@ -298,9 +314,7 @@ export class DeckEffects {
         const ctx = canvas.getContext("2d");
         if (ctx) paintSeam(ctx, w, h);
         const mat = seam.material;
-        // Three allocates immutable GPU storage on first upload; dispose before the next one forces
-        // a fresh allocation at the new size (deck-textures.ts's resizeLayer does the same).
-        mat.map?.dispose();
+        mat.map?.dispose(); // dispose before the next upload forces a fresh GPU allocation at the new size
         if (mat.map) mat.map.needsUpdate = true;
       }
       seam.scale.set(L.w, L.h, 1);
@@ -432,6 +446,12 @@ export class DeckEffects {
       s.removeFromParent();
       s.material.dispose();
     }
+    for (const o of this.occluders) {
+      if (!o) continue;
+      o.removeFromParent();
+      o.geometry.dispose();
+      o.material.dispose();
+    }
     for (const m of this.glowMats) {
       m.alphaMap?.dispose();
       m.alphaMap = null;
@@ -447,6 +467,7 @@ export class DeckEffects {
     this.textures.length = 0;
     this.glows.fill(null);
     this.seams.fill(null);
+    this.occluders.fill(null);
     this.glowImages.fill(null);
     this.seamCanvases.fill(null);
     this.layout = null;

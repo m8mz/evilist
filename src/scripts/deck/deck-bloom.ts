@@ -33,9 +33,11 @@ export interface BloomHandle {
 /** The glow target's scale against CSS px. The blur removes anything finer, so half is enough. */
 export const BLOOM_SCALE = 0.5;
 
-// Bytes per glow-target pixel: the composer's two RGBA half-float targets with depth (2 × (8 + 4)),
-// UnrealBloomPass's bright target (8) and its five blur mip pairs (2 × 8 × (1/4 + 1/16 + …) ≈ 16/3).
-const BYTES_PER_PIXEL = 2 * (8 + 4) + 8 + 16 / 3;
+// Bytes per glow-target pixel: rt2's one RGBA half-float target with depth (8 + 4 = 12; rt1 is never
+// bound, since neither pass swaps and copyPass only runs with masks), UnrealBloomPass's bright
+// target at a quarter of the glow target's pixels (half-float, no depth: 8 × 1/4 = 2), and its five
+// blur mip pairs (2 × 8 × (1/4 + 1/16 + …) ≈ 16/3).
+const BYTES_PER_PIXEL = 12 + 2 + 16 / 3;
 
 const OVERLAY_VERTEX = /* glsl */ `
 varying vec2 vUv;
@@ -103,8 +105,11 @@ export function mountBloom(
       bloomPass.threshold = params.bloom.threshold;
       const mask = camera.layers.mask;
       camera.layers.set(BLOOM_LAYER);
-      composer.render();
-      camera.layers.mask = mask;
+      try {
+        composer.render();
+      } finally {
+        camera.layers.mask = mask;
+      }
       renderer.render(scene, camera);
       const autoClear = renderer.autoClear;
       renderer.autoClear = false; // the quad adds over the frame just drawn
