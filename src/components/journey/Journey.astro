@@ -1,84 +1,102 @@
 ---
-// Scroll-driven career journey (spec §7; vector journey spec). A tall track with a pinned,
-// full-width stage: as the visitor scrolls, the stage advances through the seven ranks and the
-// vector scene (public/journey/scene.svg) ranks the character up with it. Until the scene loads,
-// and if it never does, the inline silhouette holds the stage. scripts/journey.ts maps scroll
-// progress to the active rank and the scene's state; CSS switches the cards and runs the idle
-// life on the scene's inner groups.
+// The journey card deck's stage (deck spec §3): a tall track with a pinned, full-bleed stage. The
+// stage is a WebGL canvas (src/scripts/deck/deck-stage.ts, loaded lazily) that racks seven card
+// meshes and pulls the current rank out as the visitor scrolls; src/scripts/deck/index.ts wires
+// it. The layout column is measured, never painted. The rail is the keyboard and screen-reader
+// surface; JourneyTimeline (in .journey-fallback) is the readable twin and the fallback.
 //
-// Accessibility and fallbacks: this animated version is decorative (aria-hidden). JourneyTimeline
-// carries the same content, with each rank's still, for screen readers, and is what everyone sees
-// without scripting or with reduced motion.
-//
-// It goes in the Section's `bleed` slot, so the stage spans the band's full width; the skip link
-// and the timeline keep the content column.
-import silhouette from "./silhouette.svg?raw";
+// Under `(scripting: enabled) and (prefers-reduced-motion: no-preference)` the deck shows and
+// the timeline is visually hidden; without scripting, under reduced motion, or when the script
+// sets data-deck-fallback (no WebGL2, a lost context), the timeline shows instead.
+import { getImage } from "astro:assets";
+// `no-inline` keeps this a real file: Vite's assetsInlineLimit (default 4 KB) would otherwise
+// inline the mark as a data: URI, and the deck stage needs a real URL to draw the card back with.
+import markUrl from "../../images/devil-mark.svg?url&no-inline";
 import JourneyTimeline from "./JourneyTimeline.astro";
-import Panel from "../ui/Panel.astro";
 import RankChip from "../ui/RankChip.astro";
-import Tag from "../ui/Tag.astro";
-import { career, formatRange } from "../../data/career";
+import { career } from "../../data/career";
+import { deckGlow, deckPortrait } from "../../data/deckImages";
 
-/** Each card lists at most this many highlights (only the first below 60rem). */
-const CARD_HIGHLIGHTS = 3;
+/** The build date: every tenure and XP figure is computed against it, in the twin and the stage. */
+const now = new Date().toISOString().slice(0, 10);
+
+const renditions = await Promise.all(
+  career.map(async (stage) => {
+    const source = deckPortrait(stage.id);
+    if (!source) return null;
+    const glow = deckGlow(stage.id);
+    const [x1, x2, mask] = await Promise.all([
+      getImage({ src: source, width: 400, format: "webp" }),
+      getImage({ src: source, width: 800, format: "webp" }),
+      glow ? getImage({ src: glow, width: 400, format: "webp" }) : Promise.resolve(null),
+    ]);
+    return { x1: x1.src, x2: x2.src, glow: mask?.src ?? null };
+  }),
+);
 ---
 
-<div class="wrap">
-  <a href="#skills" class="journey-skip">
-    Skip the career journey
-  </a>
-</div>
+<div class="deck" data-deck-root>
+  <div class="wrap">
+    <a href="#skills" class="journey-skip">
+      Skip the career journey
+    </a>
+  </div>
 
-<div class="journey" data-journey data-activity={career[0].activity} aria-hidden="true">
-  <div class="journey__stage">
-    <ol class="journey__rail">
-      {career.map((stage, i) => (
-        <li class:list={["journey__node", { "is-reached is-current": i === 0 }]} data-node>
-          <RankChip rank={stage.rankLabel} size="sm" />
-        </li>
-      ))}
-      <li class="journey__track-line" role="presentation">
-        <span class="journey__fill"></span>
-      </li>
-    </ol>
+  <div
+    class="journey"
+    data-deck
+    data-now={now}
+    data-count={career.length}
+    data-mark={markUrl}
+    data-deck-state="loading"
+  >
+    <div class="journey__stage">
+      <canvas class="journey__gl" data-deck-gl aria-hidden="true"></canvas>
+      <div class="journey__column" data-deck-column></div>
 
-    <div class="journey__media">
-      <div class="journey__scene" data-scene set:html={silhouette} />
+      <div class="journey__rail" data-deck-rail role="toolbar" aria-label="Ranks">
+        {career.map((stage, i) => (
+          <button
+            type="button"
+            class:list={["journey__rank", { "is-reached": i === 0 }]}
+            data-deck-rank
+            data-index={i}
+            data-stage-id={stage.id}
+            data-portrait-1x={renditions[i]?.x1}
+            data-portrait-2x={renditions[i]?.x2}
+            data-glow={renditions[i]?.glow ?? undefined}
+            aria-pressed={i === 0 ? "true" : "false"}
+            aria-label={`Rank ${stage.rankLabel}, ${stage.shortTitle ?? stage.title}`}
+            tabindex={i === 0 ? 0 : -1}
+          >
+            <RankChip rank={stage.rankLabel} size="sm" />
+          </button>
+        ))}
+        <span class="journey__track-line" role="presentation">
+          <span class="journey__fill"></span>
+        </span>
+      </div>
+
+      <p
+        class="journey__counter"
+        data-deck-counter
+        aria-hidden="true"
+      >{`01 / ${String(career.length).padStart(2, "0")}`}</p>
+      <p class="journey__hint" data-deck-hint aria-hidden="true">
+        ↓ scroll or pick a rank
+      </p>
+      <p class="visually-hidden" data-deck-live aria-live="polite"></p>
     </div>
+  </div>
 
-    <div class="journey__cards">
-      {career.map((stage, i) => (
-        <Panel
-          variant="case"
-          class:list={["journey__card", { "is-active": i === 0 }]}
-          data-card
-          data-activity={stage.activity}
-        >
-          <div class="journey__card-head">
-            <RankChip rank={stage.rankLabel} size="md" />
-            <Tag>{formatRange(stage.start, stage.end)}</Tag>
-          </div>
-          <h3>{stage.shortTitle ?? stage.title}</h3>
-          <p class="journey__meta">{stage.org}</p>
-          <p>{stage.summary}</p>
-          <ul class="journey__highlights" role="list">
-            {stage.highlights.slice(0, CARD_HIGHLIGHTS).map((highlight) => (
-              <li>{highlight}</li>
-            ))}
-          </ul>
-        </Panel>
-      ))}
-    </div>
+  <div class="wrap journey-fallback">
+    <JourneyTimeline now={now} />
   </div>
 </div>
 
-<div class="wrap journey-fallback">
-  <JourneyTimeline />
-</div>
-
 <script>
-  import { initJourney } from "../../scripts/journey";
-  initJourney();
+  import { initDeck } from "../../scripts/deck";
+  initDeck();
 </script>
 
 <style>
@@ -89,16 +107,16 @@ const CARD_HIGHLIGHTS = 3;
   }
 
   @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-    .journey {
+    .deck:not([data-deck-fallback]) .journey {
       display: block;
     }
 
-    .journey-skip {
+    .deck:not([data-deck-fallback]) .journey-skip {
       display: inline-block;
     }
 
-    /* Keep the timeline for screen readers and search, but not on screen. */
-    .journey-fallback {
+    /* The timeline stays for screen readers and search, but not on screen. */
+    .deck:not([data-deck-fallback]) .journey-fallback {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -108,7 +126,7 @@ const CARD_HIGHLIGHTS = 3;
     }
 
     /* Its stills would load behind the hidden timeline; the stage shows the art instead. */
-    .journey-fallback :global(.timeline__still) {
+    .deck:not([data-deck-fallback]) .journey-fallback :global(.timeline__still) {
       display: none;
     }
   }
@@ -143,42 +161,120 @@ const CARD_HIGHLIGHTS = 3;
     --stages: 7;
     --header: var(--header-h);
     position: relative;
-    height: calc(var(--stages) * 62dvh + 100dvh - var(--header));
+    height: calc(var(--stages) * 70dvh + 100dvh - var(--header));
     margin-top: 2rem;
   }
 
-  /* Below 60rem: rail, clip, card in rows; the clip takes what the card leaves. */
   .journey__stage {
     position: sticky;
     top: var(--header);
     height: calc(100dvh - var(--header));
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: 1rem;
-    padding-block: 1rem 1.5rem;
+    overflow: hidden;
   }
 
-  /* ---------- Progress rail ---------- */
+  .journey__gl {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .journey__gl.is-pointer {
+    cursor: pointer;
+  }
+
+  /* Measured by the stage, never painted: the deck's composition sits inside it. */
+  .journey__column {
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: calc(100% - 2 * var(--gutter));
+    translate: -50% 0;
+    pointer-events: none;
+  }
+
+  @media (min-width: 60rem) {
+    .journey__column {
+      width: min(78%, 1200px);
+    }
+  }
+
+  /* ---------- Rail, counter, hint ---------- */
   .journey__rail {
-    position: relative;
+    position: absolute;
+    left: var(--gutter);
+    right: var(--gutter);
+    bottom: 1.5rem;
+    z-index: 2;
     display: flex;
     justify-content: space-between;
-    padding: 0 var(--gutter);
-    list-style: none;
+    align-items: center;
   }
 
-  .journey__node {
+  @media (min-width: 60rem) {
+    .journey__rail {
+      left: max(var(--gutter), calc((100% - min(78%, 1200px)) / 2));
+      right: auto;
+      gap: 0.625rem;
+    }
+  }
+
+  .journey__rank {
     position: relative;
     z-index: 1;
-    transition: transform 240ms ease-out;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+      opacity 400ms ease-out,
+      transform 240ms ease-out;
   }
 
-  .journey__node.is-current {
+  .journey__rank:focus-visible {
+    outline: 2px solid var(--color-ember);
+    outline-offset: 2px;
+  }
+
+  /* The chips fade in with the deal-in, one after another; any later state shows them at once. */
+  [data-deck-state="intro"] .journey__rank,
+  [data-deck-state="scroll"] .journey__rank,
+  [data-deck-state="fallback"] .journey__rank {
+    opacity: 1;
+  }
+
+  [data-deck-state="intro"] .journey__rank:nth-child(2) {
+    transition-delay: 55ms;
+  }
+  [data-deck-state="intro"] .journey__rank:nth-child(3) {
+    transition-delay: 110ms;
+  }
+  [data-deck-state="intro"] .journey__rank:nth-child(4) {
+    transition-delay: 165ms;
+  }
+  [data-deck-state="intro"] .journey__rank:nth-child(5) {
+    transition-delay: 220ms;
+  }
+  [data-deck-state="intro"] .journey__rank:nth-child(6) {
+    transition-delay: 275ms;
+  }
+  [data-deck-state="intro"] .journey__rank:nth-child(7) {
+    transition-delay: 330ms;
+  }
+
+  .journey__rank[aria-pressed="true"] {
     transform: scale(1.12);
   }
 
+  .journey__rank[aria-pressed="true"] :global(.rank-chip) {
+    animation: chip-pulse 200ms ease-out;
+  }
+
   /* Not reached yet: dimmed by colour, not opacity, so the chip text still passes 4.5:1. */
-  .journey__node:not(.is-reached) :global(.rank-chip) {
+  .journey__rank:not(.is-reached) :global(.rank-chip) {
     border-color: var(--color-iron);
     background: var(--color-graphite);
     color: var(--color-ash);
@@ -186,14 +282,14 @@ const CARD_HIGHLIGHTS = 3;
 
   /* Seven chips must fit a 390 px phone. */
   @media (max-width: 39.99rem) {
-    .journey__node :global(.rank-chip) {
+    .journey__rank :global(.rank-chip) {
       padding-inline: 0.25rem;
     }
   }
 
   .journey__track-line {
     position: absolute;
-    inset: 50% calc(var(--gutter) + 1rem) auto;
+    inset: 50% 1rem auto;
     height: 1px;
     background: var(--color-slate);
   }
@@ -206,194 +302,43 @@ const CARD_HIGHLIGHTS = 3;
     transform: scaleX(var(--progress, 0));
   }
 
-  /* ---------- Scene ---------- */
-  .journey__media {
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
-    background: var(--color-carbon);
-  }
-
-  .journey__scene {
+  .journey__counter,
+  .journey__hint {
     position: absolute;
-    inset: 0;
-  }
-
-  .journey__scene :global(svg) {
-    display: block;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Idle life (vector journey spec §3.3): CSS on the inner groups; the scroll writes transforms */
-  /* on the outer ones, so the two never fight. fill-box keeps each origin on the group itself. */
-  .journey__scene :global(#part-torso-idle) {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
-    animation: breathe 4s ease-in-out infinite;
-  }
-
-  .journey__scene :global(#part-head-idle) {
-    transform-box: fill-box;
-    transform-origin: 50% 100%;
-    animation: sway 5s ease-in-out infinite;
-  }
-
-  .journey__scene :global(.glow) {
-    animation: glow 2.4s ease-in-out infinite alternate;
-  }
-
-  @keyframes breathe {
-    50% {
-      transform: scaleY(1.01);
-    }
-  }
-
-  @keyframes sway {
-    25% {
-      transform: rotate(-1.5deg);
-    }
-
-    75% {
-      transform: rotate(1.5deg);
-    }
-  }
-
-  @keyframes glow {
-    to {
-      opacity: 0.55;
-    }
-  }
-
-  /* ---------- Cards ---------- */
-  .journey__cards {
-    display: grid;
-    padding-inline: var(--gutter);
-  }
-
-  /* All cards share one grid cell, so the area is as tall as the tallest card and switching ranks never shifts the layout. */
-  .journey__cards :global(.journey__card) {
-    grid-area: 1 / 1;
-    display: grid;
-    align-content: start;
-    gap: 0.5rem;
-    visibility: hidden;
-    opacity: 0;
-  }
-
-  .journey__cards :global(.journey__card.is-active) {
-    visibility: visible;
-    opacity: 1;
-    animation: card-in 320ms ease-out both;
-  }
-
-  .journey__card-head {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .journey__cards h3 {
-    margin-top: 0.25rem;
-    font-size: var(--text-heading-lg);
-  }
-
-  .journey__meta {
-    color: var(--color-ash);
+    right: var(--gutter);
+    z-index: 2;
+    color: var(--color-steel);
     font-size: var(--text-caption);
-    font-weight: 700;
   }
 
-  .journey__highlights {
-    display: grid;
-    gap: 0.25rem;
-    margin: 0;
-    padding-left: 1.2rem;
-    list-style: "- ";
-    color: var(--color-fog);
+  .journey__counter {
+    bottom: 1.5rem;
   }
 
-  .journey__highlights li::marker {
-    color: var(--color-ash);
+  .journey__hint {
+    bottom: 3.25rem;
+    opacity: 0;
+    transition: opacity 500ms ease-out;
   }
 
-  /* Below 60rem the card sits under the clip: one highlight keeps it whole on a phone. */
+  .journey__hint.is-shown {
+    opacity: 1;
+  }
+
+  /* On phones the counter would collide with the rail: lift it above. */
   @media (max-width: 59.99rem) {
-    .journey__highlights li + li {
-      display: none;
+    .journey__counter {
+      bottom: 3.75rem;
+    }
+
+    .journey__hint {
+      bottom: 5.5rem;
     }
   }
 
-  /* Phones: smaller text so the active card fits under the pinned clip. Tablets keep 15px. */
-  @media (max-width: 47.99rem) {
-    .journey__cards p:not(.journey__meta),
-    .journey__highlights {
-      font-size: var(--text-caption);
-    }
-  }
-
-  /* From 60rem the scene fills the stage; the rail runs across the top and the card sits left. Last, so it overrides the rules above. */
-  @media (min-width: 60rem) {
-    .journey {
-      height: calc(var(--stages) * 70dvh + 100dvh - var(--header));
-    }
-
-    .journey__stage {
-      display: block;
-      padding: 0;
-    }
-
-    .journey__media {
-      position: absolute;
-      inset: 0;
-    }
-
-    /* The rail runs over the top of the stage, so the scene starts below it: the figure lands at about 80% of the stage's height. */
-    .journey__scene {
-      inset: 4.5rem 0 1rem;
-    }
-
-    .journey__rail {
-      position: absolute;
-      inset: 1.5rem 0 auto;
-      z-index: 1;
-    }
-
-    .journey__cards {
-      position: absolute;
-      inset: 5rem auto 2.5rem var(--gutter);
-      z-index: 1;
-      width: min(30rem, 40vw);
-      padding: 0;
-    }
-
-    .journey__cards :global(.journey__card) {
-      align-self: center;
-    }
-  }
-
-  /* Short desktop screens: one highlight and tighter insets keep the card inside the pinned stage. */
-  @media (min-width: 60rem) and (max-height: 44rem) {
-    .journey__cards {
-      inset-block: 4.5rem 1.5rem;
-    }
-
-    .journey__highlights li + li {
-      display: none;
-    }
-  }
-
-  /* Very short desktop screens: the summary alone. */
-  @media (min-width: 60rem) and (max-height: 34rem) {
-    .journey__highlights {
-      display: none;
-    }
-  }
-
-  @keyframes card-in {
+  @keyframes chip-pulse {
     from {
-      opacity: 0;
-      transform: translateY(12px);
+      transform: scale(0.9);
     }
   }
 </style>
