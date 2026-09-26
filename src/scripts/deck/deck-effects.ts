@@ -5,6 +5,7 @@ import {
   AdditiveBlending,
   CanvasTexture,
   Color,
+  DoubleSide,
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
@@ -40,7 +41,7 @@ const MID_BOOST = 1.6;
 const LIGHT_AHEAD = 1.6; // world units in front of the energetic card
 const FOG_Z = -0.5;
 const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge; the falloff hides the margin
-const SPRITE_BEHIND = 0.05; // world units the glow sprite sits behind the card, haloing its back face
+const SPRITE_CLEARANCE = 0.05; // world units the glow sprite keeps behind the presented card's corner at its largest tilt and float
 const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
 const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
 const SEAM_DENSITY = 2; // seam canvas px per CSS px, independent of dpr, for a crisp line at any zoom
@@ -100,6 +101,7 @@ export class DeckEffects {
   private readonly seams: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[];
   private readonly seamCanvases: (HTMLCanvasElement | null)[];
   private readonly occluders: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[]; // high tier only: depth-only proxies so the bloom pass, which draws no cards, still occludes
+  private readonly occluderMat = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide }); // both faces: every racked card shows the camera its back, where a front-only proxy is culled and occludes nothing
   private readonly light: PointLight;
   private readonly sprite: Sprite;
   private readonly spriteMat: SpriteMaterial;
@@ -111,6 +113,7 @@ export class DeckEffects {
   private readonly shadows: Sprite[];
   private readonly textures: Texture[] = [];
   private layout: EffectsLayout | null = null;
+  private spriteBehind = SPRITE_CLEARANCE; // world units the glow sprite sits behind the energetic card, set per layout
 
   constructor(opts: EffectsOptions) {
     this.scene = opts.scene;
@@ -243,7 +246,7 @@ export class DeckEffects {
       this.seamCanvases[index] = canvas;
     }
     if (this.highTier) {
-      const proxy = new Mesh(new PlaneGeometry(1, 1), new MeshBasicMaterial({ colorWrite: false }));
+      const proxy = new Mesh(this.unit, this.occluderMat);
       proxy.layers.set(BLOOM_LAYER); // layer 1 only: invisible to the main render and the raycaster
       group.add(proxy);
       this.occluders[index] = proxy;
@@ -270,6 +273,10 @@ export class DeckEffects {
 
   setLayout(layout: EffectsLayout): void {
     this.layout = layout;
+    const { tilt, float } = this.params; // a presented card turns by pointer tilt plus idle float (deck-pose's decorateLanded)
+    const ry = ((tilt.maxY + float.rotY.amp) * Math.PI) / 180;
+    const rx = ((tilt.maxX + float.rotX.amp) * Math.PI) / 180;
+    this.spriteBehind = (layout.w * Math.sin(ry) + layout.h * Math.sin(rx)) / 2 + SPRITE_CLEARANCE;
     for (let i = 0; i < this.glows.length; i++) this.placeCard(i);
     this.fog.scale.set(layout.stageW * FOG_MARGIN, layout.stageH * FOG_MARGIN, 1);
     this.fogUniforms.uAspect.value = layout.stageW / layout.stageH;
@@ -374,7 +381,7 @@ export class DeckEffects {
       const pos = energetic.group.position;
       this.light.position.set(pos.x, pos.y, pos.z + LIGHT_AHEAD);
       this.light.intensity = pointLightIntensity(kind, energy, br, fl.light, P);
-      this.sprite.position.set(pos.x, pos.y, pos.z - SPRITE_BEHIND);
+      this.sprite.position.set(pos.x, pos.y, pos.z - this.spriteBehind);
       const scale = glowSpriteScale(kind, energy, L.cardWPx, P) * fl.glow;
       this.sprite.scale.set(scale, scale, 1);
       this.spriteMat.opacity = Math.min(1, energy * this.boost);
@@ -446,12 +453,8 @@ export class DeckEffects {
       s.removeFromParent();
       s.material.dispose();
     }
-    for (const o of this.occluders) {
-      if (!o) continue;
-      o.removeFromParent();
-      o.geometry.dispose();
-      o.material.dispose();
-    }
+    for (const o of this.occluders) o?.removeFromParent(); // their geometry is `unit`, their material `occluderMat`
+    this.occluderMat.dispose();
     for (const m of this.glowMats) {
       m.alphaMap?.dispose();
       m.alphaMap = null;
