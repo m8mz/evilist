@@ -76,6 +76,117 @@ async function settledVram(page: Page): Promise<string> {
   }
 }
 
+/** A one-finger drag through CDP, so the page sees real touch pointer events (pointerType
+ *  "touch"). Chromium only: WebKit has no `newCDPSession`, so this is used on `pixel-7` alone. */
+async function touchDrag(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  steps = 8,
+) {
+  const cdp = await page.context().newCDPSession(page);
+  const point = (x: number, y: number) => ({ x, y, radiusX: 2, radiusY: 2, force: 1, id: 1 });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(from.x, from.y)],
+  });
+  for (let i = 1; i <= steps; i++) {
+    const x = from.x + ((to.x - from.x) * i) / steps;
+    const y = from.y + ((to.y - from.y) * i) / steps;
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [point(x, y)] });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+}
+
+/** Drives the page script's swipe logic with synthetic touch pointer events (WebKit has no CDP),
+ *  so the swipe test can run on every touch project. */
+async function pointerSwipe(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+) {
+  await page.evaluate(
+    ({ from, to }) => {
+      const c = document.querySelector<HTMLCanvasElement>("[data-deck-gl]");
+      if (!c) throw new Error("no canvas");
+      const ev = (type: string, x: number, y: number) =>
+        new PointerEvent(type, {
+          pointerType: "touch",
+          pointerId: 7,
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+          cancelable: true,
+        });
+      c.dispatchEvent(ev("pointerdown", from.x, from.y));
+      c.dispatchEvent(ev("pointermove", (from.x + to.x) / 2, (from.y + to.y) / 2));
+      c.dispatchEvent(ev("pointerup", to.x, to.y));
+    },
+    { from, to },
+  );
+}
+
+/** The canvas's on-screen box, in client px. */
+async function phoneAnchors(page: Page) {
+  return page.evaluate(() => {
+    const c = document.querySelector<HTMLCanvasElement>("[data-deck-gl]");
+    if (!c) throw new Error("no canvas");
+    const r = c.getBoundingClientRect();
+    return { left: r.left, top: r.top, width: r.width, height: r.height };
+  });
+}
+
+const phoneOnly = (info: { project: { name: string } }) =>
+  test.skip(!["iphone-15", "pixel-7", "ipad"].includes(info.project.name), "touch projects only");
+
+/** Stubs `DeviceOrientationEvent` and, when `permission` is given, its iOS-style
+ *  `requestPermission` gate, before the page's own scripts run. Playwright's WebKit (`iphone-15`,
+ *  `ipad`) has a `DeviceOrientationEvent` class, but real WebKit refuses to construct it
+ *  ("Illegal constructor") — the tests dispatch synthetic readings, so it's replaced with a
+ *  constructible polyfill whenever `new DeviceOrientationEvent(...)` doesn't actually work. */
+const stubOrientation = (page: Page, permission: "granted" | "denied" | null) =>
+  page.addInitScript((perm) => {
+    const w = window as unknown as { DeviceOrientationEvent?: unknown; __asked: number };
+    w.__asked = 0;
+    const ctor = w.DeviceOrientationEvent as
+      (new (type: string, init?: unknown) => Event) | undefined;
+    let constructible = typeof ctor === "function";
+    if (constructible) {
+      try {
+        new ctor!("deviceorientation");
+      } catch {
+        constructible = false;
+      }
+    }
+    if (!constructible) {
+      w.DeviceOrientationEvent = class extends Event {
+        beta: number | null;
+        gamma: number | null;
+        constructor(type: string, init?: { beta?: number; gamma?: number }) {
+          super(type);
+          this.beta = init?.beta ?? null;
+          this.gamma = init?.gamma ?? null;
+        }
+      };
+    }
+    if (perm) {
+      Object.defineProperty(w.DeviceOrientationEvent, "requestPermission", {
+        value: () => {
+          w.__asked += 1;
+          return Promise.resolve(perm);
+        },
+        configurable: true,
+      });
+    } else {
+      // Playwright's mobile Chromium emulation (pixel-7) exposes its own requestPermission that
+      // resolves "prompt" (never "granted"), unlike real Android Chrome, which has none. Strip it
+      // so the no-permission-gate ("direct listen") path is what actually runs here.
+      delete (w.DeviceOrientationEvent as { requestPermission?: unknown }).requestPermission;
+    }
+  }, permission);
+
 /** Records the deck chunk and the portrait requests. */
 function trackRequests(page: Page) {
   const seen = { deck: false, hosts: new Set<string>() };
@@ -317,6 +428,28 @@ test.describe("the card deck", () => {
     expect((await skip.boundingBox())!.width).toBeGreaterThan(40);
   });
 
+  test("the hint has no swipe wording on a precise pointer", async ({ page }, info) => {
+    test.skip(info.project.name !== "desktop", "one project is enough");
+    await page.goto("/");
+    await expect(page.locator("[data-deck-hint]")).toHaveText("↓ scroll or pick a rank");
+  });
+
+  test("a mouse click on the presented card never asks for orientation permission", async ({
+    page,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "orientation tilt is a phone behaviour");
+    await stubOrientation(page, "granted");
+    await page.goto(FROZEN);
+    await scrollToRank(page, 2);
+    await ready(page);
+    const box = (await page.locator("[data-deck-gl]").boundingBox())!;
+    // The presented card sits to the right of the rack in the desktop layout; a click here would
+    // enable tilt on a phone (spec §7), so it proves the mouse path is guarded by pointerType.
+    await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.5);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "off");
+    expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(0);
+  });
+
   test("a lost WebGL context hands the section to the timeline within two seconds", async ({
     page,
   }, info) => {
@@ -336,6 +469,7 @@ test.describe("the card deck", () => {
     });
     await expect(page.locator(".journey-fallback .timeline")).toBeVisible();
     await expect(track(page)).toBeHidden();
+    await expect(track(page)).not.toHaveAttribute("data-deck-tilt");
     expect(errors).toEqual([]);
   });
 
@@ -361,6 +495,214 @@ test.describe("the card deck", () => {
       )
       .toBeGreaterThanOrEqual(0.999);
     await expect(track(page)).toHaveAttribute("data-deck-rank", "S+");
+  });
+});
+
+test.describe("the deck on a phone", () => {
+  test.beforeEach(({}, info) => phoneOnly(info));
+
+  test("the hint invites a swipe, and the canvas leaves vertical pans to the page", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.locator("[data-deck-hint]")).toHaveText("↓ scroll, swipe or pick a rank");
+    expect(
+      await page.locator("[data-deck-gl]").evaluate((el) => getComputedStyle(el).touchAction),
+    ).toBe("pan-y");
+  });
+
+  test("a horizontal swipe moves one rank each way", async ({ page }) => {
+    await page.goto("/");
+    await scrollToRank(page, 2);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+    const box = await phoneAnchors(page);
+    const y = box.top + box.height * 0.45;
+    await pointerSwipe(
+      page,
+      { x: box.left + box.width * 0.8, y },
+      { x: box.left + box.width * 0.2, y },
+    );
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "B");
+    await pointerSwipe(
+      page,
+      { x: box.left + box.width * 0.2, y },
+      { x: box.left + box.width * 0.8, y },
+    );
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+  });
+
+  test("a swipe at either end changes neither the rank nor the scroll", async ({ page }) => {
+    await page.goto("/");
+    await scrollToRank(page, 0);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "E");
+    const box = await phoneAnchors(page);
+    const y = box.top + box.height * 0.45;
+    const before = await page.evaluate(() => scrollY);
+    // Swipe right (back) at the very first rank.
+    await pointerSwipe(
+      page,
+      { x: box.left + box.width * 0.2, y },
+      { x: box.left + box.width * 0.8, y },
+    );
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "E");
+    expect(await page.evaluate(() => scrollY)).toBe(before);
+
+    await scrollToRank(page, 6);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "S+");
+    const beforeEnd = await page.evaluate(() => scrollY);
+    // Swipe left (forward) at the very last rank.
+    await pointerSwipe(
+      page,
+      { x: box.left + box.width * 0.8, y },
+      { x: box.left + box.width * 0.2, y },
+    );
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "S+");
+    expect(await page.evaluate(() => scrollY)).toBe(beforeEnd);
+  });
+
+  test("a vertical drag scrolls the page without swiping the deck", async ({ page }, info) => {
+    test.skip(
+      info.project.name !== "pixel-7",
+      "proves touch-action: pan-y with a real touch pointer; CDP touch works only on Chromium",
+    );
+    await page.goto("/");
+    await scrollToRank(page, 2);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+    const box = await phoneAnchors(page);
+    const before = await page.evaluate(() => scrollY);
+    await touchDrag(
+      page,
+      { x: box.left + box.width * 0.5, y: box.top + box.height * 0.7 },
+      { x: box.left + box.width * 0.5, y: box.top + box.height * 0.2 },
+    );
+    await expect.poll(() => page.evaluate(() => scrollY)).not.toBe(before);
+    // The page moved, so the deck may have moved with the scroll, but not by the swipe's rule: a
+    // vertical drag never jumps a rank. Compare against the scroll-derived rank instead.
+    const rank = await track(page).getAttribute("data-deck-rank");
+    expect(["B", "C", "D"]).toContain(rank);
+  });
+
+  test("a tap on the peeking card moves forward; a tap on the presented card does not jump", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await scrollToRank(page, 1);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "D");
+    const box = await phoneAnchors(page);
+    // The next card peeks in 24 px from the right edge (spec §6); the card's vertical centre sits
+    // in the upper half above the rail.
+    await page.touchscreen.tap(box.left + box.width - 18, box.top + box.height * 0.42);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await page.waitForTimeout(400);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+  });
+
+  test("a tap on the presented card turns orientation tilt on, and leaving the section turns it off", async ({
+    page,
+  }) => {
+    await stubOrientation(page, null);
+    await page.goto("/");
+    await scrollToRank(page, 3);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "off");
+    const box = await phoneAnchors(page);
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "on");
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.evaluate(() => {
+      for (const [beta, gamma] of [
+        [40, -5],
+        [48, 3],
+        [30, -12],
+      ]) {
+        window.dispatchEvent(new DeviceOrientationEvent("deviceorientation", { beta, gamma }));
+      }
+    });
+    await page.waitForTimeout(300);
+    expect(errors).toEqual([]);
+    await expect(track(page)).toHaveAttribute("data-deck-ready", "");
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "off");
+  });
+
+  test("a denied orientation permission is asked once and ends silently", async ({ page }) => {
+    await stubOrientation(page, "denied");
+    await page.goto("/");
+    await scrollToRank(page, 3);
+    await ready(page);
+    const box = await phoneAnchors(page);
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await page.waitForTimeout(300);
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await page.waitForTimeout(300);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "off");
+    expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(1);
+    expect(errors).toEqual([]);
+  });
+
+  test("a granted orientation permission is asked once, across leaving and returning to the section", async ({
+    page,
+  }) => {
+    await stubOrientation(page, "granted");
+    await page.goto("/");
+    await scrollToRank(page, 3);
+    await ready(page);
+    const box = await phoneAnchors(page);
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "on");
+    await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "off");
+    await scrollToRank(page, 3);
+    await ready(page);
+    await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
+    await expect(track(page)).toHaveAttribute("data-deck-tilt", "on");
+    expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(1);
+  });
+
+  test("runs the mid tier within the phone budget: no bloom request, fog on, under 40 MB", async ({
+    page,
+  }) => {
+    const requests: string[] = [];
+    page.on("request", (r) => requests.push(r.url()));
+    await page.goto("/");
+    await scrollToEnd(page);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-tier", "mid");
+    await expect(track(page)).toHaveAttribute("data-deck-bloom", "off");
+    await page.waitForTimeout(1500);
+    expect(requests.some((u) => /deck-bloom/.test(u))).toBe(false);
+    const vram = Number(await settledVram(page));
+    expect(vram).toBeGreaterThan(0);
+    expect(vram).toBeLessThanOrEqual(40);
+  });
+
+  test("an orientation change relayouts and keeps the deck", async ({ page }, info) => {
+    test.skip(info.project.name !== "pixel-7", "one phone is enough");
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto("/");
+    await scrollToRank(page, 4);
+    await ready(page);
+    const size = page.viewportSize();
+    if (!size) throw new Error("no viewport");
+    await page.setViewportSize({ width: size.height, height: size.width });
+    await page.waitForTimeout(400);
+    await expect(track(page)).toHaveAttribute("data-deck-ready", "");
+    await page.setViewportSize(size);
+    await page.waitForTimeout(400);
+    await expect(track(page)).toHaveAttribute("data-deck-ready", "");
+    await scrollToRank(page, 4);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "A");
+    expect(errors).toEqual([]);
   });
 });
 
@@ -509,6 +851,7 @@ test.describe("reduced motion", () => {
     const seen = trackRequests(page);
     await page.goto("/");
     await expect(page.locator("[data-deck]")).toBeHidden();
+    await expect(page.locator("[data-deck]")).not.toHaveAttribute("data-deck-tilt");
     await expect(page.locator(".journey-fallback .timeline")).toBeVisible();
     await expect(page.locator(".journey-fallback .timeline__title")).toHaveCount(7);
     await expect(page.locator(".journey-fallback .timeline__log")).toHaveCount(7);
