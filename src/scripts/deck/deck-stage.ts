@@ -71,6 +71,8 @@ export interface StageHandle {
   ready: Promise<void>;
   setProgress(p: number): void;
   pointer(clientX: number | null, clientY: number | null): void;
+  /** The phone's orientation tilt target in degrees; null releases it (spec §7). */
+  tilt(x: number | null, y: number | null): void;
   hit(clientX: number, clientY: number): number | null;
   startIntro(): void;
   setVisible(visible: boolean): void;
@@ -79,7 +81,8 @@ export interface StageHandle {
 
 const DEG = Math.PI / 180;
 const PX = 1 / 100;
-const DESKTOP_MIN_PX = 960; // 60rem
+const DESKTOP_MIN_PX = 960; // 60rem at the default root size: the fallback when matchMedia is missing
+const DESKTOP_QUERY = "(min-width: 60rem)"; // the same breakpoint Journey.astro's styles use
 
 export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const params = opts.params ?? DECK_PARAMS;
@@ -103,6 +106,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   renderer.setPixelRatio(dpr);
   const scene = new Scene();
   const camera = new PerspectiveCamera(params.camera.fov, 1, 0.1, 100);
+  const desktopQuery = typeof matchMedia === "function" ? matchMedia(DESKTOP_QUERY) : null;
+  const portraitQuery =
+    typeof matchMedia === "function" ? matchMedia("(orientation: portrait)") : null;
 
   /* ---------- Environment and lights ---------- */
   const envCanvas = document.createElement("canvas");
@@ -162,7 +168,13 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   function computeLayout(): void {
     stageW = Math.max(1, stage.clientWidth);
     stageH = Math.max(1, stage.clientHeight);
-    const mode: DeckMode = stageW >= DESKTOP_MIN_PX ? "desktop" : "phone";
+    const mode: DeckMode = desktopQuery
+      ? desktopQuery.matches
+        ? "desktop"
+        : "phone"
+      : stageW >= DESKTOP_MIN_PX
+        ? "desktop"
+        : "phone";
     const stageRect = stage.getBoundingClientRect();
     const columnRect = column.getBoundingClientRect();
     const fallback = columnFor(stageW, params.layout);
@@ -219,12 +231,24 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   }
   applyLayout();
   let assetsSettled = !freeze; // freeze must not render (or resolve `ready`) before assets settle
-  const resizer = new ResizeObserver(() => {
-    computeLayout();
-    applyLayout();
-    if (assetsSettled) requestRender();
-  });
+  // Spec §6: relayout debounced 150 ms, and on orientation change. A rotating phone fires several
+  // resize callbacks in a row; one trailing relayout repaints the textures once.
+  let relayoutTimer: ReturnType<typeof setTimeout> | undefined;
+  const scheduleRelayout = (): void => {
+    clearTimeout(relayoutTimer);
+    relayoutTimer = setTimeout(() => {
+      relayoutTimer = undefined;
+      if (disposed) return;
+      computeLayout();
+      applyLayout();
+      if (assetsSettled) requestRender();
+    }, params.layout.relayoutDebounceMs);
+  };
+  const resizer = new ResizeObserver(scheduleRelayout);
   resizer.observe(stage);
+  const onOrientation = (): void => scheduleRelayout();
+  portraitQuery?.addEventListener("change", onOrientation);
+  desktopQuery?.addEventListener("change", onOrientation);
 
   /* ---------- Portraits and the mark ---------- */
   const portraitLoads = opts.portraits.map((p, i) =>
@@ -538,6 +562,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       input.pointer(clientX, clientY);
       requestRender();
     },
+    tilt(x, y) {
+      input.setTilt(x, y);
+      requestRender();
+    },
     hit: hitAt,
     startIntro() {
       if (freeze || intro || targetP >= 0.5 / N) return;
@@ -557,6 +585,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       if (raf) cancelAnimationFrame(raf);
       input.reset();
       clearTimeout(lostTimer);
+      clearTimeout(relayoutTimer);
+      portraitQuery?.removeEventListener("change", onOrientation);
+      desktopQuery?.removeEventListener("change", onOrientation);
       resizer.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);
