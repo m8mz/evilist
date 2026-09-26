@@ -92,6 +92,43 @@ describe("importPortrait", () => {
     expect(channels[0]!.max).toBe(255);
   });
 
+  it("keys a white field to black and keeps whites enclosed by the subject", async () => {
+    const d = tmp();
+    // A white field, a dark figure in the middle with a white "eye" inside it, one grey garment
+    // edge touching the field: what Nano Banana returns when it ignores the black background.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#ffffff"/><rect x="300" y="150" width="300" height="450" fill="#2b2724"/><rect x="330" y="400" width="240" height="200" fill="#6e6a66"/><rect x="420" y="220" width="40" height="30" fill="#ffffff"/></svg>`;
+    await sharp(Buffer.from(svg)).png().toFile(join(d, "white.png"));
+    const result = await importPortrait(join(d, "white.png"), "t1-support", {
+      outDir: d,
+      band: [0, 0.05],
+    });
+    expect(result.keyed).toBe(true);
+    const { data, info } = await sharp(join(d, "t1-support.webp"))
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const px = (x: number, y: number) => {
+      const i = (y * info.width + x) * info.channels;
+      return [data[i]!, data[i + 1]!, data[i + 2]!];
+    };
+    // The field, at a corner and beside the figure, is black now.
+    expect(Math.max(...px(5, 5))).toBeLessThan(8);
+    expect(Math.max(...px(290, 300))).toBeLessThan(8);
+    // The enclosed white and the figure's own colours are untouched.
+    expect(Math.min(...px(440, 235))).toBeGreaterThan(240);
+    expect(px(450, 300)[0]).toBeGreaterThan(30);
+    expect(px(450, 500)[0]).toBeGreaterThan(90);
+  });
+
+  it("leaves a black field alone", async () => {
+    const d = tmp();
+    await render(join(d, "in.png"), 0);
+    const result = await importPortrait(join(d, "in.png"), "t1-support", {
+      outDir: d,
+      band: [0, 0.05],
+    });
+    expect(result.keyed).toBe(false);
+  });
+
   it("shrinks a 4K render to 1600 px wide", async () => {
     const d = tmp();
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2560"><rect width="3840" height="2560" fill="#0a0a0a"/></svg>`;
