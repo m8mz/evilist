@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
 const SCRIPT = resolve("scripts/check-bundle-size.mjs");
@@ -141,5 +142,43 @@ describe("check-bundle-size", () => {
     const res = run(fakeDist({ "fonts/a.woff2": 42_000 }));
     expect(res.stdout).toContain("FAIL Journey scene (gz): missing");
     expect(res.status).toBe(1);
+  });
+
+  it("catches a three chunk pulled in only via a static import from the entry", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000, "three.def.js": 10 });
+    withScene(dist);
+    withDeck(dist);
+    writeFileSync(
+      join(dist, "dist/client/_astro/entry.abc.js"),
+      'import"./three.def.js";console.log(1);',
+    );
+    writeFileSync(
+      join(dist, "dist/client/index.html"),
+      '<!doctype html><script type="module" src="/_astro/entry.abc.js"></script>',
+    );
+    const res = run(dist);
+    expect(res.stdout).toContain("FAIL deck chunk in the initial graph: /_astro/three.def.js");
+    expect(res.status).toBe(1);
+  });
+
+  it("counts a helper chunk statically imported by the entry toward the initial total", () => {
+    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
+    withScene(dist);
+    withDeck(dist);
+    const entryPath = join(dist, "dist/client/_astro/entry.abc.js");
+    const helperPath = join(dist, "dist/client/_astro/helper.xyz.js");
+    writeFileSync(helperPath, randomBytes(50 * 1024));
+    writeFileSync(entryPath, `import"./helper.xyz.js";${"console.log(1);".repeat(50)}`);
+    writeFileSync(
+      join(dist, "dist/client/index.html"),
+      '<!doctype html><script type="module" src="/_astro/entry.abc.js"></script>',
+    );
+    const expectedKb =
+      (gzipSync(readFileSync(entryPath)).length + gzipSync(readFileSync(helperPath)).length) / 1024;
+    const res = run(dist);
+    expect(res.stdout).toMatch(
+      new RegExp(`ok {3}Initial JS on / \\(gz\\): ${expectedKb.toFixed(1)} KB`),
+    );
+    expect(res.status).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { COLORS } from "../src/scripts/deck/deck-paint";
 
@@ -41,20 +41,10 @@ describe("the deck painters' palette", () => {
       "#ffffff", // deck-stage's light/emissive-map recipe base: pure white, not a design token
     ]);
     // Three.js colours are numeric (0xrrggbb), so the scan matches both forms and canonicalises
-    // to "#rrggbb" before checking the allow-list.
-    for (const file of [
-      "deck-paint.ts",
-      "deck-pose.ts",
-      "deck-layout.ts",
-      "deck-params.ts",
-      "deck-textures.ts",
-      "deck-tier.ts",
-      "deck-util.ts",
-      "deck-rail.ts",
-      "deck-env.ts",
-      "deck-stage.ts",
-      "deck-tune.ts",
-    ]) {
+    // to "#rrggbb" before checking the allow-list. Every script in the deck directory is scanned,
+    // not a hard-coded list, so a new file (e.g. `index.ts` today, `deck-bloom.ts` later) is
+    // checked automatically instead of silently skipped.
+    for (const file of readdirSync("src/scripts/deck").filter((f) => f.endsWith(".ts"))) {
       const text = readFileSync(`src/scripts/deck/${file}`, "utf8");
       for (const hex of text.match(/(?:#|0x)[0-9a-fA-F]{6}\b/g) ?? []) {
         const canonical = `#${hex.slice(-6)}`.toLowerCase();

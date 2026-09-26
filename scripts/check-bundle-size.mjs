@@ -8,7 +8,7 @@
 // - Journey scene: only scene.svg may live in dist/client/journey, gzipped within its budget
 //   (until Phase 6 retires it).
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 const KB = 1024;
@@ -35,9 +35,36 @@ function htmlFiles(dir, out = []) {
   return out;
 }
 
+// A chunk's static imports (`from"./x.js"`, `import"./x.js"`, `export*from"./x.js"`), never a
+// dynamic `import("./x.js")`: the quote sits right after "from"/"import" only in the static form.
+const STATIC_IMPORT = /\b(?:from|import)["']([^"']+\.js)["']/g;
+
+/** The set of scripts reachable from `entrySrcs` by following every static import, transitively. */
+function staticClosure(entrySrcs) {
+  const closure = new Set();
+  const queue = [...entrySrcs];
+  while (queue.length) {
+    const src = queue.shift();
+    if (closure.has(src)) continue;
+    closure.add(src);
+    const filePath = `dist/client${src}`;
+    if (!existsSync(filePath)) continue;
+    const code = readFileSync(filePath, "utf8");
+    const dir = dirname(src);
+    for (const m of code.matchAll(STATIC_IMPORT)) {
+      const spec = m[1];
+      queue.push(spec.startsWith(".") ? join(dir, spec) : spec);
+    }
+  }
+  return closure;
+}
+
 const home = readFileSync("dist/client/index.html", "utf8");
-const initial = scriptsIn(home);
-const initialBytes = initial.reduce((sum, src) => sum + gz(`dist/client${src}`), 0);
+const initial = [...staticClosure(scriptsIn(home))];
+const initialBytes = initial.reduce(
+  (sum, src) => sum + (existsSync(`dist/client${src}`) ? gz(`dist/client${src}`) : 0),
+  0,
+);
 
 const fontDir = "dist/client/_astro/fonts";
 const fontBytes = existsSync(fontDir)
@@ -47,7 +74,9 @@ const fontBytes = existsSync(fontDir)
   : 0;
 
 const referenced = new Set(
-  htmlFiles("dist/client").flatMap((file) => scriptsIn(readFileSync(file, "utf8"))),
+  htmlFiles("dist/client").flatMap((file) => [
+    ...staticClosure(scriptsIn(readFileSync(file, "utf8"))),
+  ]),
 );
 const lazy = readdirSync("dist/client/_astro")
   .filter((f) => f.endsWith(".js"))

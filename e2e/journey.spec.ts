@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 import { HEADER_PX } from "./constants";
 
@@ -41,6 +42,54 @@ function trackRequests(page: Page) {
   return seen;
 }
 
+interface DeckRecording {
+  rank: string[];
+  state: string[];
+}
+
+/**
+ * Installs a MutationObserver on `.journey[data-deck]` before any of the page's own scripts run,
+ * so it catches every value `data-deck-rank` and `data-deck-state` take from the very first paint
+ * (a late or deep-scrolled mount's first rendered frame included), not just the settled end state.
+ */
+async function recordDeck(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const store: DeckRecordingWindow["__deck"] = { rank: [], state: [] };
+    (window as unknown as DeckRecordingWindow).__deck = store;
+    const attrKey: Record<string, keyof typeof store> = {
+      "data-deck-rank": "rank",
+      "data-deck-state": "state",
+    };
+    const push = (el: Element, attribute: string) => {
+      const key = attrKey[attribute];
+      const value = key ? el.getAttribute(attribute) : null;
+      if (key && value !== null) store[key].push(value);
+    };
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type !== "attributes" || !record.attributeName) continue;
+        if (!(record.target instanceof Element) || !record.target.matches(".journey[data-deck]")) {
+          continue;
+        }
+        push(record.target, record.attributeName);
+      }
+    }).observe(document, {
+      // `document`, not `document.documentElement`: an init script runs before the document has
+      // parsed even the `<html>` tag, so `documentElement` is still null and `observe()` throws.
+      // `document` itself is a valid `Node` target from the very first instant.
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-deck-rank", "data-deck-state"],
+    });
+  });
+}
+
+async function deckRecorded(page: Page): Promise<DeckRecording> {
+  return page.evaluate(() => (window as unknown as DeckRecordingWindow).__deck);
+}
+
+type DeckRecordingWindow = Window & typeof globalThis & { __deck: DeckRecording };
+
 test.describe("the card deck", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name === "reduced-motion", "covered below");
@@ -63,6 +112,7 @@ test.describe("the card deck", () => {
   test("mounts when the journey is on screen, plays the intro, and settles in the scroll state", async ({
     page,
   }) => {
+    await recordDeck(page);
     await page.goto("/");
     await scrollToRank(page, 0);
     await ready(page);
@@ -70,6 +120,9 @@ test.describe("the card deck", () => {
     await expect(track(page)).toHaveAttribute("data-deck-state", "scroll", { timeout: 10_000 });
     await expect(track(page)).toHaveAttribute("data-deck-rank", "E");
     await expect(track(page)).toHaveAttribute("data-deck-phase", /^(landing|presented)$/);
+    const recorded = await deckRecorded(page);
+    expect(recorded.state).toContain("intro");
+    expect(recorded.state.at(-1)).toBe("scroll");
   });
 
   test("advances through all seven ranks in order as you scroll, and the rail follows", async ({
@@ -136,20 +189,59 @@ test.describe("the card deck", () => {
     await expect(track(page)).toHaveAttribute("data-deck-rank", "B", { timeout: 10_000 });
   });
 
-  test("a stage that arrives late paints the rank the visitor is on, with no intro", async ({
+  test("a stage that arrives late paints only the rank the visitor is on, with no intro", async ({
     page,
   }) => {
+    // Not the frozen URL: frozen mode always snaps `p` and always skips the intro, so this test
+    // would pass whether or not the late-mount snap fix is in place. A real (unfrozen) mount is
+    // the only way to prove the fix, since it's the only path where `p` used to start at 0 and
+    // smooth up to the target over several frames.
+    await recordDeck(page);
     await page.route(/\/_astro\/deck-stage/, async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await route.continue();
     });
-    const states: string[] = [];
-    await page.goto(FROZEN);
-    await scrollToRank(page, 4);
+    await page.goto("/");
+    await scrollToRank(page, 4); // rank A
     await ready(page);
-    states.push((await track(page).getAttribute("data-deck-state"))!);
-    await expect(track(page)).toHaveAttribute("data-deck-rank", "A");
-    expect(states).not.toContain("intro");
+    const recorded = await deckRecorded(page);
+    expect(new Set(recorded.rank)).toEqual(new Set(["A"]));
+    expect(recorded.state).not.toContain("intro");
+  });
+
+  test("fetches a rank's portrait once the rail carries one, and still reaches ready", async ({
+    page,
+  }) => {
+    // No stage yet has a real portrait (src/images/deck/ is still empty), so there is nothing to
+    // exercise this path against. Rewrite rank E's rail button to point at a still the build
+    // already serves (the author picture), so a real request happens.
+    const stillFile = readdirSync("dist/client/_astro").find(
+      (f) => f.startsWith("author-pic") && f.endsWith(".webp"),
+    );
+    if (!stillFile) throw new Error("expected a built author-pic still under dist/client/_astro");
+    const portraitPath = `/_astro/${stillFile}`;
+
+    await page.route(
+      (url) => url.pathname === "/",
+      async (route) => {
+        const response = await route.fetch();
+        const html = await response.text();
+        const patched = html.replace(
+          /<button([^>]*data-index="0"[^>]*)>/,
+          (_match, attrs: string) =>
+            `<button${attrs} data-portrait-1x="${portraitPath}" data-portrait-2x="${portraitPath}">`,
+        );
+        await route.fulfill({ response, body: patched });
+      },
+    );
+    const portraitRequest = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === portraitPath,
+    );
+
+    await page.goto("/");
+    await scrollToRank(page, 0);
+    await portraitRequest;
+    await ready(page);
   });
 
   test("keeps the canvas the size of the stage through a resize", async ({ page }, info) => {
