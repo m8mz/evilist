@@ -13,7 +13,10 @@ describe("the fog shader", () => {
     expect((FOG_FRAGMENT.match(/vnoise\(/g) ?? []).length).toBeGreaterThanOrEqual(4); // 1 definition + 3 calls
     expect(FOG_FRAGMENT).toContain("smoothstep(0.0, max(uRadius");
     expect(FOG_FRAGMENT).toContain("uTime");
-    expect(FOG_FRAGMENT).toContain("gl_FragColor = vec4(uColor * a, a)");
+    // Encode the colour first, then premultiply by alpha, the order Three's own materials use.
+    expect(FOG_FRAGMENT).toMatch(
+      /gl_FragColor = vec4\(uColor, 1\.0\);\s*#include <colorspace_fragment>\s*gl_FragColor = vec4\(gl_FragColor\.rgb \* a, a\);/,
+    );
   });
   it("builds plain uniform objects with the colour", () => {
     const u = fogUniforms([0.2, 0.05, 0.6]);

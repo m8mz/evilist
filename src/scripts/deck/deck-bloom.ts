@@ -2,8 +2,8 @@
 // canvas exactly as the mid tier does (the browser's MSAA, the renderer's sRGB output). Then only
 // BLOOM_LAYER renders again, through the camera's layer mask, into one small linear target that
 // UnrealBloomPass blurs, and a full-screen quad adds that glow over the canvas. No material swapping
-// and no second composer: the glow is low-frequency, so the pass runs at half the CSS resolution and
-// costs about a tenth of a full-resolution composer. Its own lazy chunk, imported by deck-stage.ts on
+// and no second composer: the glow is low-frequency, so the pass runs at half the CSS resolution (at
+// most 1024 px on its long side) and costs about a tenth of a full-resolution composer. Its own lazy chunk, imported by deck-stage.ts on
 // the high tier only, so the mid tier never pays for the postprocessing code.
 import {
   AdditiveBlending,
@@ -32,6 +32,13 @@ export interface BloomHandle {
 
 /** The glow target's scale against CSS px. The blur removes anything finer, so half is enough. */
 export const BLOOM_SCALE = 0.5;
+/** The glow target's longest side, in px: the content is a blur, and without a cap the target's
+ *  bytes scale with the viewport (17 MB at 2560 × 1376 against 11 MB capped). */
+export const BLOOM_MAX_PX = 1024;
+// The high-pass's soft knee. The glow masks fade in over 500 ms and out over 200 ms, and Three's
+// 0.01 knee at threshold 0.5 would switch the bloom on and off as luminance × opacity crosses it.
+const BLOOM_KNEE = 0.15;
+const bloomRatio = (w: number, h: number) => Math.min(BLOOM_SCALE, BLOOM_MAX_PX / Math.max(w, h));
 
 // Bytes per glow-target pixel: rt2's one RGBA half-float target with depth (8 + 4 = 12; rt1 is never
 // bound, since neither pass swaps and copyPass only runs with masks), UnrealBloomPass's bright
@@ -74,15 +81,20 @@ export function mountBloom(
   // main render: adding them a second time washed the whole stage at S+.
   const composer = new EffectComposer(renderer);
   composer.renderToScreen = false;
+  let ratio = bloomRatio(width, height);
   const bloomPass = new UnrealBloomPass(
-    new Vector2(width * BLOOM_SCALE, height * BLOOM_SCALE),
+    new Vector2(width * ratio, height * ratio),
     params.bloom.strength,
     params.bloom.radius,
     params.bloom.threshold,
   );
+  // @types/three types highPassUniforms as `object`, so the knee is reached through a guard.
+  const uniforms = bloomPass.highPassUniforms;
+  const knee = "smoothWidth" in uniforms ? uniforms.smoothWidth : null;
+  if (typeof knee === "object" && knee !== null && "value" in knee) knee.value = BLOOM_KNEE;
   composer.addPass(new RenderPass(scene, camera));
   composer.addPass(bloomPass);
-  composer.setPixelRatio(BLOOM_SCALE);
+  composer.setPixelRatio(ratio);
   composer.setSize(width, height);
 
   const overlay = new ShaderMaterial({
@@ -120,14 +132,17 @@ export function mountBloom(
     setSize(nw, nh) {
       w = nw;
       h = nh;
-      composer.setSize(nw, nh); // applies BLOOM_SCALE and resizes the bloom pass with it
+      ratio = bloomRatio(nw, nh);
+      composer.setPixelRatio(ratio);
+      composer.setSize(nw, nh); // applies the ratio and resizes the bloom pass with it
     },
     estimateBytes() {
-      return Math.round(w * BLOOM_SCALE * h * BLOOM_SCALE * BYTES_PER_PIXEL);
+      return Math.round(w * ratio * h * ratio * BYTES_PER_PIXEL);
     },
     dispose() {
       composer.dispose(); // its two targets and copy pass; the passes below are ours to dispose
       bloomPass.dispose();
+      bloomPass.materialHighPassFilter.dispose(); // Three's dispose() omits it; the next mount reuses the context
       overlay.dispose();
       quad.dispose();
     },

@@ -2,7 +2,8 @@
 // radial falloff around the energetic card, additive violet. Plain strings and uniform objects, no
 // Three import, so the shader is unit-testable; deck-effects.ts wraps them in a ShaderMaterial.
 // Coordinates: the plane's uv with x scaled by the stage's aspect, so distances are circular on
-// screen; uCentre in uv, uRadius in stage-height units.
+// screen; uCentre in uv, uRadius in the plane's heights (the world radius, 100 CSS px per unit,
+// divided by the plane's world height).
 // A type literal gets an implicit index signature, so Three's ShaderMaterial accepts it as its
 // uniforms map without a cast, while an interface does not.
 export type FogUniforms = {
@@ -70,11 +71,12 @@ void main() {
   // smoothstep with equal edges is undefined (NaN on most GPUs) and the factory's neutral radius is 0, so the guard keeps a tiny radius that evaluates to no fog.
   float falloff = 1.0 - smoothstep(0.0, max(uRadius, 1e-4), d);
   float a = uStrength * n * falloff;
-  gl_FragColor = vec4(uColor * a, a);
-  // A custom ShaderMaterial never runs the built-in linearToOutputTexel step; on the mid tier there
-  // is no OutputPass either, so without this the fog would write linear colour straight to the sRGB
-  // canvas. Three resolves this chunk to a no-op into a linear render target and to linear->sRGB on
-  // screen, so it is correct on both tiers.
+  // A custom ShaderMaterial never runs the built-in linearToOutputTexel step, so without the
+  // include the fog would write linear colour straight to the sRGB canvas (a no-op into a linear
+  // target). Encode the colour first, then premultiply: the order Three's own materials use.
+  // Encoding the premultiplied value lifted faint fog 3–5× and wrote rgb > alpha.
+  gl_FragColor = vec4(uColor, 1.0);
   #include <colorspace_fragment>
+  gl_FragColor = vec4(gl_FragColor.rgb * a, a);
 }
 `;

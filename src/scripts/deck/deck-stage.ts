@@ -23,7 +23,7 @@ import {
 import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
 import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
-import { DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
+import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
 import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
@@ -124,6 +124,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   key.position.set(-6, 8, 10);
   const rim = new DirectionalLight(0x9080ff, params.light.rim);
   rim.position.set(8, 3, -4);
+  // Every light (and the effects' point light) also sits on BLOOM_LAYER: a bloom pass that saw no
+  // lights changed the light hash twice a frame, and Three re-resolved all 21 lit programs each time.
+  // The glow materials are unlit, so the bloom itself is unchanged.
+  for (const light of [ambient, key, rim]) light.layers.enable(BLOOM_LAYER);
   scene.add(ambient, key, rim);
 
   /* ---------- Textures ---------- */
@@ -183,6 +187,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     rng,
     kinds,
     eyeColors: cards.map((c) => c.art.eyeColor),
+    pixelRatio: renderer.getPixelRatio(),
+    anisotropy: maxAniso,
   });
   meshes.forEach((m, i) => effects.attach(i, m.group));
   for (const m of meshes) scene.add(m.group);
@@ -428,7 +434,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       // Cleared only once racked again (`pull <= 0`), never the instant `landed` flips false.
       if (c.landed && landedAt[i] === null) landedAt[i] = freeze ? time - 10_000 : time;
       if (c.pull <= 0 && landedAt[i] !== null) landedAt[i] = null;
-      if (c.phase === "leaving") {
+      // A landed card pulled back out (a reverse scroll) reports "pulling"; its leave clock starts
+      // too, so its glow fades over GLOW_LEAVE_MS both ways instead of snapping off.
+      if (c.phase === "leaving" || (c.phase === "pulling" && landedAt[i] !== null)) {
         if (leaveAt[i] === null) leaveAt[i] = freeze ? time - 10_000 : time;
       } else leaveAt[i] = null;
       const at = landedAt[i];

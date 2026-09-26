@@ -30,6 +30,12 @@ export interface SmokeEmitter {
   k: number;
 }
 
+/** A new puff's peak opacity range; `params.smoke` fits it, read at every spawn so it tunes live. */
+export interface SmokeOpacity {
+  opacityMin: number;
+  opacityMax: number;
+}
+
 export const SMOKE = {
   riseMin: 0.0035,
   riseMax: 0.007,
@@ -73,8 +79,6 @@ export class SmokePool {
   constructor(
     readonly capacity: number,
     private readonly rng: () => number,
-    private readonly opacityMin: number,
-    private readonly opacityMax: number,
   ) {
     this.puffs = Array.from({ length: capacity }, blank);
   }
@@ -86,7 +90,7 @@ export class SmokePool {
   }
 
   /** Spawns up to n puffs: half from the top edge, a quarter from each side edge. */
-  spawn(e: SmokeEmitter, n: number, sideSpeed: number): number {
+  spawn(e: SmokeEmitter, n: number, sideSpeed: number, opacity: SmokeOpacity): number {
     let spawned = 0;
     for (const p of this.puffs) {
       if (spawned >= n) break;
@@ -110,7 +114,7 @@ export class SmokePool {
       p.vrot = (this.rng() * 2 - 1) * SMOKE.spinMax;
       p.scale0 = lerp(SMOKE.scale0Min, SMOKE.scale0Max, this.rng()) * e.k;
       p.scale1 = p.scale0 + lerp(SMOKE.growMin, SMOKE.growMax, this.rng()) * e.k;
-      p.peak = lerp(this.opacityMin, this.opacityMax, this.rng());
+      p.peak = lerp(opacity.opacityMin, opacity.opacityMax, this.rng());
       p.life = Math.round(lerp(SMOKE.lifeMin, SMOKE.lifeMax, this.rng()));
       p.age = 0;
       p.variant = Math.min(2, Math.floor(this.rng() * 3)) as 0 | 1 | 2;
@@ -122,13 +126,19 @@ export class SmokePool {
   }
 
   /** Emits at `rate` puffs per frame over `frames`, carrying the fraction to the next call. */
-  emit(e: SmokeEmitter, rate: number, sideSpeed: number, frames: number): number {
+  emit(
+    e: SmokeEmitter,
+    rate: number,
+    sideSpeed: number,
+    frames: number,
+    opacity: SmokeOpacity,
+  ): number {
     this.acc += rate * frames;
     // Repeated acc += rate drifts below exact integers (e.g. 0.35 × 100 lands at 0.9999999999999953).
     // The epsilon lets a fractional rate integrate to rate × frames as expected.
     const n = Math.floor(this.acc + 1e-9);
     this.acc -= n;
-    return n > 0 ? this.spawn(e, n, sideSpeed) : 0;
+    return n > 0 ? this.spawn(e, n, sideSpeed, opacity) : 0;
   }
 
   step(frames: number): void {

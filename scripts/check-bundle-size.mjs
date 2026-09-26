@@ -10,7 +10,8 @@
 // - Journey scene: only scene.svg may live in dist/client/journey, gzipped within its budget
 //   (until Phase 6 retires it).
 // - Served portrait renditions: the largest 1x/2x rendition and glow mask the home page's rail
-//   buttons reference (data-portrait-1x/2x/glow), raw bytes (already-compressed webp).
+//   buttons reference (data-portrait-1x/2x/glow), raw bytes (already-compressed webp). A home page
+//   that references none fails.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -144,8 +145,11 @@ for (const [name, re, budget] of PORTRAIT_CLASSES) {
   }
   rows.push([name, largest, budget, 0]);
 }
+// The rail must name seven renditions: none at all means the data-portrait-* attributes were
+// dropped, and every row above would otherwise stay green.
 if (!anyPortraits) {
-  console.log("ok   Portraits: none referenced");
+  console.log("FAIL Portraits: none referenced");
+  failed = true;
 }
 
 for (const [name, bytes, budget, floor] of rows) {

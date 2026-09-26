@@ -47,7 +47,8 @@ const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge
 const SPRITE_CLEARANCE = 0.05; // world units the glow sprite keeps behind the presented card's corner at its largest tilt and float
 const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
 const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
-const SEAM_DENSITY = 2; // seam canvas px per CSS px, independent of dpr, for a crisp line at any zoom
+const SEAM_DENSITY_MAX = 1.5; // seam canvas px per CSS px: the pixel ratio up to 1.5, which keeps the thin line crisp at about half the bytes of 2×
+const SEAM_HYSTERESIS = 0.1; // deck-textures.ts's rule: repaint only past a 10 % width change (attach's 2 × 2 canvas always paints), so a window drag doesn't re-upload per resize callback
 const OCCLUDER_INSET = 0.0005; // just inside the front face: the glow plane at front + 0.002 stays ahead of it, everything behind the card falls behind it
 const VISIBLE_MIN = 0.001; // below this opacity or fog strength, hide the object outright
 const SHADOW_VISIBLE_MIN = 0.01; // a contact shadow fainter than this reads as a rendering artefact
@@ -60,6 +61,8 @@ export interface EffectsOptions {
   rng: () => number;
   kinds: (EnergyKind | null)[];
   eyeColors: string[];
+  pixelRatio: number; // the renderer's
+  anisotropy: number; // the card textures' own
 }
 
 export interface EffectCard {
@@ -96,6 +99,8 @@ export class DeckEffects {
   private readonly params: DeckParams;
   private readonly boost: number;
   private readonly highTier: boolean;
+  private readonly seamDensity: number;
+  private readonly anisotropy: number;
   private readonly kinds: (EnergyKind | null)[];
   private readonly unit = new PlaneGeometry(1, 1);
   private readonly glowMats: MeshBasicMaterial[];
@@ -124,6 +129,8 @@ export class DeckEffects {
     this.kinds = opts.kinds;
     this.boost = GLOW_GAIN;
     this.highTier = opts.tier === "high";
+    this.seamDensity = Math.min(opts.pixelRatio, SEAM_DENSITY_MAX);
+    this.anisotropy = opts.anisotropy;
     const n = opts.kinds.length;
     const P = this.params;
 
@@ -145,6 +152,7 @@ export class DeckEffects {
     this.occluders = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
 
     this.light = new PointLight(new Color(COLORS.violet), 0, 8, 2);
+    this.light.layers.enable(BLOOM_LAYER); // the bloom pass sees the stage's lights: see deck-stage.ts
     this.scene.add(this.light);
 
     const glowTexture = canvasTexture(
@@ -231,6 +239,7 @@ export class DeckEffects {
       canvas.height = 2;
       const texture = new CanvasTexture(canvas);
       texture.colorSpace = SRGBColorSpace;
+      texture.anisotropy = this.anisotropy; // the thin line stays sharp at the rack's 77° angle
       this.textures.push(texture);
       const seam = new Mesh(
         this.unit,
@@ -316,9 +325,9 @@ export class DeckEffects {
     const seam = this.seams[index];
     const canvas = this.seamCanvases[index];
     if (seam && canvas) {
-      const w = Math.max(2, Math.round(L.cardWPx * SEAM_DENSITY));
+      const w = Math.max(2, Math.round(L.cardWPx * this.seamDensity));
       const h = Math.max(2, Math.round((L.h / L.w) * w));
-      if (canvas.width !== w || canvas.height !== h) {
+      if (canvas.width <= 2 || Math.abs(w - canvas.width) > canvas.width * SEAM_HYSTERESIS) {
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d");

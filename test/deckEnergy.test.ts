@@ -51,7 +51,7 @@ describe("flare", () => {
 });
 
 describe("glowOpacity", () => {
-  it("is 0 while racked or pulling, whatever the clocks say", () => {
+  it("is 0 while racked or pulling in, whatever the landing clock says", () => {
     expect(glowOpacity("racked", 1000, null, P)).toBe(0);
     expect(glowOpacity("pulling", 1000, null, P)).toBe(0);
   });
@@ -65,6 +65,10 @@ describe("glowOpacity", () => {
     expect(glowOpacity("leaving", 5000, GLOW_LEAVE_MS / 2, P)).toBeCloseTo(0.5, 6);
     expect(glowOpacity("leaving", 5000, GLOW_LEAVE_MS, P)).toBe(0);
     expect(glowOpacity("leaving", 5000, null, P)).toBe(0);
+  });
+  it("fades out the same way when a landed card is pulled back out (a reverse scroll)", () => {
+    expect(glowOpacity("pulling", 5000, GLOW_LEAVE_MS / 2, P)).toBeCloseTo(0.5, 6);
+    expect(glowOpacity("pulling", 5000, GLOW_LEAVE_MS, P)).toBe(0);
   });
 });
 
@@ -101,9 +105,10 @@ describe("glowSpriteScale and the light", () => {
 });
 
 describe("fogFor and shadowFor", () => {
-  it("has no fog without a kind, a fixed fog at S and a growing one at S+", () => {
+  it("has no fog without a kind, a fixed fog at S that ramps in with its energy and a growing one at S+", () => {
     expect(fogFor(null, 1, 0, P)).toEqual({ radius: 0, strength: 0 });
     expect(fogFor("S", 0.3, 0, P)).toEqual({ radius: P.fog.radiusS, strength: P.fog.strengthS });
+    expect(fogFor("S", P.energy.s / 2, 0, P).strength).toBeCloseTo(P.fog.strengthS / 2, 9);
     const full = fogFor("S+", 1, 0.2, P);
     expect(full.radius).toBeCloseTo(P.fog.radiusSPlusBase + P.fog.radiusSPlusRamp, 6);
     expect(full.strength).toBeCloseTo(P.fog.strengthSPlus + 0.2, 6);

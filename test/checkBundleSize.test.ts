@@ -45,6 +45,21 @@ function withBloom(dist: string, bytes = 5 * 1024, name = "deck-bloom.abc.js"): 
   writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(bytes, 1));
 }
 
+/** Names one rail button's renditions in the home page and writes them, so the portrait rows pass. */
+function withPortraits(dist: string): void {
+  const index = join(dist, "dist/client/index.html");
+  const button =
+    '<button data-deck-rank data-portrait-1x="/_astro/r.1x.webp" data-portrait-2x="/_astro/r.2x.webp" data-glow="/_astro/r.g.webp"></button>';
+  const html = readFileSync(index, "utf8");
+  writeFileSync(
+    index,
+    html.includes("</body>") ? html.replace("</body>", `${button}</body>`) : html + button,
+  );
+  for (const name of ["r.1x.webp", "r.2x.webp", "r.g.webp"]) {
+    writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(1_000));
+  }
+}
+
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
   root = undefined;
@@ -56,6 +71,7 @@ describe("check-bundle-size", () => {
     withScene(dist);
     withDeck(dist);
     withBloom(dist);
+    withPortraits(dist);
     const res = run(dist);
     expect(res.stdout).toContain("ok   Fonts (woff2)");
     expect(res.status).toBe(0);
@@ -71,6 +87,7 @@ describe("check-bundle-size", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
     withScene(dist);
     withBloom(dist);
+    withPortraits(dist);
     writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(150 * 1024));
     const res = run(dist);
     expect(res.stdout).toMatch(/ok {3}Deck lazy JS \(gz\): 15\d\.\d KB \(budget 170 KB\)/);
@@ -112,6 +129,7 @@ describe("check-bundle-size", () => {
     withScene(dist);
     withDeck(dist);
     withBloom(dist);
+    withPortraits(dist);
     mkdirSync(join(dist, "dist/client/contact"), { recursive: true });
     writeFileSync(
       join(dist, "dist/client/contact/index.html"),
@@ -140,6 +158,7 @@ describe("check-bundle-size", () => {
     writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(200 * 1024));
     withDeck(dist);
     withBloom(dist);
+    withPortraits(dist);
     const res = run(dist);
     expect(res.stdout).toMatch(/ok {3}Journey scene \(gz\): 20\d\.\d KB \(budget 300 KB\)/);
     expect(res.status).toBe(0);
@@ -190,6 +209,7 @@ describe("check-bundle-size", () => {
       join(dist, "dist/client/index.html"),
       '<!doctype html><script type="module" src="/_astro/entry.abc.js"></script>',
     );
+    withPortraits(dist);
     const expectedKb =
       (gzipSync(readFileSync(entryPath)).length + gzipSync(readFileSync(helperPath)).length) / 1024;
     const res = run(dist);
@@ -203,6 +223,7 @@ describe("check-bundle-size", () => {
     const dist = fakeDist();
     withScene(dist);
     withDeck(dist);
+    withPortraits(dist);
     // Without a bloom chunk the run fails on the missing row, but the deck row still prints.
     const before = /Deck lazy JS \(gz\): ([\d.]+) KB/.exec(run(dist).stdout)?.[1];
     writeFileSync(
@@ -252,5 +273,15 @@ describe("check-bundle-size", () => {
     out = run(dist);
     expect(out.status).toBe(1);
     expect(out.stdout).toMatch(/FAIL Portraits 2x/);
+  });
+
+  it("fails when the home page names no portrait renditions (the rail must name seven)", () => {
+    const dist = fakeDist();
+    withScene(dist);
+    withDeck(dist);
+    withBloom(dist);
+    const res = run(dist);
+    expect(res.stdout).toContain("FAIL Portraits: none referenced");
+    expect(res.status).toBe(1);
   });
 });

@@ -3,7 +3,7 @@
 - **Date:** 2026-09-25 (revised the same day after Marcus's deep review)
 - **Status:** Approved 2026-09-25. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character) and 3 (energy) implemented; ADR 0004 written with Plan 2.
 - **Implementation notes (Plan 1 reviews):** the intro clock is an accumulated `elapsed` (no derived speed); a card's `landedAt` persists until it is racked again (`pull <= 0`), never cleared on leaving; the canvas font family is read from `--font-jetbrains` at runtime (the Fonts API registers a hashed name). Where §7 disagrees, these win.
-- **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the quad adds the blur alone (the glow objects are already on the canvas), the glow set renders at 1.6× on both tiers, and the bloom's threshold of 0.5 leaves the violet sprite and seams to that gain so only the pale eyes and flames bloom; the fog's radius is passed in stage-height units; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
+- **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the quad adds the blur alone (the glow objects are already on the canvas), the glow set renders at 1.6× on both tiers, and the bloom's threshold of 0.5 leaves the violet sprite and seams to that gain so only the pale eyes and flames bloom; the fog's radius is in world units (100 CSS px each), divided by the fog plane's height for the shader; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
 - **Supersedes:** `2026-09-25-vector-journey-design.md` (the traced SVG scene) and the journey
   parts of `2026-09-24-hero-journey-redesign-design.md`
 - **Decisions this creates:** ADR 0004 (Three.js, lighting, bloom, glow and smoke inside the
@@ -402,15 +402,17 @@ Files in `src/scripts/deck/` (a new directory, so it never collides with the old
   `MeshStandardMaterial`, `MeshBasicMaterial`, `ShaderMaterial`, `Sprite`, `SpriteMaterial`, the
   three lights, `CanvasTexture`, `PMREMGenerator`, `Color`, `Layers`, `Raycaster`, `Vector2/3`;
   from `three/addons`: `RoundedBoxGeometry`, and in the bloom chunk `EffectComposer`, `RenderPass`,
-  `ShaderPass`, `UnrealBloomPass`, `OutputPass`).
+  `UnrealBloomPass` and `FullScreenQuad`).
 - **Textures and memory.** Sizes follow the on-screen card times the pixel ratio, capped at
   1040 × 1456. Body: one per card, RGBA with mipmaps and anisotropy 8, painted lazily when the card
   comes within one rank of the active one. Text: one per _slot_
   (presented, incoming), repainted in place during the print-in, never per card. Frame and back:
-  one each, shared. Chip: one per rank, 160 × 56. Glow mask: one per card, single channel
-  (`RedFormat` (implemented as RGBA: alphaMap samples .g)), at the 1× portrait size. Smoke: three 256² alpha textures. Environment: one 256
-  PMREM. Estimated total on a 1440 × 900 high-tier display: about 60 MB; the ceiling is 80 MB on
-  desktop and 40 MB on phones, and the stage reports its estimate on `data-deck-vram`. Textures are
+  one each, shared. Chip: one per rank, 160 × 56. Glow mask: one per card, at the 1× portrait
+  size; it uploads as RGBA rather than a single `RedFormat` channel, because Three's `alphaMap`
+  samples `.g`. Smoke: three 256² alpha textures. Environment: one 256 PMREM. Estimated total on
+  the high tier: about 70 MB at 1440 × 900 on dpr 2, under 80 MB at 2560 × 1440 dpr 2 with the
+  bloom target capped at 1024 px and the seams at 1.5×; the ceiling is 80 MB on desktop and 40 MB
+  on phones, and the stage reports its estimate on `data-deck-vram`. Textures are
   disposed with the renderer after 30 s out of view and repainted from the cached canvases on return.
 - **Fonts.** The painter awaits `document.fonts.load()` for 400 normal and 400 italic JetBrains Mono
   before its first paint, using the family name the Fonts API registers (`--font-jetbrains`).

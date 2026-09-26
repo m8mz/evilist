@@ -2396,3 +2396,15 @@ Rulings made while the plan ran, so the plan reads true against the code:
   bloom defaults are strength 0.45, radius 0.5, threshold 0.5 (UnrealBloomPass returns a large smooth
   source at about three times its strength, and threshold 0.5 keeps the violet, luminance under 0.2, out
   of the blur). The S halo stays at the spec's scale and reads understated; its size is a Plan 5 knob.
+- The fog's radius is in world units (100 CSS px each), divided by the fog plane's height for the
+  shader (`radius / (stageH × 1.1)`), not "stage-height units" as the Deviations list put it: S+ at
+  full energy is 3.6 units, about 360 px.
+- Final fix wave (2026-09-26, from the final review): the fog encodes its colour before
+  premultiplying; the bloom's high-pass takes a 0.15 soft knee so the glow masks' fades don't
+  switch it on and off; the bloom target is capped at 1024 px on its long side; the seams paint at
+  the renderer's pixel ratio up to 1.5×, repaint only past a 10 % width change and take the card
+  textures' anisotropy; the smoke reads its opacity range at every spawn, so the panel's slider is
+  live; every light sits on the bloom layer too; a landed card pulled back out on a reverse scroll
+  fades its glow over 200 ms; S's fog ramps in with its energy; the smoke pool clears when the
+  energy goes silent; the size gate fails a home page that names no portraits; and an e2e test
+  holds the estimate under 80 MB at S+ on a 2560 × 1440 dpr 2 display (66.1 MB measured).

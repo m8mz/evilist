@@ -396,11 +396,17 @@ test.describe("the card deck's energy", () => {
 
   test("keeps the energy at zero through E–A and reaches full energy at the end of S+", async ({
     page,
-  }) => {
+  }, info) => {
     await page.goto("/");
-    for (const i of [0, 2, 4]) {
+    for (const [i, rank] of [
+      [0, "E"],
+      [2, "C"],
+      [4, "A"],
+    ] as const) {
       await scrollToRank(page, i);
       await ready(page);
+      // The rank lands first, so the energy read below belongs to it and not to the rank before.
+      await expect(track(page)).toHaveAttribute("data-deck-rank", rank);
       await expect(track(page)).toHaveAttribute("data-deck-energy", "0.00");
     }
     await scrollToEnd(page);
@@ -409,7 +415,33 @@ test.describe("the card deck's energy", () => {
       .toBeGreaterThanOrEqual(0.95);
     const vram = Number(await track(page).getAttribute("data-deck-vram"));
     expect(vram).toBeGreaterThan(0);
+    expect(vram).toBeLessThanOrEqual(info.project.name === "desktop" ? 80 : 40);
+  });
+
+  test("stays under the desktop ceiling at the end of S+ on a 2560 × 1440 display at dpr 2", async ({
+    browser,
+  }, info) => {
+    test.skip(info.project.name !== "desktop", "a desktop display");
+    test.setTimeout(60_000);
+    const context = await browser.newContext({
+      viewport: { width: 2560, height: 1440 },
+      deviceScaleFactor: 2,
+    });
+    const p = await context.newPage();
+    await forceTier(p, "high");
+    // Frozen: the mount waits for every mask and the bloom before its one frame. A live mount
+    // renders a 5120 × 2752 canvas every frame, which under the suite's parallel load can hold the
+    // bloom's arrival past the default wait.
+    await p.goto(FROZEN);
+    await scrollToEnd(p);
+    await ready(p);
+    await expect(track(p)).toHaveAttribute("data-deck-rank", "S+");
+    await expect(track(p)).toHaveAttribute("data-deck-bloom", "on");
+    const vram = Number(await settledVram(p));
+    info.annotations.push({ type: "vram at 2560 × 1440, dpr 2", description: `${vram} MB` });
+    expect(vram).toBeGreaterThan(0);
     expect(vram).toBeLessThanOrEqual(80);
+    await context.close();
   });
 
   test("keeps the canvas transparent where energy is silent, and shows only a partial halo where it isn't", async ({
@@ -433,6 +465,9 @@ test.describe("the card deck's energy", () => {
         // which would read 255.
         await scrollToRank(p, 6);
         await ready(p);
+        // `ready` is already set from rank E: wait for the S+ frame, which emits the rank and its
+        // corner read together, or the read below sees E's "0".
+        await expect(track(p)).toHaveAttribute("data-deck-rank", "S+");
         const cornerAlpha = Number(await track(p).getAttribute("data-deck-corner-alpha"));
         expect(cornerAlpha).toBeLessThan(128);
       }

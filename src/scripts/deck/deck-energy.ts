@@ -40,14 +40,18 @@ export function flare(
 
 export const GLOW_LEAVE_MS = 200;
 
-/** The glow plane: 0 racked or pulling, in over print.eyesMs from landing, out over 200 ms leaving. */
+/**
+ * The glow plane: 0 racked or pulling in, in over print.eyesMs from landing, out over 200 ms
+ * leaving. A card pulled back out after landing (a reverse scroll) is `pulling` with a leave clock
+ * the stage started, and fades out the same way.
+ */
 export function glowOpacity(
   phase: CardPhase,
   sinceLandMs: number | null,
   sinceLeaveMs: number | null,
   params: DeckParams = DECK_PARAMS,
 ): number {
-  if (phase === "leaving") {
+  if (phase === "leaving" || (phase === "pulling" && sinceLeaveMs !== null)) {
     return sinceLeaveMs === null ? 0 : Math.max(0, 1 - sinceLeaveMs / GLOW_LEAVE_MS);
   }
   if ((phase !== "landing" && phase !== "presented") || sinceLandMs === null) return 0;
@@ -110,7 +114,12 @@ export function fogFor(
 ): FogLevel {
   if (!kind) return { radius: 0, strength: 0 };
   const F = params.fog;
-  if (kind === "S") return { radius: F.radiusS, strength: F.strengthS + kick };
+  if (kind === "S") {
+    // S's fixed strength grows with the pull (its energy reaches energy.s once landed), not a pop.
+    const s = params.energy.s;
+    const ramp = s > 0 ? Math.min(1, Math.max(0, energy / s)) : 1;
+    return { radius: F.radiusS, strength: F.strengthS * ramp + kick };
+  }
   return {
     radius: F.radiusSPlusBase + F.radiusSPlusRamp * energy,
     strength: F.strengthSPlus * energy + kick,

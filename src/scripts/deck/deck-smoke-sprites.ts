@@ -40,6 +40,7 @@ export class SmokeSprites {
   private readonly emitter: SmokeEmitter = { x: 0, y: 0, z: 0, halfW: 1, halfH: 1, k: 1 };
   private prewarmed = false;
   private ready = false;
+  private hadKind = false; // last frame's kind was non-null: its first null frame clears the pool
 
   constructor(
     private readonly scene: Scene,
@@ -50,7 +51,7 @@ export class SmokeSprites {
     this.puffTextures = [0, 1, 2].map((variant) =>
       canvasTexture(PUFF_SIZE, (ctx) => paintPuff(ctx, PUFF_SIZE, mulberry32(100 + variant)), true),
     );
-    this.pool = new SmokePool(capacity, rng, params.smoke.opacityMin, params.smoke.opacityMax);
+    this.pool = new SmokePool(capacity, rng);
     this.puffs = this.pool.puffs.map(() => {
       const mat = new SpriteMaterial({
         map: this.puffTextures[0] ?? null,
@@ -91,7 +92,7 @@ export class SmokeSprites {
     const rate = smokeRate(kind, frame.energy, this.params);
     const side = smokeSideSpeed(kind, frame.energy, this.params);
     for (let i = 0; i < frames; i++) {
-      this.pool.emit(this.emitter, rate, side, 1);
+      this.pool.emit(this.emitter, rate, side, 1, this.params.smoke);
       this.pool.step(1);
     }
     this.prewarmed = true;
@@ -100,6 +101,10 @@ export class SmokeSprites {
   update(frame: EffectsFrame, energetic: EffectCard | null): void {
     const P = this.params;
     const { kind, energy, energyIndex } = frame;
+    // The energy went silent: drop the cloud, or S re-energizing within the puffs' life would bring
+    // an old S+ cloud back in mid-air. The puffs are already invisible (shown = 0 without a kind).
+    if (!kind && this.hadKind) this.pool.clear();
+    this.hadKind = kind !== null;
 
     for (let i = 0; i < frame.cards.length; i++) {
       const c = frame.cards[i];
@@ -117,7 +122,7 @@ export class SmokeSprites {
     ) {
       this.burstDone[energyIndex] = true;
       this.pointEmitter(energetic);
-      this.pool.spawn(this.emitter, burstCount(kind, P), smokeSideSpeed(kind, energy, P));
+      this.pool.spawn(this.emitter, burstCount(kind, P), smokeSideSpeed(kind, energy, P), P.smoke);
     }
 
     if (kind && energetic && frame.frames > 0) {
@@ -127,6 +132,7 @@ export class SmokeSprites {
         smokeRate(kind, energy, P),
         smokeSideSpeed(kind, energy, P),
         frame.frames,
+        P.smoke, // read at every spawn, so the panel's opacity slider acts live
       );
     }
     if (frame.frames > 0) this.pool.step(frame.frames);
