@@ -30,7 +30,8 @@ describe("JourneyTimeline", () => {
     const figures = html.match(/<figure class="still timeline__still[\s\S]*?<\/figure>/g) ?? [];
     expect(figures).toHaveLength(career.length);
     for (const [i, figure] of figures.entries()) {
-      const { subject } = stageArt[career[i].id];
+      const id = career[i]!.id;
+      const { subject } = deckPortrait(id) ? deckArtById[id]! : stageArt[id]!;
       expect(figure).toContain(`alt="Illustration: ${subject}"`);
       expect(figure).toMatch(/<img[^>]*loading="lazy"/);
     }

@@ -1,4 +1,3 @@
-import { readdirSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 import { HEADER_PX } from "./constants";
 
@@ -212,33 +211,22 @@ test.describe("the card deck", () => {
   test("fetches a rank's portrait once the rail carries one, and still reaches ready", async ({
     page,
   }) => {
-    // No stage yet has a real portrait (src/images/deck/ is still empty), so there is nothing to
-    // exercise this path against. Rewrite rank E's rail button to point at a still the build
-    // already serves (the author picture), so a real request happens.
-    const stillFile = readdirSync("dist/client/_astro").find(
-      (f) => f.startsWith("author-pic") && f.endsWith(".webp"),
-    );
-    if (!stillFile) throw new Error("expected a built author-pic still under dist/client/_astro");
-    const portraitPath = `/_astro/${stillFile}`;
-
-    await page.route(
-      (url) => url.pathname === "/",
-      async (route) => {
-        const response = await route.fetch();
-        const html = await response.text();
-        const patched = html.replace(
-          /<button([^>]*data-index="0"[^>]*)>/,
-          (_match, attrs: string) =>
-            `<button${attrs} data-portrait-1x="${portraitPath}" data-portrait-2x="${portraitPath}">`,
-        );
-        await route.fulfill({ response, body: patched });
-      },
-    );
-    const portraitRequest = page.waitForRequest(
-      (request) => new URL(request.url()).pathname === portraitPath,
-    );
-
+    // Every rank has carried a portrait since Plan 0 (src/images/deck/): rank E's rail button
+    // names its renditions, and the stage must fetch one of them once the deck mounts.
     await page.goto("/");
+    const button = page.locator('button[data-deck-rank][data-index="0"]');
+    const renditions = [
+      await button.getAttribute("data-portrait-1x"),
+      await button.getAttribute("data-portrait-2x"),
+    ].filter((v): v is string => Boolean(v));
+    if (renditions.length === 0) {
+      throw new Error("expected rank E's rail button to carry data-portrait-1x and -2x");
+    }
+    const paths = new Set(renditions.map((r) => new URL(r, "http://127.0.0.1").pathname));
+    const portraitRequest = page.waitForRequest((request) =>
+      paths.has(new URL(request.url()).pathname),
+    );
+
     await scrollToRank(page, 0);
     await portraitRequest;
     await ready(page);

@@ -71,7 +71,7 @@ it. Rejected jobs: `1b902d64`, `7781c95b` (round 1); `3d993304`, `72d3ac6a`, `0c
 Rejected rack jobs: `b318e2a9`, `7a90abbe` (round 1); `1e99d06a`, `ffabe4a7` (round 2). Rig
 alternatives: `c4315162`, `0012e60c`. Spend: 26 credits for 13 renders.
 
-## Journey (hero and journey redesign, spec §7)
+## Journey (hero and journey redesign, spec §7) — retired 2026-09-25, see "Card deck" below and the deck spec
 
 Anime illustration, not photography: the monochrome suffixes above do not apply. Violet lives only
 inside this art (ADR 0003). The character is original: never a likeness of Marcus or of any
@@ -248,7 +248,7 @@ lights; the first and last frames match, so each loop closes. Every encode fit a
 
 Spend: 360 credits (2,944 → 2,584): the pilot (45) and the seven locked-camera clips (315).
 
-## Vector journey (2026-09-25)
+## Vector journey (2026-09-25) — retired 2026-09-25, see "Card deck" below and the deck spec
 
 The clips above are replaced by one traced-and-rigged SVG scene (spec
 `docs/superpowers/specs/2026-09-25-vector-journey-design.md`). Every render below is flat vector
@@ -461,3 +461,20 @@ Batch 16 results: both C renders on black in greyscale black, 6693a39b glow 0.02
 Marcus after the black set: the ember stitching goes from every garment; the clothes must be the darkest black, so the blacks swap: true black (#000000) cloth on a dark graphite (#191919) field (the card's portrait window then reads as a graphite panel on the carbon card); A holds an open laptop up in both hands, its lid toward the viewer, instead of the keys. The bible loses its seam sentence and its field becomes graphite; the import keys a white field to graphite now. E is re-rendered too so all seven share the field.
 
 Batch 17 (graphite field, true black cloth, no seam): t1-support 04326298-f9aa-4ca7-bc59-f0e1c7a7ebbd, web-concierge e9d8dc99-dfe1-4728-be77-4db78137c007, professional-services f26a3462-7683-40ad-b294-7f59a9f10fbe, t3-support 143940bd-def1-42b5-b362-9d8d9bd2f384, sysadmin e4e49142-206b-42d6-b174-59b95f83ecd2 (the laptop). Batch 18: linux-engineer 1b04f31f-7d91-4c4d-a9b5-463a4d3ed7c7, systems-architect 5c67c2fc-879e-4e83-a79a-bf69b90bd49f.
+Batch 17/18 results (graphite field): web-concierge 0.00%, professional-services 0.03%, t3-support 0.25%, sysadmin 0.15% (the laptop held up, lid toward the viewer), linux-engineer 0.45%, systems-architect 6.90% — all PASS, all on graphite with true black cloth and no seam; t1-support 04326298 right to the eye but 0.07% (the hoodie's cool shadow) — re-rolled. Batch 19: t1-support 957b05f7-0b2c-4fc6-8b12-5eda49a03fdb, 3ceb26f3-71f5-4b92-8ba9-e0894d1a4db0 (the hoodie's shadows named warm).
+
+Batch 19 results: 957b05f7 on graphite, glow 0.04% — PASS (E candidate); 3ceb26f3 0.15% — rejected. Graphite set complete: E 0.04, D 0.00, C 0.03, B 0.25, A 0.15, S 0.45, S+ 6.90 (percent), every rank inside its band.
+
+### Step 6 — the picks, imported (2026-09-25)
+
+| Rank | Stage id              | Job                                  | Glow  |
+| ---- | --------------------- | ------------------------------------ | ----- |
+| E    | t1-support            | 957b05f7-0b2c-4fc6-8b12-5eda49a03fdb | 0.04% |
+| D    | web-concierge         | e9d8dc99-dfe1-4728-be77-4db78137c007 | 0.00% |
+| C    | professional-services | f26a3462-7683-40ad-b294-7f59a9f10fbe | 0.03% |
+| B    | t3-support            | 143940bd-def1-42b5-b362-9d8d9bd2f384 | 0.25% |
+| A    | sysadmin              | e4e49142-206b-42d6-b174-59b95f83ecd2 | 0.15% |
+| S    | linux-engineer        | 1b04f31f-7d91-4c4d-a9b5-463a4d3ed7c7 | 0.45% |
+| S+   | systems-architect     | 5c67c2fc-879e-4e83-a79a-bf69b90bd49f | 6.90% |
+
+All seven on the graphite field with true black cloth, no seam, imported with `node scripts/import-portrait.mjs <render> <stage-id>` into `src/images/deck/` (sources 29–44 KB, masks under 3 KB). Spend for Plan 0: 8 sheets at 2K and 63 portraits at 4K, about 320 credits. Element `deck-character` de47c220-a3b1-4d39-8ada-ce7d9b9853bd stays for later re-rolls.
