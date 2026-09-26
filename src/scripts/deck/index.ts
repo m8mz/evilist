@@ -20,6 +20,8 @@ function fallback(root: HTMLElement, track: HTMLElement): void {
   delete track.dataset.deckEnergy;
   delete track.dataset.deckVram;
   delete track.dataset.deckSlots;
+  delete track.dataset.deckBloom;
+  delete track.dataset.deckCornerAlpha;
 }
 
 /**
@@ -107,6 +109,9 @@ export function initDeck(): void {
       track.dataset.deckVram = String(state.vram);
       if (state.slots) track.dataset.deckSlots = state.slots;
       else delete track.dataset.deckSlots;
+      track.dataset.deckBloom = state.bloom ? "on" : "off";
+      if (state.cornerAlpha !== null) track.dataset.deckCornerAlpha = String(state.cornerAlpha);
+      else delete track.dataset.deckCornerAlpha;
       const index = labels.indexOf(state.rank);
       if (state.state === "scroll" && !hintShown && !freeze) {
         hintShown = true;

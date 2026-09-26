@@ -20,7 +20,10 @@ import {
   type Material,
 } from "three";
 import type { RankLabel } from "../../data/career";
+import type { BloomHandle } from "./deck-bloom";
 import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
+import { DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
+import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
 import { COLORS, PRINT_STEPS, type CardModel } from "./deck-paint";
@@ -43,6 +46,8 @@ export interface StageState {
   energy: number;
   vram: number;
   slots: string | null;
+  bloom: boolean;
+  cornerAlpha: number | null;
 }
 
 export interface StageOptions {
@@ -79,7 +84,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const { canvas, stage, column, cards, labels, freeze } = opts;
   const count = cards.length;
   const rng = mulberry32(freeze ? 7 : (Math.random() * 2 ** 31) | 0);
-  void rng; // the smoke (Plan 3) draws from it
   const clock = () => (freeze ? freeze.time : performance.now());
 
   /* ---------- Renderer, scene, camera ---------- */
@@ -168,19 +172,41 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   computeLayout();
 
   const meshes: CardMeshes[] = buildCards(cards, textures, envMap, unit, params);
+  const kinds: (EnergyKind | null)[] = cards.map((c) =>
+    c.stage.rankLabel === "S" || c.stage.rankLabel === "S+" ? c.stage.rankLabel : null,
+  );
+  const effects = new DeckEffects({
+    scene,
+    params,
+    tier: opts.tier,
+    rng,
+    kinds,
+    eyeColors: cards.map((c) => c.art.eyeColor),
+  });
+  meshes.forEach((m, i) => effects.attach(i, m.group));
   for (const m of meshes) scene.add(m.group);
   const floor = new Mesh(unit, new MeshBasicMaterial({ color: COLORS.iron }));
   scene.add(floor);
   const slabs = meshes.map((m) => m.slab); // precomputed once; hitAt filters by group visibility
 
   let front = 0;
-  void front; // the front face's z (world); Task 8's effects planes read this
+  let bloom: BloomHandle | null = null;
   /* ---------- Layout, part 2: size the meshes ---------- */
   function applyLayout(): void {
     if (!layout) return;
     front = layoutCards(meshes, layout, params);
     floor.scale.set(stageW * PX, 0.01, 1);
     floor.position.set(0, toY(layout.floorY), -0.001);
+    effects.setLayout({
+      cardWPx: layout.cardW,
+      w: layout.cardW * PX,
+      h: layout.cardH * PX,
+      front,
+      stageW: stageW * PX,
+      stageH: stageH * PX,
+      floorY: toY(layout.floorY),
+    });
+    bloom?.setSize(stageW, stageH);
   }
   applyLayout();
   let assetsSettled = !freeze; // freeze must not render (or resolve `ready`) before assets settle
@@ -192,15 +218,23 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   resizer.observe(stage);
 
   /* ---------- Portraits and the mark ---------- */
-  const glows: (HTMLImageElement | null)[] = new Array(count).fill(null);
   const portraitLoads = opts.portraits.map((p, i) =>
     loadImage(pickRendition(dpr, p.x1, p.x2)).then((img) => {
       if (img) textures.setPortrait(i, img);
-      return loadImage(p.glow).then((g) => (glows[i] = g)); // glow-mask planes (Plan 3)
+      return loadImage(p.glow).then((g) => effects.setGlow(i, g)); // glow-mask planes (Plan 3)
     }),
   );
   const markLoad = loadImage(opts.markUrl).then((img) => textures.setMark(img));
   const assets = Promise.allSettled([...portraitLoads, markLoad]);
+  const bloomLoad =
+    opts.tier === "high"
+      ? import("./deck-bloom")
+          .then(({ mountBloom }) => {
+            if (disposed) return;
+            bloom = mountBloom(renderer, scene, camera, params, stageW, stageH);
+          })
+          .catch(() => undefined)
+      : Promise.resolve();
 
   /* ---------- Frame state ---------- */
   const N = count;
@@ -218,12 +252,30 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const cam = { x: 0, y: 0 };
   const camTarget = { x: 0, y: 0 };
   const landedAt: (number | null)[] = new Array(count).fill(null);
+  const leaveAt: (number | null)[] = new Array(count).fill(null);
+  const effectCards: EffectCard[] = meshes.map((m) => ({
+    group: m.group,
+    phase: "racked",
+    pull: 0,
+    zPx: 0,
+    sinceLandMs: null,
+    sinceLeaveMs: null,
+  }));
+  const effectsFrame: EffectsFrame = {
+    time: 0,
+    frames: 0,
+    energy: 0,
+    energyIndex: null,
+    kind: null,
+    cards: effectCards,
+  };
   let intro: IntroState | null = null;
   let lastNow = performance.now();
   let raf = 0;
   let visible = true;
   let disposed = false;
   let lastState = "";
+  let cornerAlpha: number | null = null;
   let readyResolve: (() => void) | null = null;
   const ready = new Promise<void>((resolve) => (readyResolve = resolve));
   let readyDone = false;
@@ -305,11 +357,18 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       rank,
       phase: presentedCard.phase,
       energy: Math.round(pose.energy * 20) / 20,
-      vram: Math.round((textures.estimateBytes() / 1_048_576) * 10) / 10,
+      vram:
+        Math.round(
+          ((textures.estimateBytes() + effects.estimateBytes() + (bloom?.estimateBytes() ?? 0)) /
+            1_048_576) *
+            10,
+        ) / 10,
       slots:
         freeze && layout?.mode === "desktop"
           ? layout.slots.map((s) => `${Math.round(s.x)},${Math.round(s.y)}`).join(";")
           : null,
+      bloom: bloom !== null,
+      cornerAlpha,
     };
     const key = JSON.stringify(state);
     if (key === lastState) return;
@@ -369,6 +428,19 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       // Cleared only once racked again (`pull <= 0`), never the instant `landed` flips false.
       if (c.landed && landedAt[i] === null) landedAt[i] = freeze ? time - 10_000 : time;
       if (c.pull <= 0 && landedAt[i] !== null) landedAt[i] = null;
+      if (c.phase === "leaving") {
+        if (leaveAt[i] === null) leaveAt[i] = time;
+      } else leaveAt[i] = null;
+      const at = landedAt[i];
+      const leftAt = leaveAt[i];
+      const ec = effectCards[i];
+      if (ec) {
+        ec.phase = c.phase;
+        ec.pull = c.pull;
+        ec.zPx = c.z;
+        ec.sinceLandMs = at === null ? null : time - at;
+        ec.sinceLeaveMs = leftAt === null ? null : time - leftAt;
+      }
       applyText(i, c.phase, time);
       m.group.position.set(toX(c.x), toY(c.y), c.z * PX);
       m.group.rotation.set(c.rotX * DEG, c.rotY * DEG, c.rotZ * DEG);
@@ -395,7 +467,21 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     camera.position.y = cam.y;
     camera.lookAt(0, 0, 0);
 
-    renderer.render(scene, camera);
+    effectsFrame.time = time;
+    effectsFrame.frames = dt / (1000 / 60);
+    effectsFrame.energy = pose.energy;
+    effectsFrame.energyIndex = pose.energyIndex;
+    effectsFrame.kind = pose.kind;
+    if (freeze) effects.prewarm(effectsFrame, params.smoke.prewarmFrames);
+    effects.update(effectsFrame);
+    if (bloom) bloom.render();
+    else renderer.render(scene, camera);
+    if (freeze) {
+      const gl = renderer.getContext();
+      const px = new Uint8Array(4);
+      gl.readPixels(4, 4, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // (4, 4) from the bottom-left: the stage's corner, no card there
+      cornerAlpha = px[3] ?? null;
+    }
     emitState(pose);
     firstFrameDone = true;
     if (!readyDone) {
@@ -437,10 +523,11 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
 
   /* ---------- Start ---------- */
   if (freeze) {
-    await assets;
+    await Promise.all([assets, bloomLoad]);
     assetsSettled = true;
   } else {
     void assets.then(() => requestRender());
+    void bloomLoad.then(() => requestRender());
   }
   requestRender();
 
@@ -484,6 +571,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       (floor.material as Material).dispose();
       textures.dispose();
       envTarget.dispose();
+      effects.dispose();
+      bloom?.dispose();
+      bloom = null;
       renderer.dispose();
     },
   };
