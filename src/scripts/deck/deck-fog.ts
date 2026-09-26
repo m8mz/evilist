@@ -62,7 +62,7 @@ float vnoise(vec2 p) {
 
 void main() {
   vec2 q = vec2(vUv.x * uAspect, vUv.y);
-  float rise = uTime * 0.00004;
+  highp float rise = uTime * 0.00004;
   float n = 0.55 * vnoise(q * 3.0 + vec2(0.0, -rise * 2.0))
           + 0.30 * vnoise(q * 6.0 + vec2(7.3, -rise * 3.0))
           + 0.15 * vnoise(q * 12.0 + vec2(3.1, -rise * 5.0));

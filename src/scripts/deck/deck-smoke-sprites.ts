@@ -166,5 +166,6 @@ export class SmokeSprites {
     this.scene.remove(...this.puffs);
     for (const p of this.puffs) p.material.dispose();
     for (const t of this.puffTextures) t.dispose();
+    this.puffTextures.length = 0; // so a post-dispose estimateBytes() reads zero, not the disposed sizes
   }
 }

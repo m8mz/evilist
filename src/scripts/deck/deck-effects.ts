@@ -40,7 +40,7 @@ const MID_BOOST = 1.6;
 const LIGHT_AHEAD = 1.6; // world units in front of the energetic card
 const FOG_Z = -0.5;
 const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge; the falloff hides the margin
-const SPRITE_AHEAD = 0.05; // world units the glow sprite sits in front of the card's face
+const SPRITE_BEHIND = 0.05; // world units the glow sprite sits behind the card, haloing its back face
 const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
 const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
 const SEAM_DENSITY = 2; // seam canvas px per CSS px, independent of dpr, for a crisp line at any zoom
@@ -360,7 +360,7 @@ export class DeckEffects {
       const pos = energetic.group.position;
       this.light.position.set(pos.x, pos.y, pos.z + LIGHT_AHEAD);
       this.light.intensity = pointLightIntensity(kind, energy, br, fl.light, P);
-      this.sprite.position.set(pos.x, pos.y, pos.z - SPRITE_AHEAD);
+      this.sprite.position.set(pos.x, pos.y, pos.z - SPRITE_BEHIND);
       const scale = glowSpriteScale(kind, energy, L.cardWPx, P) * fl.glow;
       this.sprite.scale.set(scale, scale, 1);
       this.spriteMat.opacity = Math.min(1, energy * this.boost);
@@ -377,13 +377,15 @@ export class DeckEffects {
     const u = this.fogUniforms;
     if (kind && energetic && level.strength > VISIBLE_MIN) {
       const pos = energetic.group.position;
-      // Mount-relative: the caller's clock is epoch ms live, or frozen ms deep under deck-freeze,
-      // and both scales lose precision the raw uniform can't afford. Zero at first use fixes both.
+      // Mount-relative: the caller's clock is performance.now() live, or frozen at epoch ms under
+      // deck-freeze, and both scales lose precision the raw uniform can't afford. Zero fixes both.
       this.fogT0 ??= frame.time;
       u.uTime.value = frame.time - this.fogT0;
-      u.uCentre.value[0] = pos.x / L.stageW + 0.5;
-      u.uCentre.value[1] = pos.y / L.stageH + 0.5;
-      u.uRadius.value = level.radius / L.stageH;
+      // Divide by the plane's own scaled extent (FOG_MARGIN wider than the stage), not the stage
+      // itself, so the uv centre and the radius match what setLayout actually drew.
+      u.uCentre.value[0] = pos.x / (L.stageW * FOG_MARGIN) + 0.5;
+      u.uCentre.value[1] = pos.y / (L.stageH * FOG_MARGIN) + 0.5;
+      u.uRadius.value = level.radius / (L.stageH * FOG_MARGIN);
       u.uStrength.value = level.strength;
       this.fog.visible = true;
     } else {
@@ -432,6 +434,7 @@ export class DeckEffects {
     }
     for (const m of this.glowMats) {
       m.alphaMap?.dispose();
+      m.alphaMap = null;
       m.dispose();
     }
     this.spriteMat.dispose();
@@ -445,6 +448,7 @@ export class DeckEffects {
     this.glows.fill(null);
     this.seams.fill(null);
     this.glowImages.fill(null);
+    this.seamCanvases.fill(null);
     this.layout = null;
   }
 }
