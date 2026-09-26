@@ -1,5 +1,6 @@
 // The journey deck's WebGL stage (deck spec §5–§9): seven laminated card meshes driven by the pure
-// pose model each frame. Lazy import; fixed colour management, so every token survives the renderer.
+// pose model each frame, plus the energy layer's effects (deck-effects.ts) and the high tier's bloom
+// pass (deck-bloom.ts). Lazy import; fixed colour management, so every token survives the renderer.
 import {
   AmbientLight,
   CanvasTexture,
@@ -191,6 +192,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
 
   let front = 0;
   let bloom: BloomHandle | null = null;
+  let disposed = false;
   /* ---------- Layout, part 2: size the meshes ---------- */
   function applyLayout(): void {
     if (!layout) return;
@@ -221,7 +223,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const portraitLoads = opts.portraits.map((p, i) =>
     loadImage(pickRendition(dpr, p.x1, p.x2)).then((img) => {
       if (img) textures.setPortrait(i, img);
-      return loadImage(p.glow).then((g) => effects.setGlow(i, g)); // glow-mask planes (Plan 3)
+      return loadImage(p.glow).then((g) => effects.setGlow(i, g)); // glow-mask planes
     }),
   );
   const markLoad = loadImage(opts.markUrl).then((img) => textures.setMark(img));
@@ -273,7 +275,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   let lastNow = performance.now();
   let raf = 0;
   let visible = true;
-  let disposed = false;
   let lastState = "";
   let cornerAlpha: number | null = null;
   let readyResolve: (() => void) | null = null;
@@ -352,17 +353,16 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const presentedCard = pose.cards.reduce((a, b) => (b.pull > a.pull ? b : a));
     const rank = labels[pose.active];
     if (!rank) return;
+    const textureBytes = textures.estimateBytes();
+    const effectBytes = effects.estimateBytes();
+    const bloomBytes = bloom?.estimateBytes() ?? 0;
+    const bytes = textureBytes + effectBytes + bloomBytes;
     const state: StageState = {
       state: intro ? "intro" : "scroll",
       rank,
       phase: presentedCard.phase,
       energy: Math.round(pose.energy * 20) / 20,
-      vram:
-        Math.round(
-          ((textures.estimateBytes() + effects.estimateBytes() + (bloom?.estimateBytes() ?? 0)) /
-            1_048_576) *
-            10,
-        ) / 10,
+      vram: Math.round((bytes / 1_048_576) * 10) / 10,
       slots:
         freeze && layout?.mode === "desktop"
           ? layout.slots.map((s) => `${Math.round(s.x)},${Math.round(s.y)}`).join(";")
@@ -429,7 +429,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       if (c.landed && landedAt[i] === null) landedAt[i] = freeze ? time - 10_000 : time;
       if (c.pull <= 0 && landedAt[i] !== null) landedAt[i] = null;
       if (c.phase === "leaving") {
-        if (leaveAt[i] === null) leaveAt[i] = time;
+        if (leaveAt[i] === null) leaveAt[i] = freeze ? time - 10_000 : time;
       } else leaveAt[i] = null;
       const at = landedAt[i];
       const leftAt = leaveAt[i];
