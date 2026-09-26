@@ -68,6 +68,8 @@ export function initDeck(): void {
   let introPlayed = false;
   let presented = 0;
   let hintShown = false;
+  let gaveUp = false;
+  let hasScrolled = false;
   let disposeTimer: ReturnType<typeof setTimeout> | undefined;
   let stageModule: Promise<typeof import("./deck-stage")> | null = null;
   const loadStage = () => (stageModule ??= import("./deck-stage"));
@@ -106,20 +108,41 @@ export function initDeck(): void {
     }
   };
 
-  const wirePointer = (h: StageHandle) => {
-    canvas.addEventListener("pointermove", (event) => {
-      if (event.pointerType === "touch") return;
-      h.pointer(event.clientX, event.clientY);
-    });
-    canvas.addEventListener("pointerleave", () => h.pointer(null, null));
-    canvas.addEventListener("click", (event) => {
-      const index = h.hit(event.clientX, event.clientY);
-      if (index !== null && index !== presented) jump(index);
-    });
+  // Wired exactly once against the persistent canvas: every dispatch reads the live `handle`, so
+  // a re-mount after the off-screen dispose never doubles up a stale mount's listeners.
+  canvas.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "touch") return;
+    handle?.pointer(event.clientX, event.clientY);
+  });
+  canvas.addEventListener("pointerleave", () => handle?.pointer(null, null));
+  canvas.addEventListener("click", (event) => {
+    const index = handle?.hit(event.clientX, event.clientY) ?? null;
+    if (index !== null && index !== presented) jump(index);
+  });
+
+  const armDispose = (): void => {
+    clearTimeout(disposeTimer);
+    disposeTimer = setTimeout(() => {
+      handle?.dispose();
+      handle = null;
+      delete track.dataset.deckReady;
+    }, DECK_PARAMS.tiers.disposeAfterMs);
+  };
+
+  // Once the deck can't run (a stage failure or a lost context it never recovers from), stop for
+  // good: no more observed intersections, no more scroll-armed mounts, nothing left mounted.
+  const giveUp = (): void => {
+    if (gaveUp) return;
+    gaveUp = true;
+    observer.disconnect();
+    removeEventListener("scroll", onFirstScroll);
+    handle?.dispose();
+    handle = null;
+    fallback(root, track);
   };
 
   const mount = async () => {
-    if (handle || mounting) return;
+    if (handle || mounting || gaveUp) return;
     mounting = true;
     try {
       const mod = await loadStage();
@@ -136,67 +159,63 @@ export function initDeck(): void {
         params: DECK_PARAMS,
         freeze,
         onState,
-        onContextLost: () => {
-          handle?.dispose();
-          handle = null;
-          fallback(root, track);
-        },
+        onContextLost: giveUp,
       });
       handle = mounted;
       mounted.setProgress(targetP);
       mounted.setVisible(intersecting && !document.hidden);
+      // The section may have scrolled off while this awaited: the observer's not-intersecting
+      // branch saw no `handle` yet to arm a dispose timer on, so arm it now instead.
+      if (!intersecting) armDispose();
       if (!freeze && !introPlayed && targetP < 0.5 / count) {
         introPlayed = true;
         mounted.startIntro();
       }
-      wirePointer(mounted);
       void mounted.ready.then(() => {
         if (handle === mounted) track.dataset.deckReady = "";
       });
     } catch {
-      fallback(root, track);
+      giveUp();
     } finally {
       mounting = false;
     }
   };
 
-  // Prefetch the stage (and E's portrait) after the first scroll, when the browser is idle.
-  addEventListener(
-    "scroll",
-    once(() =>
-      idle(() => {
-        void loadStage();
-        const url = pickRendition(
-          devicePixelRatio || 1,
-          portraits[0]?.x1 ?? null,
-          portraits[0]?.x2 ?? null,
-        );
-        if (url) new Image().src = url;
-      }),
-    ),
-    { passive: true },
-  );
+  // The first scroll both arms the mount gate below (the stage never loads at page load, on any
+  // window size) and, once idle, prefetches the stage chunk and rank E's portrait. If the journey
+  // is already on screen when this fires, it triggers the mount check itself.
+  const onFirstScroll = once(() => {
+    hasScrolled = true;
+    if (intersecting) void mount();
+    idle(() => {
+      void loadStage();
+      const url = pickRendition(
+        devicePixelRatio || 1,
+        portraits[0]?.x1 ?? null,
+        portraits[0]?.x2 ?? null,
+      );
+      if (url) new Image().src = url;
+    });
+  });
+  addEventListener("scroll", onFirstScroll, { passive: true });
 
   // Ignores the window's bottom 15%: a strip of journey peeking up at load mounts nothing.
-  new IntersectionObserver(
+  const observer = new IntersectionObserver(
     (entries) => {
       const entry = entries.at(-1);
       if (!entry) return;
       intersecting = entry.isIntersecting;
       if (intersecting) {
         clearTimeout(disposeTimer);
-        void mount();
+        if (hasScrolled) void mount();
       } else if (handle) {
-        disposeTimer = setTimeout(() => {
-          handle?.dispose();
-          handle = null;
-          delete track.dataset.deckReady;
-        }, DECK_PARAMS.tiers.disposeAfterMs);
+        armDispose();
       }
       handle?.setVisible(intersecting && !document.hidden);
     },
     { rootMargin: "0px 0px -15% 0px" },
-  ).observe(track);
+  );
+  observer.observe(track);
 
   document.addEventListener("visibilitychange", () => {
     handle?.setVisible(intersecting && !document.hidden);
