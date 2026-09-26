@@ -2358,3 +2358,34 @@ git commit -m "docs: Plan 3 in the spec's status and CLAUDE.md"
 - [ ] **Step 4: Hand back for the browser check**
 
 Report the head and the `pnpm size` rows. The controller opens the production build at 1440 (headless Chromium for exact widths, Chrome for the feel), checks S's eyes and seam, S+'s coat, smoke, fog and flare, the shadow, the bloom against the mid tier, the frame pacing during an S → S+ handoff, shows Marcus the screenshots, and writes the Build Log entry. The tuning session with the panel is Plan 5.
+
+## Execution notes (2026-09-25)
+
+Rulings made while the plan ran, so the plan reads true against the code:
+
+- Task 7's two-composer bloom was replaced. Darkening non-bloom objects hid the glow planes behind
+  the card's frame and text planes, and two full-resolution half-float composers cost about 210 MB
+  against the 80 MB ceiling. The bloom is now one half-resolution glow pass (`BLOOM_SCALE = 0.5`)
+  selected by the camera's layer mask and added over the plain canvas render by an additive
+  premultiplied quad (alpha = the glow's brightest encoded channel, `colorspace_fragment` encodes
+  once). `BloomHandle` gained `estimateBytes()`, counted in `data-deck-vram`.
+- Because that pass draws no cards, `DeckEffects` owns a depth-only proxy plane per card
+  (`colorWrite: false`, `DoubleSide`, `BLOOM_LAYER` only, high tier only) so the glow stays behind
+  the cards, and the glow sprite's setback is derived from the card's half extents and the largest
+  tilt plus float (0.806 world at 1440 × 900) instead of a fixed 0.05.
+- The smoke moved out of `deck-effects.ts` into `deck-smoke-sprites.ts` (`SmokeSprites`). Line caps
+  were authoring estimates: `deck-effects.ts` ≤ 480, `deck-smoke-sprites.ts` ≤ 175, `deck-bloom.ts`
+  ≤ 140.
+- The fog material is opaque-list additive (`transparent: false`, `premultipliedAlpha: true`,
+  `renderOrder −1`) so cards overwrite it; its shader includes `colorspace_fragment`, takes a
+  mount-relative `highp` time, and guards `smoothstep` against a zero radius. `FogUniforms` is a type
+  alias so a `ShaderMaterial` accepts it without a cast.
+- `SmokePool.emit` floors `acc + 1e-9` so a fractional rate integrates exactly.
+- Task 11's transparency probe reads `data-deck-corner-alpha = 0` at an energy-free rank on both
+  tiers and `< 128` at S+ on high (the blur's widest mip can reach the corner); the re-mount test
+  waits for `data-deck-bloom = on` and a settled vram before recording its baseline.
+- Deferred to Plan 5: the S+ point light (55 cd) likely clips a hotspot on the face; emission while
+  the card is still pulling; seam textures at 2× regardless of dpr; the bloom's reach
+  (`bloom.radius`/`threshold`); the halo's depth edge against the racked backs (a group-parented glow
+  plane would tilt with the card and sit close again); the mid boost when the bloom chunk fails on
+  high; the size gate's `Portraits: none referenced` branch has no test.

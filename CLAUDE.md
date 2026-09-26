@@ -11,7 +11,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 >
 > **Vector journey done.** Spec: docs/superpowers/specs/2026-09-25-vector-journey-design.md; plan: docs/superpowers/plans/2026-09-25-vector-journey.md. The journey's clips are replaced by one traced-and-rigged SVG scene that ranks the character up with the scroll.
 >
-> **Journey card deck in progress** (replaces the vector scene). Spec: docs/superpowers/specs/2026-09-25-journey-card-deck-design.md; plans: docs/superpowers/plans/2026-09-25-journey-deck-*.md; ADR 0004. Plans 1 (foundations) and 2 (the stage, desktop) are done; energy, phone and the tuning/retirement phases follow.
+> **Journey card deck in progress** (replaces the vector scene). Spec: docs/superpowers/specs/2026-09-25-journey-card-deck-design.md; plans: docs/superpowers/plans/2026-09-25-journey-deck-*.md; ADR 0004. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character) and 3 (energy) are done; phone and the tuning/retirement phases follow.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
 - `pnpm test:visual` runs the visual regression baselines (macOS, local only). After an intentional design change, run `pnpm test:visual --update-snapshots`, review the new images, and commit them.
 - Lighthouse CI config: `lighthouse/lighthouserc.cjs`. To run it locally: `pnpm build && npx -y @lhci/cli@0.15.1 autorun --config=lighthouse/lighthouserc.cjs --upload.target=filesystem --upload.outputDir=/tmp/lhci`. Don't install it with pnpm.
-- `pnpm size` checks `dist/` (it runs in CI): initial JS on `/`, fonts between 20 and 120 KB (0 means the Fonts API entry broke), the deck's lazy JS (Three.js and the stage, ≤ 170 KB gz, never in the initial graph) and the journey scene until Phase 6 retires it.
+- `pnpm size` checks `dist/` (it runs in CI): initial JS on `/`, fonts between 20 and 120 KB (0 means the Fonts API entry broke), the deck's lazy JS (Three.js and the stage, ≤ 170 KB gz, never in the initial graph), the bloom chunk (≤ 40 KB gz), portrait renditions (800 px ≤ 120 KB, 400 px ≤ 40 KB, glow masks ≤ 10 KB) and the journey scene until Phase 6 retires it.
 - Component tests render `.astro` files through `test/render.ts` (Astro Container API) and assert on markup. Pass `request` for components that read `Astro.url`. Scoped styles append `data-astro-cid-*` as the last attribute, so match `class="x"[^>]*>text<`.
 - If the claude-in-chrome window won't resize, check real Chrome at the width it allows, and capture exact widths with Playwright Chromium against the production server on a spare port.
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
@@ -59,7 +59,7 @@ Marcus prefers step-by-step delivery:
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
 - `art/journey/` holds the registered flat-vector sources (lossless WebP) the scene is built from; `scripts/build-scene.mjs` traces them into `public/journey/scene.svg` and the inline silhouette.
-- The journey card deck: `src/components/journey/Journey.astro` (the stage's DOM: canvas, layout column, rank rail, counter, hint, live region) with `JourneyTimeline.astro` as the accessible twin and fallback; `src/scripts/deck/` (`index.ts` runs in the page, `deck-stage.ts` is the lazy Three.js stage, `deck-pose.ts`/`deck-layout.ts`/`deck-paint.ts`/`deck-textures.ts` are pure and unit-tested, `deck-params.ts` holds every tunable, `deck-tune.ts` is the dev panel behind `?tune`); `src/data/deck.ts` (per-rank art record) and `src/images/deck/` (portraits and glow masks from `scripts/import-portrait.mjs`). `?deck-freeze=YYYY-MM-DD` stills the deck for tests.
+- The journey card deck: `src/components/journey/Journey.astro` (the stage's DOM: canvas, layout column, rank rail, counter, hint, live region) with `JourneyTimeline.astro` as the accessible twin and fallback; `src/scripts/deck/` (`index.ts` runs in the page, `deck-stage.ts` is the lazy Three.js stage, `deck-effects.ts` its energy (glow, seams, light, fog, shadows) fed by the pure `deck-energy.ts` and `deck-fog.ts`, `deck-smoke-sprites.ts` the smoke sprites over the pure `deck-smoke.ts` pool, `deck-bloom.ts` the high tier's second lazy chunk (a half-resolution glow pass added over the canvas), `deck-cards.ts` the card meshes, `deck-pose.ts`/`deck-layout.ts`/`deck-paint.ts`/`deck-textures.ts` are pure and unit-tested, `deck-params.ts` holds every tunable, `deck-tune.ts` is the dev panel behind `?tune`); `src/data/deck.ts` (per-rank art record) and `src/images/deck/` (portraits and glow masks from `scripts/import-portrait.mjs`). `?deck-freeze=YYYY-MM-DD` stills the deck for tests.
 - `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
@@ -97,6 +97,7 @@ Marcus prefers step-by-step delivery:
   - Motion: ≤ 30 KB gz
   - fonts: ≤ 120 KB
   - Three.js only in the deck's lazy chunks: ≤ 170 KB gz, never in the initial graph
+  - the bloom chunk ≤ 40 KB gz, never in the initial graph; served portraits 800 px ≤ 120 KB, 400 px ≤ 40 KB, glow masks ≤ 10 KB
   - zero third-party requests
   - the deck's chunk may prefetch after the first scroll; its portraits load only once the journey is on screen; `scene.svg` ≤ 300 KB gz until Phase 6 removes it
 

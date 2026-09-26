@@ -1,8 +1,9 @@
 # Journey card deck — design
 
 - **Date:** 2026-09-25 (revised the same day after Marcus's deep review)
-- **Status:** Approved 2026-09-25. Plan 1 (foundations) and Plan 2 (the stage, desktop) implemented; ADR 0004 written with Plan 2.
+- **Status:** Approved 2026-09-25. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character) and 3 (energy) implemented; ADR 0004 written with Plan 2.
 - **Implementation notes (Plan 1 reviews):** the intro clock is an accumulated `elapsed` (no derived speed); a card's `landedAt` persists until it is racked again (`pull <= 0`), never cleared on leaving; the canvas font family is read from `--font-jetbrains` at runtime (the Fonts API registers a hashed name). Where §7 disagrees, these win.
+- **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the fog's radius is passed in stage-height units; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
 - **Supersedes:** `2026-09-25-vector-journey-design.md` (the traced SVG scene) and the journey
   parts of `2026-09-24-hero-journey-redesign-design.md`
 - **Decisions this creates:** ADR 0004 (Three.js, lighting, bloom, glow and smoke inside the
@@ -405,7 +406,7 @@ Files in `src/scripts/deck/` (a new directory, so it never collides with the old
   comes within one rank of the active one. Text: one per _slot_
   (presented, incoming), repainted in place during the print-in, never per card. Frame and back:
   one each, shared. Chip: one per rank, 160 × 56. Glow mask: one per card, single channel
-  (`RedFormat`), at the 1× portrait size. Smoke: three 256² alpha textures. Environment: one 256
+  (`RedFormat` (implemented as RGBA: alphaMap samples .g)), at the 1× portrait size. Smoke: three 256² alpha textures. Environment: one 256
   PMREM. Estimated total on a 1440 × 900 high-tier display: about 60 MB; the ceiling is 80 MB on
   desktop and 40 MB on phones, and the stage reports its estimate on `data-deck-vram`. Textures are
   disposed with the renderer after 30 s out of view and repainted from the cached canvases on return.
