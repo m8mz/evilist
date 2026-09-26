@@ -66,7 +66,9 @@ export function initDeck(): void {
   let mounting = false;
   let intersecting = false;
   let introPlayed = false;
-  let presented = 0;
+  // -1, not 0: rank E is index 0 too, and the first state update must still reach
+  // rail.setPresented so the aria-live region announces the landing rank.
+  let presented = -1;
   let hintShown = false;
   let gaveUp = false;
   let hasScrolled = false;

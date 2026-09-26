@@ -80,7 +80,10 @@ export function initRail(
   const counter = track.querySelector<HTMLElement>("[data-deck-counter]");
   const hint = track.querySelector<HTMLElement>("[data-deck-hint]");
   const live = track.querySelector<HTMLElement>("[data-deck-live]");
-  let presented = 0;
+  // -1, not 0: button 0 already carries aria-pressed="true" from the server render, so a 0 start
+  // would make the very first setPresented(0) a no-op and the aria-live region would never
+  // announce the landing rank.
+  let presented = -1;
   let hintTimer: ReturnType<typeof setTimeout> | undefined;
 
   const focusRank = (index: number) => {
