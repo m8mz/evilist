@@ -435,8 +435,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       if (c.landed && landedAt[i] === null) landedAt[i] = freeze ? time - 10_000 : time;
       if (c.pull <= 0 && landedAt[i] !== null) landedAt[i] = null;
       // A landed card pulled back out (a reverse scroll) reports "pulling"; its leave clock starts
-      // too, so its glow fades over GLOW_LEAVE_MS both ways instead of snapping off.
-      if (c.phase === "leaving" || (c.phase === "pulling" && landedAt[i] !== null)) {
+      // too, so its glow fades over GLOW_LEAVE_MS both ways instead of snapping off. A card that
+      // never landed (one coming back through "leaving" on a reverse scroll) gets no clock, so its
+      // glow stays off until it lands instead of flashing to full and fading.
+      if ((c.phase === "leaving" || c.phase === "pulling") && landedAt[i] !== null) {
         if (leaveAt[i] === null) leaveAt[i] = freeze ? time - 10_000 : time;
       } else leaveAt[i] = null;
       const at = landedAt[i];
