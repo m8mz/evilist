@@ -4,6 +4,7 @@
 // attributes, and hand the section to the timeline when anything is missing.
 import { scroll } from "motion";
 import { career } from "../../data/career";
+import { judgeSwipe, orientationTilt, screenAngleOf, type Orientation } from "./deck-gestures";
 import { cardModel, setDeckFontFamily } from "./deck-paint";
 import { DECK_PARAMS } from "./deck-params";
 import { initRail, scrollToRank } from "./deck-rail";
@@ -22,6 +23,7 @@ function fallback(root: HTMLElement, track: HTMLElement): void {
   delete track.dataset.deckSlots;
   delete track.dataset.deckBloom;
   delete track.dataset.deckCornerAlpha;
+  delete track.dataset.deckTilt;
 }
 
 /**
@@ -60,6 +62,10 @@ export function initDeck(): void {
     return;
   }
   track.dataset.deckTier = tier;
+
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  const hint = track.querySelector<HTMLElement>("[data-deck-hint]");
+  if (coarse && hint) hint.textContent = "↓ scroll, swipe or pick a rank";
 
   // A synchronous throw anywhere below (setup, not the async `mount`, which has its own try/catch
   // via `giveUp`) must still hand the section to the timeline rather than leave the pinned track
@@ -127,6 +133,59 @@ export function initDeck(): void {
       }
     };
 
+    // deviceorientation (spec §7, §13): listened to only after a tap on the presented card. iOS
+    // asks once, inside that tap's gesture; a denial ends it silently. The baseline is the first
+    // reading after enabling, so the phone's resting angle is "flat".
+    type Permission = "granted" | "denied" | "prompt";
+    interface OrientationCtor {
+      requestPermission?: () => Promise<Permission>;
+    }
+    let permission: Permission | "unknown" = "unknown";
+    let orientationOn = false;
+    let baseline: Orientation | null = null;
+    const setTiltState = (on: boolean): void => {
+      orientationOn = on;
+      track.dataset.deckTilt = on ? "on" : "off";
+      if (!on) {
+        baseline = null;
+        handle?.tilt(null, null);
+      }
+    };
+    const onOrientation = (event: DeviceOrientationEvent): void => {
+      if (!orientationOn || !handle) return;
+      const reading = { beta: event.beta ?? Number.NaN, gamma: event.gamma ?? Number.NaN };
+      if (!Number.isFinite(reading.beta) || !Number.isFinite(reading.gamma)) return;
+      baseline ??= reading;
+      const angle = screenAngleOf(screen.orientation?.angle ?? 0);
+      const t = orientationTilt(reading, baseline, angle);
+      handle.tilt(t.x, t.y);
+    };
+    const stopOrientation = (): void => {
+      if (!orientationOn) return;
+      removeEventListener("deviceorientation", onOrientation);
+      setTiltState(false);
+    };
+    const enableOrientation = async (): Promise<void> => {
+      if (orientationOn || permission === "denied") return;
+      const ctor = (globalThis as unknown as { DeviceOrientationEvent?: OrientationCtor })
+        .DeviceOrientationEvent;
+      if (!ctor) return;
+      if (typeof ctor.requestPermission === "function" && permission !== "granted") {
+        try {
+          permission = await ctor.requestPermission();
+        } catch {
+          permission = "denied";
+        }
+        if (permission !== "granted") {
+          permission = "denied";
+          return;
+        }
+      }
+      addEventListener("deviceorientation", onOrientation, { passive: true });
+      setTiltState(true);
+    };
+    track.dataset.deckTilt = "off";
+
     // Wired exactly once against the persistent canvas: every dispatch reads the live `handle`, so
     // a re-mount after the off-screen dispose never doubles up a stale mount's listeners.
     canvas.addEventListener("pointermove", (event) => {
@@ -139,9 +198,40 @@ export function initDeck(): void {
       if (index !== null && index !== presented) jump(index);
     });
 
+    // Touch (spec §7). The canvas's touch-action is pan-y, so the browser owns vertical pans and
+    // cancels the pointer; what reaches pointerup is a horizontal gesture or a tap.
+    let touchStart: { id: number; x: number; y: number } | null = null;
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch" || !event.isPrimary) return;
+      touchStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    });
+    canvas.addEventListener("pointercancel", () => (touchStart = null));
+    canvas.addEventListener("pointerup", (event) => {
+      if (event.pointerType !== "touch" || !touchStart || touchStart.id !== event.pointerId) return;
+      const dx = event.clientX - touchStart.x;
+      const dy = event.clientY - touchStart.y;
+      touchStart = null;
+      const dir = judgeSwipe(dx, dy);
+      if (dir !== 0) {
+        const next = Math.max(0, Math.min(count - 1, presented + dir));
+        if (next !== presented) jump(next);
+        return;
+      }
+      // A tap. On the presented card it turns the orientation tilt on; anywhere else the click
+      // handler above already jumps to the tapped card.
+      if (
+        Math.abs(dx) < 8 &&
+        Math.abs(dy) < 8 &&
+        handle?.hit(event.clientX, event.clientY) === presented
+      ) {
+        void enableOrientation();
+      }
+    });
+
     const armDispose = (): void => {
       clearTimeout(disposeTimer);
       disposeTimer = setTimeout(() => {
+        stopOrientation();
         handle?.dispose();
         handle = null;
         delete track.dataset.deckReady;
@@ -155,6 +245,7 @@ export function initDeck(): void {
       gaveUp = true;
       observer.disconnect();
       removeEventListener("scroll", onFirstScroll);
+      stopOrientation();
       handle?.dispose();
       handle = null;
       fallback(root, track);
@@ -231,6 +322,7 @@ export function initDeck(): void {
           armDispose();
         }
         handle?.setVisible(intersecting && !document.hidden);
+        if (!intersecting) stopOrientation();
       },
       { rootMargin: "0px 0px -15% 0px" },
     );
@@ -238,6 +330,7 @@ export function initDeck(): void {
 
     document.addEventListener("visibilitychange", () => {
       handle?.setVisible(intersecting && !document.hidden);
+      if (document.hidden) stopOrientation();
     });
 
     // Listens for the page's whole life (a back/forward-cache restore must not freeze the deck).

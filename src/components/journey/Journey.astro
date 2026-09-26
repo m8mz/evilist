@@ -178,6 +178,8 @@ const renditions = await Promise.all(
     display: block;
     width: 100%;
     height: 100%;
+    /* Vertical pans stay the page's; horizontal ones reach the swipe (spec §7). */
+    touch-action: pan-y;
   }
 
   .journey__gl.is-pointer {

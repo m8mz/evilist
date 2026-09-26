@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import Journey from "../../src/components/journey/Journey.astro";
 import { career } from "../../src/data/career";
@@ -88,5 +89,12 @@ describe("Journey (the card deck's stage)", () => {
     expect(html).not.toContain("data-scene");
     expect(html).not.toContain("<video");
     expect(html).not.toContain("<svg");
+  });
+
+  it("lets vertical touch scrolling through the canvas and keeps horizontal swipes for the deck", async () => {
+    // The Container API's renderToString does not include the scoped <style> block (see
+    // test/render.ts), so the rule is asserted against the component source instead.
+    const source = readFileSync("src/components/journey/Journey.astro", "utf8");
+    expect(source).toMatch(/\.journey__gl[^{]*\{[^}]*touch-action:\s*pan-y/);
   });
 });
