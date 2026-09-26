@@ -140,7 +140,7 @@ export function initDeck(): void {
     interface OrientationCtor {
       requestPermission?: () => Promise<Permission>;
     }
-    let permission: Permission | "unknown" = "unknown";
+    let permission: Permission | "unknown" | "asking" = "unknown";
     let orientationOn = false;
     let baseline: Orientation | null = null;
     const setTiltState = (on: boolean): void => {
@@ -166,11 +166,15 @@ export function initDeck(): void {
       setTiltState(false);
     };
     const enableOrientation = async (): Promise<void> => {
-      if (orientationOn || permission === "denied") return;
+      // The stage reads the external tilt only in phone mode: an iPad in landscape or a touch
+      // laptop would be prompted for a tilt that never moves anything (deck-input.ts).
+      if (matchMedia("(min-width: 60rem)").matches) return;
+      if (orientationOn || permission === "denied" || permission === "asking") return;
       const ctor = (globalThis as unknown as { DeviceOrientationEvent?: OrientationCtor })
         .DeviceOrientationEvent;
       if (!ctor) return;
       if (typeof ctor.requestPermission === "function" && permission !== "granted") {
+        permission = "asking";
         try {
           permission = await ctor.requestPermission();
         } catch {
@@ -180,6 +184,8 @@ export function initDeck(): void {
           permission = "denied";
           return;
         }
+        // Whatever wanted the tilt may be gone by now; the granted permission stays regardless.
+        if (orientationOn || gaveUp || !intersecting || document.hidden) return;
       }
       addEventListener("deviceorientation", onOrientation, { passive: true });
       setTiltState(true);
@@ -193,19 +199,20 @@ export function initDeck(): void {
       handle?.pointer(event.clientX, event.clientY);
     });
     canvas.addEventListener("pointerleave", () => handle?.pointer(null, null));
-    canvas.addEventListener("click", (event) => {
-      const index = handle?.hit(event.clientX, event.clientY) ?? null;
-      if (index !== null && index !== presented) jump(index);
-    });
 
     // Touch (spec §7). The canvas's touch-action is pan-y, so the browser owns vertical pans and
     // cancels the pointer; what reaches pointerup is a horizontal gesture or a tap.
     let touchStart: { id: number; x: number; y: number } | null = null;
+    // Set by pointerup for a tap on the presented card; the click that follows consumes it below.
+    let tapOnPresented = false;
     canvas.addEventListener("pointerdown", (event) => {
       if (event.pointerType !== "touch" || !event.isPrimary) return;
       touchStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
     });
-    canvas.addEventListener("pointercancel", () => (touchStart = null));
+    canvas.addEventListener("pointercancel", () => {
+      touchStart = null;
+      tapOnPresented = false;
+    });
     canvas.addEventListener("pointerup", (event) => {
       if (event.pointerType !== "touch" || !touchStart || touchStart.id !== event.pointerId) return;
       const dx = event.clientX - touchStart.x;
@@ -213,19 +220,30 @@ export function initDeck(): void {
       touchStart = null;
       const dir = judgeSwipe(dx, dy);
       if (dir !== 0) {
+        if (presented < 0) return; // No landed rank yet to move from.
         const next = Math.max(0, Math.min(count - 1, presented + dir));
         if (next !== presented) jump(next);
         return;
       }
-      // A tap. On the presented card it turns the orientation tilt on; anywhere else the click
-      // handler above already jumps to the tapped card.
+      // A tap on the presented card flags it for the click below; elsewhere the click handler's
+      // own hit test jumps to the tapped card, as before.
       if (
-        Math.abs(dx) < 8 &&
-        Math.abs(dy) < 8 &&
+        Math.abs(dx) < DECK_PARAMS.gestures.tapSlopPx &&
+        Math.abs(dy) < DECK_PARAMS.gestures.tapSlopPx &&
         handle?.hit(event.clientX, event.clientY) === presented
       ) {
+        tapOnPresented = true;
+      }
+    });
+    canvas.addEventListener("click", (event) => {
+      // The permission request rides this event, not the touch pointerup above: iOS ties
+      // requestPermission() to a gesture it recognizes, and pointerup isn't reliably one.
+      if (tapOnPresented) {
+        tapOnPresented = false;
         void enableOrientation();
       }
+      const index = handle?.hit(event.clientX, event.clientY) ?? null;
+      if (index !== null && index !== presented) jump(index);
     });
 
     const armDispose = (): void => {

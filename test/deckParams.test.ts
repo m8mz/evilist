@@ -21,6 +21,7 @@ describe("deck params", () => {
     expect(DECK_PARAMS.smoke.pool).toBe(140);
     expect(DECK_PARAMS.bloom.strength).toBe(0.45);
     expect(DECK_PARAMS.gestures.swipeMinPx).toBe(40);
+    expect(DECK_PARAMS.gestures.tapSlopPx).toBe(8);
     expect(DECK_PARAMS.layout.relayoutDebounceMs).toBe(150);
   });
 

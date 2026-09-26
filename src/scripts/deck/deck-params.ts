@@ -64,6 +64,8 @@ export interface DeckParams {
     swipeRatio: number;
     /** Degrees of card tilt per degree of device tilt, before the tilt clamps apply. */
     orientationGain: number;
+    /** A touch that traveled less than this in either axis, in CSS px, counts as a tap. */
+    tapSlopPx: number;
   };
   float: {
     fadeInMs: number;
@@ -176,7 +178,7 @@ export function defaultDeckParams(): DeckParams {
       rackRotY: 103,
     },
     tilt: { maxX: 8, maxY: 10, tau: 120 },
-    gestures: { swipeMinPx: 40, swipeRatio: 2, orientationGain: 0.5 },
+    gestures: { swipeMinPx: 40, swipeRatio: 2, orientationGain: 0.5, tapSlopPx: 8 },
     float: {
       fadeInMs: 1500,
       y: { amp: 4, periodMs: 4200 },
