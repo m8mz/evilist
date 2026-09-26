@@ -1,7 +1,8 @@
 # Journey card deck — design
 
 - **Date:** 2026-09-25 (revised the same day after Marcus's deep review)
-- **Status:** Approved in brainstorm, pending Marcus's review of this revision
+- **Status:** Approved 2026-09-25. Plan 1 (foundations) and Plan 2 (the stage, desktop) implemented; ADR 0004 written with Plan 2.
+- **Implementation notes (Plan 1 reviews):** the intro clock is an accumulated `elapsed` (no derived speed); a card's `landedAt` persists until it is racked again (`pull <= 0`), never cleared on leaving; the canvas font family is read from `--font-jetbrains` at runtime (the Fonts API registers a hashed name). Where §7 disagrees, these win.
 - **Supersedes:** `2026-09-25-vector-journey-design.md` (the traced SVG scene) and the journey
   parts of `2026-09-24-hero-journey-redesign-design.md`
 - **Decisions this creates:** ADR 0004 (Three.js, lighting, bloom, glow and smoke inside the

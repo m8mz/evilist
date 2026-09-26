@@ -10,6 +10,8 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 > **Hero and journey redesign done.** Spec: docs/superpowers/specs/2026-09-24-hero-journey-redesign-design.md; plans: docs/superpowers/plans/2026-09-2{4,5}-hero-v2-*.md; ADR 0003. All three phases are implemented (header and hero; the E → S+ ladder, LinkedIn content and rack parallax; the anime journey). Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline), on hold until Marcus says development is done.
 >
 > **Vector journey done.** Spec: docs/superpowers/specs/2026-09-25-vector-journey-design.md; plan: docs/superpowers/plans/2026-09-25-vector-journey.md. The journey's clips are replaced by one traced-and-rigged SVG scene that ranks the character up with the scroll.
+>
+> **Journey card deck in progress** (replaces the vector scene). Spec: docs/superpowers/specs/2026-09-25-journey-card-deck-design.md; plans: docs/superpowers/plans/2026-09-25-journey-deck-*.md; ADR 0004. Plans 1 (foundations) and 2 (the stage, desktop) are done; energy, phone and the tuning/retirement phases follow.
 
 ## Commands
 
@@ -17,7 +19,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 - `pnpm check` runs astro check. `pnpm test` runs vitest. `pnpm test:e2e` runs playwright. `pnpm lint` / `pnpm format` run prettier.
 - `pnpm test:visual` runs the visual regression baselines (macOS, local only). After an intentional design change, run `pnpm test:visual --update-snapshots`, review the new images, and commit them.
 - Lighthouse CI config: `lighthouse/lighthouserc.cjs`. To run it locally: `pnpm build && npx -y @lhci/cli@0.15.1 autorun --config=lighthouse/lighthouserc.cjs --upload.target=filesystem --upload.outputDir=/tmp/lhci`. Don't install it with pnpm.
-- `pnpm size` checks `dist/` (it runs in CI): initial JS on `/`, fonts between 20 and 120 KB (0 means the Fonts API entry broke), and no Three.js chunk.
+- `pnpm size` checks `dist/` (it runs in CI): initial JS on `/`, fonts between 20 and 120 KB (0 means the Fonts API entry broke), the deck's lazy JS (Three.js and the stage, ≤ 170 KB gz, never in the initial graph) and the journey scene until Phase 6 retires it.
 - Component tests render `.astro` files through `test/render.ts` (Astro Container API) and assert on markup. Pass `request` for components that read `Astro.url`. Scoped styles append `data-astro-cid-*` as the last attribute, so match `class="x"[^>]*>text<`.
 - If the claude-in-chrome window won't resize, check real Chrome at the width it allows, and capture exact widths with Playwright Chromium against the production server on a spare port.
 - `pnpm build:pdf` builds the resume PDF (Phase 3). Lighthouse CI runs in GitHub Actions only; `@lhci/cli` is not a local dependency because its stale transitive deps fail pnpm's trustPolicy.
@@ -57,7 +59,7 @@ Marcus prefers step-by-step delivery:
 - `src/styles/tokens.css` holds the design tokens (`@theme`). The retired manga names (`--color-washi`, `--color-hanko`, `--text-3xl`, …) are gone; `test/migration.test.ts` keeps them from coming back.
 - `src/components/{layout,seo,ui,home,journey,contact}` hold the Astro components. Islands are vanilla TS in `src/scripts/`, with no React.
 - `art/journey/` holds the registered flat-vector sources (lossless WebP) the scene is built from; `scripts/build-scene.mjs` traces them into `public/journey/scene.svg` and the inline silhouette.
-- The journey card deck (spec `docs/superpowers/specs/2026-09-25-journey-card-deck-design.md`) is being built in phases; the vector scene stays live until Phase 3 swaps it. Foundations: `src/data/deck.ts` (per-rank art record) with `deck-glow-bands.json`, `src/scripts/deck/` (`deck-params.ts` constants, `deck-layout.ts`, `deck-pose.ts`, `deck-paint.ts`), `scripts/import-portrait.mjs` (portraits into `src/images/deck/<stage-id>.webp` plus a `-glow.webp` mask) and `src/images/devil-mark.svg` (the card back's mark, from `scripts/trace-mark.mjs`).
+- The journey card deck: `src/components/journey/Journey.astro` (the stage's DOM: canvas, layout column, rank rail, counter, hint, live region) with `JourneyTimeline.astro` as the accessible twin and fallback; `src/scripts/deck/` (`index.ts` runs in the page, `deck-stage.ts` is the lazy Three.js stage, `deck-pose.ts`/`deck-layout.ts`/`deck-paint.ts`/`deck-textures.ts` are pure and unit-tested, `deck-params.ts` holds every tunable, `deck-tune.ts` is the dev panel behind `?tune`); `src/data/deck.ts` (per-rank art record) and `src/images/deck/` (portraits and glow masks from `scripts/import-portrait.mjs`). `?deck-freeze=YYYY-MM-DD` stills the deck for tests.
 - `src/components/ui/` holds the primitives: `Section` (`tone`, `prompt` eyebrow), `Panel` (`variant="case"`), `Button` (a link with `href`, otherwise a submit button), `RankChip`, `Prompt`, `Tag`, `KeyValue`, `TerminalFrame`, `LogBars`, `Icon`, `Still` (Higgsfield stills, alt starting "Illustration:").
 - `src/content/notes/*.mdx` is the Notes collection (defined in `src/content.config.ts`). Deep technical posts belong on linux.engineering, not here.
 - `src/actions/contact.ts` is the contact action (SendGrid). Escape all user input, and keep the honeypot, time-trap and rate limit. `/contact` is the only on-demand page.
@@ -68,7 +70,7 @@ Marcus prefers step-by-step delivery:
 
 ## Design brief
 
-- Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow.
+- Concept: "terminal window at midnight" (from the Axiom style reference). Surfaces step `void #000` → `carbon #111` → `graphite #191919` → `iron #202020` (borders). Elevation comes only from those steps: no shadows, gradients, blur or glow (the journey deck is the one exception, ADR 0004).
 - One accent, `--color-ember` `#da5c2c`, used only for: primary button fills, the prompt cursor, the `Panel case` left border, log bars / pulse dots / LEDs, the hero network's lit nodes, link hover, focus rings, selection, and the S+ `RankChip` (the top rank). Nowhere else. Two exceptions live only inside images (ADR 0003): the yellow evil_logo in the header, and violet in the journey art.
 - Header: 64px (--header-h), full width; the home link is two crops of evil_logo.webp side by side (lettering first, 0.25rem gap): `logo-lettering.webp` at 27px tall (25px on phones), `logo-devil.webp` at 50px tall (46px on phones); both alt="", the link carries the name. The nav reads as root paths (`/home /resume /now /notes /contact`, lowercase, a `/` in an `aria-hidden` span before each label), 18px links.
 - Errors and status never use ember: paper text with an ash `error:` prefix, and a 1px paper border on the invalid field.
@@ -83,23 +85,20 @@ Marcus prefers step-by-step delivery:
   - keep `trailingSlash: "never"`: the Node adapter attaches the static CSP header only to the slashless path, and `e2e/layout.spec.ts` checks every sitemap URL for it
   - CSP is disabled under `astro dev` (Vite HMR injects unhashed inline tags); only production builds enforce it, and `e2e/layout.spec.ts` checks that it does
   - use `@media (scripting: enabled)` for JS-only states
-- Journey (`src/components/journey/`):
-  - `Journey.astro` holds the pinned, full-width stage (in `Section`'s `bleed` slot): one `[data-scene]` box carrying the inline silhouette until `scripts/journey.ts` fetches `public/journey/scene.svg` (only once the journey is on screen and the page has scrolled). `src/scripts/avatar.ts` maps scroll progress to the scene state (rank, blend, props sequence, pose, energy; pure, unit-tested); `src/scripts/scene.ts` writes it as SVG attributes by id. Idle life is CSS on the scene's `#part-*-idle` groups.
-  - The art pipeline is pnpm only: `scripts/import-art.mjs` → `scripts/register-outfit.mjs` (2% residual gate) → `scripts/build-scene.mjs` (`sharp` + `potrace`, palette in `scripts/trace-vector.mjs`, rig in `src/data/avatar-rig.json`) → `scripts/render-rank-stills.mjs` for the timeline's pictures. `pnpm size` checks the scene (≤ 300 KB gz) and rejects any other file in `dist/client/journey`.
-  - Switch stages with visibility/opacity, never `display`, or the layout shifts.
+- Journey (`src/components/journey/`): the card deck. `Journey.astro` renders the stage's DOM contract (see the plan) and `src/scripts/deck/index.ts` decides the tier, prefetches the stage after the first scroll, mounts it when the journey is on screen, mirrors its state to `data-deck-*` attributes and falls back to the timeline when WebGL2 is missing or a context is lost. Colour management is fixed in `deck-stage.ts`: no tone mapping, sRGB out, faces on the emissive recipe. Switch stages with visibility/opacity, never `display`, while the section is pinned.
 - Playwright: `test.skip(callback)` only receives fixtures. For project-based skips, call `test.skip(info.project.name …)` inside `test.beforeEach(({}, info) => …)`.
 - Avoid template tells: all-caps eyebrow labels (the eyebrow is the `~/path` prompt), card grids with soft shadows, fade-up on every section.
 
-- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield flat-vector renders traced into one scroll-driven SVG scene; its violet energy aura lives inside that art, ADR 0003). No hero aura effect (the Three.js one is gone), no diagonal section cuts.
+- Dark only. Tech, gaming and anime flavour without the cliché: rank-up E→S+ as terminal chips and an original anime character in the journey (Higgsfield flat-vector renders traced into one scroll-driven SVG scene; its violet energy aura lives inside that art, ADR 0003). No hero aura effect; Three.js exists only in the journey deck's lazy chunk (ADR 0004), no diagonal section cuts.
 - Respect `prefers-reduced-motion` in every animation.
-- Animate only `transform` and `opacity`, plus `stroke-dashoffset` for vector outline draw-ins (the journey's props).
+- Animate only `transform` and `opacity`, plus `stroke-dashoffset` for vector outline draw-ins (the journey's props). The deck's canvas is WebGL and outside this rule (ADR 0004).
 - Budgets:
   - initial JS on `/`: ≤ 100 KB gz
   - Motion: ≤ 30 KB gz
   - fonts: ≤ 120 KB
-  - no Three.js (removed in the Axiom redesign)
+  - Three.js only in the deck's lazy chunks: ≤ 170 KB gz, never in the initial graph
   - zero third-party requests
-  - the journey's scene and stills load only once the journey is on screen and the page has scrolled (none at page load, on any window size); `scene.svg` ≤ 300 KB gz
+  - the deck's chunk may prefetch after the first scroll; its portraits load only once the journey is on screen; `scene.svg` ≤ 300 KB gz until Phase 6 removes it
 
 ## Security checklist (before merge)
 
