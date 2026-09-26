@@ -1,37 +1,43 @@
-// Selective bloom for the high tier (deck spec §8, "Bloom"; ADR 0004): the scene renders once with
-// everything off BLOOM_LAYER darkened, that pass blooms at half resolution, and a second composer
-// adds the result over the normal render. Its own lazy chunk, imported by deck-stage.ts only on the
-// high tier, so the mid tier never pays for the postprocessing code.
+// Selective bloom for the high tier (deck spec §8, "Bloom"; ADR 0004). The scene renders to the
+// canvas exactly as the mid tier does (the browser's MSAA, the renderer's sRGB output). Then only
+// BLOOM_LAYER renders again, through the camera's layer mask, into one small linear target that
+// UnrealBloomPass blurs, and a full-screen quad adds that glow over the canvas. No material swapping
+// and no second composer: the glow is low-frequency, so the pass runs at half the CSS resolution and
+// costs about a tenth of a full-resolution composer. Its own lazy chunk, imported by deck-stage.ts on
+// the high tier only, so the mid tier never pays for the postprocessing code.
 import {
-  HalfFloatType,
-  Mesh,
-  MeshBasicMaterial,
+  AdditiveBlending,
   ShaderMaterial,
-  Sprite,
-  SpriteMaterial,
   Vector2,
-  WebGLRenderTarget,
   type Camera,
-  type Material,
-  type Object3D,
   type Scene,
   type WebGLRenderer,
 } from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { BLOOM_LAYER } from "./deck-effects";
 import type { DeckParams } from "./deck-params";
 
 export interface BloomHandle {
+  /** Renders the scene to the canvas, then the glow pass over it. */
   render(): void;
+  /** Resizes the glow target; `w` and `h` in CSS px, as the stage measures them. */
   setSize(w: number, h: number): void;
+  /** The glow pass's render targets, in bytes, for `data-deck-vram`. */
+  estimateBytes(): number;
   dispose(): void;
 }
 
-const MIX_VERTEX = /* glsl */ `
+/** The glow target's scale against CSS px. The blur removes anything finer, so half is enough. */
+export const BLOOM_SCALE = 0.5;
+
+// Bytes per glow-target pixel: the composer's two RGBA half-float targets with depth (2 × (8 + 4)),
+// UnrealBloomPass's bright target (8) and its five blur mip pairs (2 × 8 × (1/4 + 1/16 + …) ≈ 16/3).
+const BYTES_PER_PIXEL = 2 * (8 + 4) + 8 + 16 / 3;
+
+const OVERLAY_VERTEX = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
@@ -39,17 +45,16 @@ void main() {
 }
 `;
 
-// Adds the bloom over the base; alpha keeps the page visible where nothing is drawn and lets the
-// glow read over the section's void where the cards are not.
-const MIX_FRAGMENT = /* glsl */ `
-uniform sampler2D baseTexture;
-uniform sampler2D bloomTexture;
+// Adds the glow over the canvas. The canvas is premultiplied, so alpha follows the brightest
+// encoded channel: the halo reads over the page where no card is drawn, and rgb ≤ alpha holds by
+// construction. colorspace_fragment encodes to the renderer's output space (sRGB) exactly once.
+const OVERLAY_FRAGMENT = /* glsl */ `
+uniform sampler2D tBloom;
 varying vec2 vUv;
 void main() {
-  vec4 base = texture2D(baseTexture, vUv);
-  vec4 bloom = texture2D(bloomTexture, vUv);
-  float glow = max(bloom.r, max(bloom.g, bloom.b));
-  gl_FragColor = vec4(base.rgb + bloom.rgb, max(base.a, min(1.0, glow)));
+  gl_FragColor = vec4(texture2D(tBloom, vUv).rgb, 1.0);
+  #include <colorspace_fragment>
+  gl_FragColor.a = min(1.0, max(gl_FragColor.r, max(gl_FragColor.g, gl_FragColor.b)));
 }
 `;
 
@@ -61,76 +66,64 @@ export function mountBloom(
   width: number,
   height: number,
 ): BloomHandle {
-  const size = renderer.getDrawingBufferSize(new Vector2());
-  const target = new WebGLRenderTarget(size.x, size.y, { type: HalfFloatType });
-  const bloomComposer = new EffectComposer(renderer, target);
-  bloomComposer.renderToScreen = false;
+  // RenderPass draws into the composer's read buffer and UnrealBloomPass adds its blur there, and
+  // neither swaps, so renderTarget2 holds the glow after every render (as in Three's selective
+  // bloom example).
+  const composer = new EffectComposer(renderer);
+  composer.renderToScreen = false;
   const bloomPass = new UnrealBloomPass(
-    new Vector2(width / 2, height / 2),
+    new Vector2(width * BLOOM_SCALE, height * BLOOM_SCALE),
     params.bloom.strength,
     params.bloom.radius,
     params.bloom.threshold,
   );
-  bloomComposer.addPass(new RenderPass(scene, camera));
-  bloomComposer.addPass(bloomPass);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(bloomPass);
+  composer.setPixelRatio(BLOOM_SCALE);
+  composer.setSize(width, height);
 
-  const mixMaterial = new ShaderMaterial({
-    uniforms: {
-      baseTexture: { value: null },
-      bloomTexture: { value: bloomComposer.renderTarget2.texture },
-    },
-    vertexShader: MIX_VERTEX,
-    fragmentShader: MIX_FRAGMENT,
+  const overlay = new ShaderMaterial({
+    uniforms: { tBloom: { value: composer.renderTarget2.texture } },
+    vertexShader: OVERLAY_VERTEX,
+    fragmentShader: OVERLAY_FRAGMENT,
+    blending: AdditiveBlending,
+    premultipliedAlpha: true,
     transparent: true,
+    depthTest: false,
     depthWrite: false,
   });
-  const mixPass = new ShaderPass(mixMaterial, "baseTexture");
-  const finalComposer = new EffectComposer(renderer);
-  finalComposer.addPass(new RenderPass(scene, camera));
-  finalComposer.addPass(mixPass);
-  finalComposer.addPass(new OutputPass());
-
-  const dark = new MeshBasicMaterial({ color: 0x000000 });
-  const darkSprite = new SpriteMaterial({ color: 0x000000 });
-  const saved = new Map<Mesh | Sprite, Material>();
-  const darken = (obj: Object3D): void => {
-    if (obj.layers.isEnabled(BLOOM_LAYER)) return;
-    if (obj instanceof Sprite) {
-      saved.set(obj, obj.material);
-      obj.material = darkSprite;
-    } else if (obj instanceof Mesh) {
-      saved.set(obj, obj.material as Material);
-      obj.material = dark;
-    }
-  };
-  const restore = (): void => {
-    for (const [obj, mat] of saved) obj.material = mat;
-    saved.clear();
-  };
+  const quad = new FullScreenQuad(overlay);
+  let w = width;
+  let h = height;
 
   return {
     render() {
       bloomPass.strength = params.bloom.strength;
       bloomPass.radius = params.bloom.radius;
       bloomPass.threshold = params.bloom.threshold;
-      scene.traverse(darken);
-      bloomComposer.render();
-      restore();
-      finalComposer.render();
+      const mask = camera.layers.mask;
+      camera.layers.set(BLOOM_LAYER);
+      composer.render();
+      camera.layers.mask = mask;
+      renderer.render(scene, camera);
+      const autoClear = renderer.autoClear;
+      renderer.autoClear = false; // the quad adds over the frame just drawn
+      quad.render(renderer);
+      renderer.autoClear = autoClear;
     },
-    setSize(w, h) {
-      bloomComposer.setSize(w, h);
-      finalComposer.setSize(w, h);
-      bloomPass.resolution.set(w / 2, h / 2);
+    setSize(nw, nh) {
+      w = nw;
+      h = nh;
+      composer.setSize(nw, nh); // applies BLOOM_SCALE and resizes the bloom pass with it
+    },
+    estimateBytes() {
+      return Math.round(w * BLOOM_SCALE * h * BLOOM_SCALE * BYTES_PER_PIXEL);
     },
     dispose() {
-      bloomComposer.dispose();
-      finalComposer.dispose();
+      composer.dispose(); // its two targets and copy pass; the passes below are ours to dispose
       bloomPass.dispose();
-      mixMaterial.dispose();
-      dark.dispose();
-      darkSprite.dispose();
-      target.dispose();
+      overlay.dispose();
+      quad.dispose();
     },
   };
 }
