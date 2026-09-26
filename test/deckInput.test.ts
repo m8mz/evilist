@@ -31,11 +31,21 @@ describe("StageInput targets", () => {
     input.updateTargets(args());
     input.step(10_000);
     expect(input.tilt.y).toBeCloseTo(P.tilt.maxY, 3);
+    input.pointer(700 + 150 + 100, 400 - 210 + 50); // same corner, shifted by the canvas offset
+    input.updateTargets(args({ rect: { left: 100, top: 50 } }));
+    input.step(10_000);
+    expect(input.tilt.y).toBeCloseTo(P.tilt.maxY, 3);
+    expect(input.tilt.x).toBeCloseTo(-P.tilt.maxX, 3);
+    input.updateTargets(args({ presented: -1 })); // nothing landed: releases even at the corner
+    input.step(10_000);
+    expect(input.tilt).toEqual({ x: 0, y: 0 });
   });
   it("parallaxes the camera with the pointer on desktop when allowed, never on phones", () => {
     const desk = new StageInput(7, P);
     desk.pointer(1400, 0); // right edge, top
     desk.updateTargets(args());
+    desk.step(P.camera.parallaxTau); // one time constant, not tilt.tau: 1 − e^−1 of the way
+    expect(desk.cam.x).toBeCloseTo(P.camera.parallax * (1 - Math.exp(-1)), 3);
     desk.step(10_000);
     expect(desk.cam.x).toBeCloseTo(P.camera.parallax, 3);
     expect(desk.cam.y).toBeCloseTo(P.camera.parallax, 3);
@@ -54,11 +64,15 @@ describe("StageInput targets", () => {
     const input = new StageInput(7, P);
     input.pointer(300, 400);
     expect(input.updateTargets(args({ hitAt: () => 1 }))).toBe(true);
+    input.step(P.hover.inMs); // one time constant, not outMs: 1 − e^−1 of the way up
+    expect(input.hover[1]).toBeCloseTo(1 - Math.exp(-1), 3);
     input.step(10_000);
     expect(input.hover[1]).toBeCloseTo(1, 3);
     expect(input.hover[3]).toBe(0);
     expect(input.updateTargets(args({ hitAt: () => 3 }))).toBe(false); // the presented card
     expect(input.updateTargets(args({ hitAt: () => 1, mode: "phone" }))).toBe(false);
+    input.step(P.hover.outMs); // the top-of-frame reset dropped the lift; one time constant down
+    expect(input.hover[1]).toBeCloseTo(Math.exp(-1), 3);
   });
   it("uses the external tilt on phones and ignores the pointer there", () => {
     const input = new StageInput(7, P);

@@ -31,7 +31,8 @@ export class StageInput {
   readonly cam = { x: 0, y: 0 };
   readonly hover: number[];
   private pointerAt: { x: number; y: number } | null = null;
-  private external: { x: number; y: number } | null = null;
+  private readonly external = { x: 0, y: 0 };
+  private hasExternal = false;
   private readonly tiltTarget = { x: 0, y: 0 };
   private readonly camTarget = { x: 0, y: 0 };
   private readonly hoverTarget: number[];
@@ -47,9 +48,11 @@ export class StageInput {
     this.pointerAt = clientX === null || clientY === null ? null : { x: clientX, y: clientY };
   }
 
-  /** The phone's orientation tilt target, degrees; `null` releases it to 0. */
+  /** The phone's orientation tilt target, degrees; `null` releases it to 0. Allocates nothing. */
   setTilt(x: number | null, y: number | null): void {
-    this.external = x === null || y === null ? null : { x, y };
+    this.hasExternal = x !== null && y !== null;
+    this.external.x = x ?? 0;
+    this.external.y = y ?? 0;
   }
 
   /** Recomputes the targets. Returns true when a racked card sits under a desktop pointer. */
@@ -59,8 +62,8 @@ export class StageInput {
     if (a.mode === "phone") {
       // Spec §7: no pointer tilt, no hover and no camera parallax on phones. The tilt comes from
       // the device's orientation, when the visitor turned it on.
-      this.tiltTarget.x = this.external?.x ?? 0;
-      this.tiltTarget.y = this.external?.y ?? 0;
+      this.tiltTarget.x = this.hasExternal ? this.external.x : 0;
+      this.tiltTarget.y = this.hasExternal ? this.external.y : 0;
       this.camTarget.x = this.camTarget.y = 0;
       return false;
     }
@@ -107,7 +110,7 @@ export class StageInput {
 
   reset(): void {
     this.pointerAt = null;
-    this.external = null;
+    this.hasExternal = false;
     this.tilt.x = this.tilt.y = 0;
     this.cam.x = this.cam.y = 0;
     this.tiltTarget.x = this.tiltTarget.y = 0;
