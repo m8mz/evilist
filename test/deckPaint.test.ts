@@ -12,8 +12,13 @@ import {
   paintChip,
   paintFrame,
   paintPlaceholder,
+  paintPuff,
+  paintRadial,
+  paintSeam,
   paintText,
   PRINT_STEPS,
+  PUFF_SIZE,
+  RADIAL_SIZE,
   cardModel,
   setDeckFontFamily,
   wrapText,
@@ -21,6 +26,7 @@ import {
   WINDOW,
 } from "../src/scripts/deck/deck-paint";
 import { career } from "../src/data/career";
+import { mulberry32 } from "../src/scripts/deck/deck-util";
 import { fakeContext, fakeImage, type Op } from "./helpers/fakeCanvas";
 
 /** Every recorded box and text anchor lies inside a w × h canvas. */
@@ -336,5 +342,52 @@ describe("paintText", () => {
         expectInside(body.ops, w!, h!);
       }
     }
+  });
+});
+
+describe("paintPuff, paintRadial, paintSeam", () => {
+  it("paints a puff as nine soft white blobs on a cleared square", () => {
+    const ctx = fakeContext();
+    paintPuff(ctx, PUFF_SIZE, mulberry32(1));
+    expect(ctx.ops[0]?.op).toBe("clearRect");
+    expect(ctx.ops.filter((o) => o.op === "arc")).toHaveLength(9);
+    expect(ctx.ops.filter((o) => o.op === "fill" && o.fillStyle === "gradient")).toHaveLength(9);
+    for (const o of ctx.ops.filter((o) => o.op === "arc")) {
+      const [x, y, r] = o.args as number[];
+      expect(x! - r!).toBeGreaterThanOrEqual(-PUFF_SIZE * 0.05);
+      expect(x! + r!).toBeLessThanOrEqual(PUFF_SIZE * 1.05);
+      expect(y! - r!).toBeGreaterThanOrEqual(-PUFF_SIZE * 0.05);
+      expect(y! + r!).toBeLessThanOrEqual(PUFF_SIZE * 1.05);
+    }
+  });
+  it("paints different puffs from different seeds and the same from the same", () => {
+    const a = fakeContext();
+    const b = fakeContext();
+    const c = fakeContext();
+    paintPuff(a, PUFF_SIZE, mulberry32(1));
+    paintPuff(b, PUFF_SIZE, mulberry32(2));
+    paintPuff(c, PUFF_SIZE, mulberry32(1));
+    expect(JSON.stringify(a.ops)).not.toBe(JSON.stringify(b.ops));
+    expect(JSON.stringify(a.ops)).toBe(JSON.stringify(c.ops));
+  });
+  it("paints a radial disc from the colour to transparent, filling the whole square", () => {
+    const ctx = fakeContext();
+    paintRadial(ctx, RADIAL_SIZE, COLORS.violet, 1);
+    const fills = ctx.rects("fillRect");
+    expect(fills).toEqual([{ x: 0, y: 0, w: RADIAL_SIZE, h: RADIAL_SIZE, color: "gradient" }]);
+  });
+  it("paints the seam as one violet rounded outline 6 px in at the card's scale", () => {
+    const ctx = fakeContext();
+    paintSeam(ctx, CARD_W * 2, CARD_H * 2);
+    expect(ctx.ops[0]?.op).toBe("clearRect");
+    const stroke = ctx.ops.find((o) => o.op === "stroke");
+    expect(stroke?.strokeStyle).toBe(COLORS.violet);
+    expect(ctx.lineWidth).toBeCloseTo(3, 6); // 1.5 px at 2×
+    const arcs = ctx.ops.filter((o) => o.op === "arc");
+    expect(arcs).toHaveLength(4);
+    const xs = arcs.map((o) => (o.args as number[])[0]!);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(12);
+    expect(Math.max(...xs)).toBeLessThanOrEqual(CARD_W * 2 - 12);
+    expect(ctx.ops.filter((o) => o.op === "fillRect")).toHaveLength(0);
   });
 });

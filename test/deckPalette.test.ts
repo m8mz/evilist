@@ -39,6 +39,7 @@ describe("the deck painters' palette", () => {
       "#9080ff", // deck-stage's rim light: a violet sheen colour baked into the stage, not a token
       "#1b1b1b", // deck-stage's slab edge colour
       "#ffffff", // deck-stage's light/emissive-map recipe base: pure white, not a design token
+      "#9d86d8", // the smoke puffs' lighter quarter (spec §8)
     ]);
     // Three.js colours are numeric (0xrrggbb), so the scan matches both forms and canonicalises
     // to "#rrggbb" before checking the allow-list. Every script in the deck directory is scanned,

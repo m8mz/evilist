@@ -36,6 +36,8 @@ export const COLORS = {
   violet: "#7040d2",
   /** The card back's carbon, a step darker than the face so the flip reads. */
   back: "#0e0e0e",
+  /** The smoke puffs' lighter quarter (spec §8). */
+  puffLight: "#9d86d8",
 } as const;
 
 // Astro's Fonts API registers JetBrains Mono under a hashed family name (e.g.
@@ -409,4 +411,76 @@ export function paintText(
   ctx.fillText(card.stage.rankLabel, right, h - 12 * s);
   ctx.textAlign = "left";
   return { bottom: h - 12 * s };
+}
+
+export const PUFF_SIZE = 256;
+export const RADIAL_SIZE = 128;
+
+/**
+ * A smoke puff (spec §8): nine overlapping soft blobs, white on transparent so the sprite's colour
+ * tints it. The RNG decides the layout, so three seeds give the three texture variants and a seeded
+ * run repeats them.
+ */
+export function paintPuff(ctx: Ctx, size: number, rng: () => number): void {
+  ctx.clearRect(0, 0, size, size);
+  const c = size / 2;
+  for (let i = 0; i < 9; i++) {
+    const angle = rng() * Math.PI * 2;
+    const dist = (0.06 + 0.2 * rng()) * size;
+    const x = c + Math.cos(angle) * dist;
+    const y = c + Math.sin(angle) * dist;
+    const r = (0.14 + 0.1 * rng()) * size;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, "rgba(255,255,255,0.5)");
+    g.addColorStop(0.55, "rgba(255,255,255,0.16)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/** A soft disc: `color` at `innerAlpha` in the centre to transparent at the edge (glow, shadow). */
+export function paintRadial(ctx: Ctx, size: number, color: string, innerAlpha: number): void {
+  ctx.clearRect(0, 0, size, size);
+  const c = size / 2;
+  const g = ctx.createRadialGradient(c, c, 0, c, c, c);
+  const rgb = hexToRgb(color);
+  g.addColorStop(0, `rgba(${rgb},${innerAlpha})`);
+  g.addColorStop(0.5, `rgba(${rgb},${innerAlpha * 0.35})`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+}
+
+/** The S and S+ backs' seam (spec §5): a 1.5 px violet rounded outline 6 px in, at the card's scale. */
+export function paintSeam(ctx: Ctx, w: number, h: number): void {
+  ctx.clearRect(0, 0, w, h);
+  const s = w / CARD_W;
+  const inset = 6 * s;
+  const r = 2 * s;
+  const x0 = inset;
+  const y0 = inset;
+  const x1 = w - inset;
+  const y1 = h - inset;
+  ctx.strokeStyle = COLORS.violet;
+  ctx.lineWidth = 1.5 * s;
+  ctx.beginPath();
+  ctx.moveTo(x0 + r, y0);
+  ctx.lineTo(x1 - r, y0);
+  ctx.arc(x1 - r, y0 + r, r, -Math.PI / 2, 0);
+  ctx.lineTo(x1, y1 - r);
+  ctx.arc(x1 - r, y1 - r, r, 0, Math.PI / 2);
+  ctx.lineTo(x0 + r, y1);
+  ctx.arc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI);
+  ctx.lineTo(x0, y0 + r);
+  ctx.arc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+function hexToRgb(hex: string): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 }
