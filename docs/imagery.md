@@ -357,3 +357,73 @@ the builder now traces props at half resolution:
 **Retired.** The seven `seedance_2_0` clips (Step 3 above) and the seven `nano_banana_pro` stage
 stills (Step 2 above) are no longer served; their prompts and job ids stay here as history. The
 timeline's pictures are now rendered from `public/journey/scene.svg`.
+
+## Card deck (Plan 0, 2026-09-25)
+
+Preflight: `nano_banana_pro` at 4K 3:2 costs 4 credits per job (balance 2508, ultra plan). The reference sheets run at 2K 16:9. Every job below was paid from credits; no `use_unlim`.
+
+### Step 2 — reference sheets (2026-09-25)
+
+Batch 1, `nano_banana_pro` 16:9 2K, 4 jobs: turnaround ×2 (ad3e32ac-4f28-4e59-936f-a40c5ebcd4d6, 56431872-30a5-4ece-b4c1-0d7c6f7d30e5), expression sheet ×2 (2e92e17a-b288-4c77-837d-a049565c3cde, 8e721f8f-9a92-4c98-a9a6-aa387ae9f3f0). Prompt: the composition clause + the bible (spec §10) + "identical original character on all views, pure black seamless background, professional character sheet presentation", a fitted black technical shirt with the ember seam on the left shoulder as the sheet's outfit, the anime-2d render and quality modules, and the negative tail with the same-scar/same-part/same-pendant clause.
+
+Batch 2 (re-roll, expression sheets only: batch 1's two came back on white or in framed white panels), `nano_banana_pro` 16:9 2K, 2 jobs: 13a3187b-45a2-4112-b494-475b0bc8b731, 4ebbc56e-ac2f-4317-970e-eab9d1f54a78. Prompt as batch 1 with the portraits floating on one continuous black field, no boxes, no frames, no white areas, no hands, and the same hair length in every portrait.
+
+Results: turnaround 0 (ad3e32ac) is the strongest sheet — one face across four views, the scar, the `>_` pendant, ember raglan seams, black field. Turnaround 1 (56431872) drifts: lighter eyes and a mouse-pointer pendant. All four expression sheets (2e92e17a, 8e721f8f, 13a3187b, 4ebbc56e) came back on white or in framed white panels even with the black field stated three ways; 4ebbc56e is the most consistent face of them.
+
+Batch 3 (re-roll, composition reworded to four bust portraits in a row on one black field, no "expression sheet" wording), `nano_banana_pro` 16:9 2K, 2 jobs: 9486592a-a580-4e64-ac05-b61b18a4b9df, 19233b73-322a-42a9-b4e3-02df9d30b3cd.
+
+Batch 3 results: both on black. 19233b73 matches turnaround 0 (the messy fringe, the `>_` pendant, the same jaw); 9486592a has shorter hair and a mouse-pointer pendant, closer to turnaround 1. Controller's recommendation: turnaround ad3e32ac + bust row 19233b73 for the identity element.
+
+**Pick (Marcus, 2026-09-25):** turnaround 56431872-30a5-4ece-b4c1-0d7c6f7d30e5 and bust row 9486592a-a580-4e64-ac05-b61b18a4b9df. Alternatives kept in the gallery: ad3e32ac (turnaround), 2e92e17a, 8e721f8f, 13a3187b, 4ebbc56e (expression sheets on white), 19233b73 (bust row). Spend so far: 8 jobs at 2K 16:9.
+
+### Step 3 — identity lock (2026-09-25)
+
+Reference Element `deck-character`, id `de47c220-a3b1-4d39-8ada-ce7d9b9853bd` (category character), built from the two picked jobs. Every portrait prompt starts with the element placeholder.
+
+### Step 4 — portraits, batch one: E, D, C, B (2026-09-25)
+
+Batch 4, `nano_banana_pro` 3:2 4K, 4 jobs: t1-support adbf14db-fe42-46c2-a475-a47dcafb75ce, web-concierge 87189f65-3394-4269-8817-c75f8bf7e442, professional-services 81e2e27e-b6ed-4cfe-9d03-ed0c17d18587, t3-support f6541919-b0a5-40c9-936d-ac2a3b6e5699. Prompt: the element placeholder + the framing clause + the rank's ladder row (verbatim from `src/data/deck.ts`) + the bible.
+
+Batch 4 results (import dry run into a scratch dir): t1-support on WHITE, violet hoodie piping, glow 2.80% (band 0–0.05%) — rejected; web-concierge on WHITE, glow 0.13% — rejected; t3-support on black, good framing, glow 0.62% (band 0.05–0.5%) from violet-tinted outlines on the shirt — rejected, marginal.
+professional-services: on black, framing right, glow 0.78% (band 0–0.05%) from a violet-tinted rim light the model paints on black clothing — rejected.
+
+Batch 5 (re-rolls with the background rule moved to the front and "all outlines near-black, no violet anywhere" for E–C, "violet only as the iris rim" for B), 4K 3:2: t1-support cb238f2e-ef58-4c1b-89f8-ba1aa34d973e, web-concierge 3a72c80a-3f80-4b0f-9954-ff462a1fd3b6, t3-support 1a3b051a-d71d-4a71-9a2f-7b9f5ae3af3a; professional-services submitted separately (id recorded below).
+
+professional-services re-roll: a91b14d9-11fe-4e48-ad35-ec2fbbe7c8b5.
+
+Batch 5 results: t1-support on black, glow 1.33%; web-concierge on black, glow 0.67%; t3-support 0.22% (in band) but on WHITE; professional-services 0.02% (in band) but on WHITE. Detector debug (`.superpowers/glow-debug.mjs`): on t1-support every hit is saturation < 0.2 at mid lightness, i.e. the hoodie's cool grey (hue 250–285, sat 0.12–0.2); on web-concierge the hits are sat 0.2–0.4 at mid lightness, the violet-tinted shading the model paints on black cloth. Neither is a glow; `GLOW.satMin` 0.12 (chosen for the pale S+ eyes) keys cool greys.
+
+### White backgrounds
+
+Four of eight portrait renders came back on white with "pure black background" stated three times in the prompt. Batch 6 attaches the black-field turnaround (56431872) as an `image_references` media next to the element and opens with "the same solid pure black background as the reference image".
+
+Batch 6, 4K 3:2 with the turnaround as image_references: t1-support 23ec08f9-310e-4d88-b228-92b872fc6075, web-concierge 32cfe085-92a8-4f00-a553-739e9f50f9fa, professional-services 0ee8a9d1-103c-4d92-ac1d-36e921209a72, t3-support 4d5e4dfb-d76b-4744-8259-43d4eac4263c.
+
+Batch 6 results: t1-support on black, warm grey hoodie, glow 0.07% (band ≤ 0.05%) — a hair over; web-concierge on WHITE with a smear artifact; t3-support on black, glow 0.72% (band 0.05–0.5%), the purple shading on the black shirt again; professional-services pending. Detector sweep (satMin 0.12 / 0.2 / 0.25 / 0.3 / 0.35): the grey hoodie vanishes at 0.2 (1.56% → 0.00%), but the black-cloth tint holds at every floor (web-concierge v2 0.67% → 0.51%, professional-services v1 0.77% → 0.66%), and B's faint iris rim also vanishes at 0.2 (0.22% → 0.01%). The tint is real violet-grey shading (sat 0.2–0.35) the model uses to separate black cloth from a black field.
+
+Batch 7 (4K 3:2, reference attached): every black item pinned to warm charcoal (#2b2724, shadows #1a1614, highlights #4a4441) so the cloth's hue leaves the 250–285° window; B's rim asked for as a clearly visible #7040d2 ring.
+
+Batch 7 ids: t1-support 6daddb7b-a66f-4218-ade3-19b1c0cb7dfc, web-concierge 1714d4f1-13a4-4e41-80bc-7d78d1265c1f, professional-services 38f3795d-33e1-4ae7-80b7-3bd180447f16, t3-support 25056a2e-7f73-47f6-8e97-c04ce6036c8b.
+
+Batch 7 results: t1-support on black, glow 0.00% — PASS (candidate; v3 6daddb7b's predecessor 23ec08f9 at 0.07% is the alternative); web-concierge on WHITE with a heavy smear — rejected; professional-services on black, glow 0.00% — PASS (candidate); t3-support on black, violet drawn as thin lid lines rather than an iris ring, glow 0.03% (band floor 0.05%) — held for Marcus's band ruling. The C third render (0ee8a9d1, batch 6) finished late; superseded.
+
+Batch 8 (web-concierge ×2, same prompt as batch 7 plus "no smoke, no fog, no blur"): ee52d185-1b2d-4437-a5b0-92a4aec55a2f, 7d9ff71e-efbf-4899-bd1d-0a00c617dc1e.
+
+Batch 8 results: both web-concierge renders on black; 7d9ff71e (v5b) glow 0.04%, ee52d185 (v5a) 0.00% — both PASS; controller's recommendation 7d9ff71e (the collar reads, the smile is there).
+
+Batch one status for Marcus's pick: E = 6daddb7b (alt 23ec08f9), D = 7d9ff71e (alt ee52d185), C = 38f3795d, B = 25056a2e held at 0.03% under the 0.05% floor. Spend: 8 sheets at 2K + 20 portraits at 4K.
+
+### Step 4b — the ladder rewritten for the arc (2026-09-25)
+
+Marcus's direction after batch one: stronger, better looking and more of a badass with every rank; baggy clothes and an innocent look at E, a fuller frame and more confidence rank by rank, a tailored black suit with a long coat from S. The rows in `src/data/deck.ts` were rewritten (outfit, expression, posture, subject; eyes and bands unchanged). Batch 9 re-renders E–B with the new rows on the proven scaffold: reference attached, black field first, warm charcoal for black items, warm grey for E's hoodie, B asked for a clearly visible violet ring.
+
+Batch 9 ids: t1-support ca7a4a79-6053-4295-9e03-14d1a8ee75ed, web-concierge 36ca8638-17c8-41f1-89e8-6f66b240a0f0, professional-services 6dc08e3e-5ba2-4d2e-bf16-ed0815306537, t3-support ebf54533-4b8e-452c-8d8d-ca17d2176a41.
+Batch 9 results (the arc): t1-support on WHITE (the look is right: slight, anxious, hood bunched, hair over the eyes); web-concierge on black, squared up with a half-smile, glow 0.05% exactly on the ceiling (low-sat cool grey in the hair highlights: 0.00% at satMin 0.2); professional-services on black, fuller chest and sharper jaw, glow 0.00% — PASS; t3-support on black, set jaw, solid, but only a lilac tint in the iris and no ring, glow 0.00%.
+
+Batch 10 (E ×2 for the background coin flip, D with the hair highlights named warm, B with the ring described as a distinct saturated violet outer ring): t1-support 88bb09fb-7869-47df-9d69-3af18d0fe83f + abb2de49-c5c5-4dd0-89e4-cec9cabe2b02, web-concierge a54c4673-ab44-496c-bf35-ab6811d2cc7b, t3-support 15180e32-f1e5-4802-a5bd-b6df9390344b.
+
+Batch 10 results: t1-support 88bb09fb on WHITE (good render), abb2de49 on a black-and-white silhouette mess (discarded); web-concierge a54c4673 on WHITE (good render: collared polo, half-smile), glow 0.00%; t3-support 15180e32 on black with fully violet irises, glow 0.03% — still under B's 0.05% floor, which settles it: two irises at this framing measure about 0.03% whatever their colour. A's floor (0.1%) is out of reach for the same reason.
+
+### White fields: keyed on import (2026-09-25)
+
+About 40% of portrait renders came back on white across 24 jobs, whatever the prompt said. `scripts/import-portrait.mjs` now keys a white field to black before measuring and writing: a flood fill from the borders over near-white pixels, dilated two pixels to swallow the anti-aliased fringe, so enclosed whites (eyes, teeth, badges) stay. The CLI reports `(white field keyed)` when it fires.
