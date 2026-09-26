@@ -1047,3 +1047,12 @@ Rulings made while the plan ran:
   on `pixel-7`, and the tilt tests install a `DeviceOrientationEvent` stub where it is missing.
 - Deferred to Plan 5: no e2e crosses the 60rem breakpoint; the orientation gain (0.5) and the S
   halo are tuning knobs; the pull-phase emission and the other Plan 3 items.
+- The final review's fix wave: the ResizeObserver draws a frame synchronously after
+  `measureStage()` (a resized WebGL canvas is cleared after the frame's rAF, so the deck blinked on
+  every toolbar change and rotation); `toX`/`toY` convert with the stage size the layout was
+  computed for (`layoutW`/`layoutH`), closing the parked item; `tapOnPresented` is cleared at
+  `pointerdown`, so a long press or a fling-stopping touch can't arm a prompt; the tilt's baseline
+  is re-captured when the screen angle changes, and the beta delta wraps into [−180, 180); the
+  canvas is `touch-action: pan-y pinch-zoom`; the track's per-rank span is `70lvh` (the stage stays
+  `100dvh`); the mid-tier e2e title drops "fog on". Caps amended: `deck-stage.ts` ≤ 630, `index.ts`
+  ≤ 380.

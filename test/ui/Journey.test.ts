@@ -91,10 +91,10 @@ describe("Journey (the card deck's stage)", () => {
     expect(html).not.toContain("<svg");
   });
 
-  it("lets vertical touch scrolling through the canvas and keeps horizontal swipes for the deck", async () => {
+  it("lets vertical touch scrolling and pinch-zoom through the canvas and keeps horizontal swipes for the deck", async () => {
     // The Container API's renderToString does not include the scoped <style> block (see
     // test/render.ts), so the rule is asserted against the component source instead.
     const source = readFileSync("src/components/journey/Journey.astro", "utf8");
-    expect(source).toMatch(/\.journey__gl[^{]*\{[^}]*touch-action:\s*pan-y/);
+    expect(source).toMatch(/\.journey__gl[^{]*\{[^}]*touch-action:\s*pan-y pinch-zoom;/);
   });
 });

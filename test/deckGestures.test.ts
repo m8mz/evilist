@@ -77,6 +77,15 @@ describe("orientationTilt", () => {
     expect(upside.x).toBeCloseTo(-5, 6);
     expect(upside.y).toBeCloseTo(-5, 6);
   });
+  it("wraps a beta delta that crosses ±180 instead of reading it as a near-full turn", () => {
+    const gain = DECK_PARAMS.gestures.orientationGain;
+    const t = orientationTilt({ beta: -178, gamma: 0 }, { beta: 175, gamma: 0 }, 0);
+    expect(t.x).toBeCloseTo(7 * gain, 6); // a 7° tilt forward, not −353°
+    expect(t.x).toBeGreaterThan(0);
+    expect(t.y).toBe(0);
+    const back = orientationTilt({ beta: 175, gamma: 0 }, { beta: -178, gamma: 0 }, 0);
+    expect(back.x).toBeCloseTo(-7 * gain, 6);
+  });
   it("returns zero for a reading without numbers (desktop browsers fire nulls)", () => {
     const bad = { beta: Number.NaN, gamma: 3 };
     expect(orientationTilt(bad, base, 0 as ScreenAngle)).toEqual({ x: 0, y: 0 });

@@ -501,14 +501,14 @@ test.describe("the card deck", () => {
 test.describe("the deck on a phone", () => {
   test.beforeEach(({}, info) => phoneOnly(info));
 
-  test("the hint invites a swipe, and the canvas leaves vertical pans to the page", async ({
+  test("the hint invites a swipe, and the canvas leaves vertical pans and pinch-zoom to the browser", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(page.locator("[data-deck-hint]")).toHaveText("↓ scroll, swipe or pick a rank");
     expect(
       await page.locator("[data-deck-gl]").evaluate((el) => getComputedStyle(el).touchAction),
-    ).toBe("pan-y");
+    ).toBe("pan-y pinch-zoom");
   });
 
   test("a horizontal swipe moves one rank each way", async ({ page }) => {
@@ -668,7 +668,7 @@ test.describe("the deck on a phone", () => {
     expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(1);
   });
 
-  test("runs the mid tier within the phone budget: no bloom request, fog on, under 40 MB", async ({
+  test("runs the mid tier within the phone budget: no bloom request, under 40 MB", async ({
     page,
   }) => {
     const requests: string[] = [];

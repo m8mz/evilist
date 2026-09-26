@@ -43,6 +43,9 @@ const clamp = (v: number, limit: number): number => {
   return clamped || 0; // Normalize -0 to 0
 };
 
+/** Degrees into [−180, 180): beta runs −180…180, so a delta across the wrap is a small turn. */
+const wrapDeg = (v: number): number => ((((v + 180) % 360) + 360) % 360) - 180;
+
 /**
  * The card's tilt target in degrees from a device reading, relative to the reading captured when
  * the visitor turned tilt on (so the phone's resting angle is "flat"). Beta drives rotX and gamma
@@ -55,7 +58,7 @@ export function orientationTilt(
   angle: ScreenAngle,
   params: DeckParams = DECK_PARAMS,
 ): { x: number; y: number } {
-  const db = reading.beta - baseline.beta;
+  const db = wrapDeg(reading.beta - baseline.beta); // gamma (−90…90) never wraps
   const dg = reading.gamma - baseline.gamma;
   if (!Number.isFinite(db) || !Number.isFinite(dg)) return { x: 0, y: 0 };
   let frontBack = db;

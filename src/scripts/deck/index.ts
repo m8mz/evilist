@@ -135,7 +135,7 @@ export function initDeck(): void {
 
     // deviceorientation (spec §7, §13): listened to only after a tap on the presented card. iOS
     // asks once, inside that tap's gesture; a denial ends it silently. The baseline is the first
-    // reading after enabling, so the phone's resting angle is "flat".
+    // reading after enabling (or after a rotation), so the phone's resting angle is "flat".
     type Permission = "granted" | "denied" | "prompt";
     interface OrientationCtor {
       requestPermission?: () => Promise<Permission>;
@@ -143,6 +143,7 @@ export function initDeck(): void {
     let permission: Permission | "unknown" | "asking" = "unknown";
     let orientationOn = false;
     let baseline: Orientation | null = null;
+    let baselineAngle = 0;
     const setTiltState = (on: boolean): void => {
       orientationOn = on;
       track.dataset.deckTilt = on ? "on" : "off";
@@ -155,8 +156,13 @@ export function initDeck(): void {
       if (!orientationOn || !handle) return;
       const reading = { beta: event.beta ?? Number.NaN, gamma: event.gamma ?? Number.NaN };
       if (!Number.isFinite(reading.beta) || !Number.isFinite(reading.gamma)) return;
-      baseline ??= reading;
       const angle = screenAngleOf(screen.orientation?.angle ?? 0);
+      // A rotation turns the device's axes against the screen's: measured from the old angle's
+      // baseline, the turn itself reads as a full tilt and pins the card at the limits. Re-capture.
+      if (!baseline || angle !== baselineAngle) {
+        baseline = reading;
+        baselineAngle = angle;
+      }
       const t = orientationTilt(reading, baseline, angle);
       handle.tilt(t.x, t.y);
     };
@@ -206,6 +212,9 @@ export function initDeck(): void {
     // Set by pointerup for a tap on the presented card; the click that follows consumes it below.
     let tapOnPresented = false;
     canvas.addEventListener("pointerdown", (event) => {
+      // A long press, or a touch that stops a fling, ends with no click: its flag must not arm
+      // the next tap (on the peeking card, say) into an unrequested permission prompt.
+      tapOnPresented = false;
       if (event.pointerType !== "touch" || !event.isPrimary) return;
       touchStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
     });

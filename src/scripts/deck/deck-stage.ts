@@ -162,8 +162,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   let layout: DeckLayout | null = null;
   let stageW = 1;
   let stageH = 1;
-  const toX = (px: number) => (px - stageW / 2) * PX;
-  const toY = (py: number) => -(py - stageH / 2) * PX;
+  // The stage size the layout was computed for: the layout's px convert with it, so in the 150 ms
+  // between a resize and its relayout the cards stay with the floor, shadows and fog.
+  let layoutW = 1;
+  let layoutH = 1;
+  const toX = (px: number) => (px - layoutW / 2) * PX;
+  const toY = (py: number) => -(py - layoutH / 2) * PX;
 
   // Split from computeLayout(): the ResizeObserver below runs this synchronously on every callback
   // (cheap), then debounces the layout and textures (spec §6). On phones the stage is 100dvh, so a
@@ -192,6 +196,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     const columnLeft = columnRect.width > 0 ? columnRect.left - stageRect.left : fallback.left;
     const columnW = columnRect.width > 0 ? columnRect.width : fallback.width;
     layout = deckLayout({ stageW, stageH, columnLeft, columnW, mode, count }, params.layout);
+    layoutW = stageW;
+    layoutH = stageH;
     textures.setSize(layout.cardW, dpr);
   }
   computeLayout();
@@ -252,9 +258,13 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     }, params.layout.relayoutDebounceMs);
   };
   const resizer = new ResizeObserver(() => {
-    // Sizes at once; scheduleRelayout still debounces the layout and textures below.
+    // Sizes at once (scheduleRelayout debounces the layout and textures). A resize clears the
+    // drawing buffer after this frame's rAF has drawn: draw now, or a blank canvas is composited.
     measureStage();
-    if (assetsSettled) requestRender();
+    if (assetsSettled && !disposed && (freeze || visible)) {
+      if (raf) cancelAnimationFrame(raf);
+      frame(performance.now());
+    }
     scheduleRelayout();
   });
   resizer.observe(stage);
@@ -334,8 +344,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     if (!layout) return;
     const r = canvas.getBoundingClientRect();
     const racked = input.updateTargets({
-      presentedX: layout.presented.x,
-      presentedY: layout.presented.y,
+      presentedX: layout.presented.x + (stageW - layoutW) / 2, // the layout's px in canvas px
+      presentedY: layout.presented.y + (stageH - layoutH) / 2,
       cardW: layout.cardW,
       cardH: layout.cardH,
       stageW,

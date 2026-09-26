@@ -79,8 +79,10 @@ The section keeps its place on the home page between Work and About.
   section width for the smoke to leave the column; the deck's _layout_ is computed inside the column
   (§6).
 - `src/components/journey/Journey.astro` renders:
-  - `.journey[data-deck]`, the track: `height: calc(7 × 70dvh + 100dvh − var(--header-h))` while
-    the deck is active, `auto` in fallback. It carries the state attributes (§9).
+  - `.journey[data-deck]`, the track: `height: calc(7 × 70lvh + 100dvh − var(--header-h))` while
+    the deck is active, `auto` in fallback; each rank's span is in `lvh` so a phone's toolbar
+    showing or hiding never moves the deck's progress under a still page. It carries the state
+    attributes (§9).
   - `.journey__stage`, the sticky box at `top: var(--header-h)`, `height: calc(100dvh −
 var(--header-h))`, containing:
     - `<canvas data-deck-gl aria-hidden="true">`, full bleed, `position: absolute; inset: 0`.
@@ -291,10 +293,12 @@ If `p` passes `0.5 / N` during the intro, the clock runs at 4× until the intro 
   rail does. The camera follows the pointer by `±0.15` units on x and y, smoothed `τ = 200 ms`,
   looking at the stage centre.
 - Phone: a horizontal swipe on the stage (`|dx| > 40 px` and `|dx| > 2 × |dy|`, judged at pointer
-  up) moves one rank forward or back; vertical movement is left to the page. A tap on the peeking
-  next card moves forward. `deviceorientation` tilt starts only after a tap on the presented card;
-  on iOS that tap calls `DeviceOrientationEvent.requestPermission()` once, and a denial ends the
-  matter silently. No camera parallax. The hint reads `↓ scroll, swipe or pick a rank` on coarse
+  up) moves one rank forward or back; vertical movement is left to the page, and the canvas allows
+  pinch-zoom alongside vertical pans (`touch-action: pan-y pinch-zoom`). A tap on the peeking next
+  card moves forward. `deviceorientation` tilt starts only after a tap on the presented card; on
+  iOS that tap calls `DeviceOrientationEvent.requestPermission()` once, and a denial ends the
+  matter silently. The tilt's baseline is re-captured when the screen angle changes. No camera
+  parallax. The hint reads `↓ scroll, swipe or pick a rank` on coarse
   pointers; iOS's permission request rides the `click` that follows the tap, the only event Safari
   treats as the gesture.
 
