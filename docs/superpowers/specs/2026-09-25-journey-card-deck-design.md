@@ -1,9 +1,10 @@
 # Journey card deck — design
 
 - **Date:** 2026-09-25 (revised the same day after Marcus's deep review)
-- **Status:** Approved 2026-09-25. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character) and 3 (energy) implemented; ADR 0004 written with Plan 2.
+- **Status:** Approved 2026-09-25. Plans 1 (foundations), 2 (the stage, desktop), 0 (the character), 3 (energy) and 4 (phone) implemented; ADR 0004 written with Plan 2.
 - **Implementation notes (Plan 1 reviews):** the intro clock is an accumulated `elapsed` (no derived speed); a card's `landedAt` persists until it is racked again (`pull <= 0`), never cleared on leaving; the canvas font family is read from `--font-jetbrains` at runtime (the Fonts API registers a hashed name). Where §7 disagrees, these win.
 - **Implementation notes (Plan 3):** the smoke is a pool of sprites with one material each, driven by `deck-smoke-sprites.ts`; the seam is a painted back-side plane; the bloom is one half-resolution glow pass (the camera's layer mask selects the glow objects, UnrealBloomPass blurs them) added over the canvas by a full-screen quad whose alpha is the glow's brightest channel, with a depth-only proxy plane per card keeping it behind the cards; the quad adds the blur alone (the glow objects are already on the canvas), the glow set renders at 1.6× on both tiers, and the bloom's threshold of 0.5 leaves the violet sprite and seams to that gain so only the pale eyes and flames bloom; the fog's radius is in world units (100 CSS px each), divided by the fog plane's height for the shader; `smoke.prewarmFrames` ages the frozen cloud; the glow sprite sits far enough behind the presented card to clear its largest tilt; the glow mask uploads as RGBA (Three's `alphaMap` samples `.g`, so §9's RedFormat would read 0); the glow sprite's landing flare settles over `light.flareMs`; the portrait rendition rows of §11 landed here.
+- **Implementation notes (Plan 4):** the pointer, tilt, hover and camera targets live in `deck-input.ts` (`StageInput`), the gesture arithmetic in `deck-gestures.ts`; the stage's mode follows `matchMedia("(min-width: 60rem)")` with the width compare as the fallback; swipes are judged at pointer up from synthetic-testable pointer events; the orientation tilt's baseline is the first reading after enabling and its gain is `gestures.orientationGain`; the tap slop is `gestures.tapSlopPx`; the e2e phone projects are WebKit (iPhone, iPad) and Chromium (Pixel), so swipes are exercised with synthetic pointer events everywhere and real touch drags on the Pixel only.
 - **Supersedes:** `2026-09-25-vector-journey-design.md` (the traced SVG scene) and the journey
   parts of `2026-09-24-hero-journey-redesign-design.md`
 - **Decisions this creates:** ADR 0004 (Three.js, lighting, bloom, glow and smoke inside the
@@ -236,7 +237,7 @@ else `phone`). Reserved: `railH = 88` at the bottom, `pad = 24`.
 - Camera: `fov = 26°` (tunable), centred on the stage, distance chosen so the visible height at
   `z = 0` equals `stageH` px. Desktop adds a pointer parallax (§7).
 
-Re-run on resize (debounced 150 ms) and on orientation change; textures repaint when the card's
+Re-run on resize (the renderer and camera at once, the layout and textures debounced 150 ms) and on orientation change; textures repaint when the card's
 on-screen size changes by more than 10 %.
 
 ## 7. Motion
@@ -293,7 +294,9 @@ If `p` passes `0.5 / N` during the intro, the clock runs at 4× until the intro 
   up) moves one rank forward or back; vertical movement is left to the page. A tap on the peeking
   next card moves forward. `deviceorientation` tilt starts only after a tap on the presented card;
   on iOS that tap calls `DeviceOrientationEvent.requestPermission()` once, and a denial ends the
-  matter silently. No camera parallax.
+  matter silently. No camera parallax. The hint reads `↓ scroll, swipe or pick a rank` on coarse
+  pointers; iOS's permission request rides the `click` that follows the tap, the only event Safari
+  treats as the gesture.
 
 **Scroll binding and mounting.** `index.ts` observes the journey box (`IntersectionObserver`,
 `rootMargin: 0 0 -15% 0`). The deck chunk is prefetched (`import()`, no mount) in an idle callback
@@ -428,8 +431,9 @@ Files in `src/scripts/deck/` (a new directory, so it never collides with the old
 - **State attributes** on `[data-deck]`, updated on change (energy rounded to 0.05):
   `data-deck-state` (`loading` | `intro` | `scroll` | `fallback`), `data-deck-rank` (`E`…`S+`),
   `data-deck-phase` (`racked` | `pulling` | `landing` | `presented` | `leaving`), `data-deck-energy`,
-  `data-deck-tier`, `data-deck-vram`, and `data-deck-ready` once the first frame after all textures
-  and portraits is rendered.
+  `data-deck-tier`, `data-deck-vram`, `data-deck-tilt` (`off` | `on`: whether the phone's orientation
+  listener is live; absent under fallback), and `data-deck-ready` once the first frame after all
+  textures and portraits is rendered.
 - **Freeze.** With `?deck-freeze=<iso-date>` in the URL: the clock is fixed at that date, the RNG is
   seeded, the intro is skipped, smoothing is off, and the loop renders one frame after
   `data-deck-ready` and stops. It works in every build, because e2e and the visual baselines run

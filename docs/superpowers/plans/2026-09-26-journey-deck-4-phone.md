@@ -1025,3 +1025,25 @@ git commit -m "docs: Plan 4 in the spec's status and CLAUDE.md"
 - **Type consistency.** `StageInput.setTilt` (the Interfaces table's `tilt2` note explains the naming), `StageHandle.tilt`, `judgeSwipe` returns `SwipeDirection`, `orientationTilt(reading, baseline, angle, params?)`, `InputTargetsArgs` fields match Task 2's stage call. `e2e` helpers use the file's existing `scrollToRank`, `ready`, `track`, `scrollToEnd`, `settledVram`.
 - **Review Focus.** Each of the five lines names the task whose test pins it (1: Task 5 vertical drag + Task 4 CSS test; 2: Task 5 denied permission; 3: Task 2 unit test; 4: Task 5 orientation change; 5: Task 5 taps).
 - **Open risk.** The tap coordinates for the peeking card are derived, not measured; Task 5 says how to correct them from the layout. `page.touchscreen.tap` and CDP touch events produce `pointerType: "touch"` in Chromium's mobile emulation; if a project's device lacks `hasTouch`, the test skips itself through `phoneOnly`.
+
+## Execution notes (2026-09-26)
+
+Rulings made while the plan ran:
+
+- Line caps: the plan's "≤ 520 after Task 2" was an estimate; the stage's call into `StageInput`
+  is nearly as long as the code it replaced. Caps amended: `deck-stage.ts` ≤ 620 (it is 620),
+  `index.ts` ≤ 370 (it is 370).
+- Task 3's relayout is split: `measureStage()` (stage size, renderer size, camera aspect and
+  distance) runs synchronously on every ResizeObserver callback so a phone's URL-bar collapse never
+  squashes the picture; the layout and textures wait for the 150 ms debounce. Parked: `toX`/`toY`
+  should convert with the stage size the layout was computed for, so the cards stay with the floor
+  and shadows during those 150 ms.
+- Task 4's permission request moved from `pointerup` to the following `click` (WebKit's user
+  activation), with an `asking` state against a double tap, a post-await re-check, no prompt when the
+  desktop breakpoint matches, swipes ignored before the first presented card, and
+  `gestures.tapSlopPx`.
+- Task 5's projects: `iphone-15` and `ipad` are WebKit (no CDP, `DeviceOrientationEvent` may be
+  missing), so swipes use synthetic pointer events on every touch project, the real vertical drag runs
+  on `pixel-7`, and the tilt tests install a `DeviceOrientationEvent` stub where it is missing.
+- Deferred to Plan 5: no e2e crosses the 60rem breakpoint; the orientation gain (0.5) and the S
+  halo are tuning knobs; the pull-phase emission and the other Plan 3 items.
