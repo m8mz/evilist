@@ -3,15 +3,11 @@
 import {
   AmbientLight,
   CanvasTexture,
-  Color,
   DirectionalLight,
   EquirectangularReflectionMapping,
-  Group,
   LinearMipmapLinearFilter,
   Mesh,
   MeshBasicMaterial,
-  MeshPhysicalMaterial,
-  MeshStandardMaterial,
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
@@ -22,13 +18,12 @@ import {
   Vector2,
   WebGLRenderer,
   type Material,
-  type Texture,
 } from "three";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { RankLabel } from "../../data/career";
+import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
-import { CARD_W, CHIP_H, CHIP_W, COLORS, PRINT_STEPS, type CardModel } from "./deck-paint";
+import { COLORS, PRINT_STEPS, type CardModel } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 import { deckPose, type CardPhase, type IntroState, type StagePose } from "./deck-pose";
 import { DeckTextures } from "./deck-textures";
@@ -78,35 +73,6 @@ export interface StageHandle {
 const DEG = Math.PI / 180;
 const PX = 1 / 100;
 const DESKTOP_MIN_PX = 960; // 60rem
-
-interface CardMeshes {
-  group: Group;
-  slab: Mesh;
-  slabMat: MeshStandardMaterial;
-  body: Mesh;
-  bodyMat: MeshPhysicalMaterial;
-  frame: Mesh;
-  text: Mesh;
-  chip: Mesh;
-  back: Mesh;
-  backMat: MeshPhysicalMaterial;
-  layerMats: Material[];
-}
-
-function loadImage(url: string | null): Promise<HTMLImageElement | null> {
-  if (!url) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () =>
-      img.decode().then(
-        () => resolve(img),
-        () => resolve(img),
-      );
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
-}
 
 export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const params = opts.params ?? DECK_PARAMS;
@@ -174,28 +140,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   );
 
   /* ---------- Cards ---------- */
-  const M = params.material;
-  const laminated = (map: Texture, sheen: boolean): MeshPhysicalMaterial => {
-    const mat = new MeshPhysicalMaterial({
-      color: 0x000000,
-      emissive: 0xffffff,
-      emissiveMap: map,
-      metalness: M.metalness,
-      roughness: M.roughness,
-      clearcoat: M.clearcoat,
-      clearcoatRoughness: M.clearcoatRoughness,
-      envMap,
-      envMapIntensity: M.envMapIntensity,
-    });
-    if (sheen) {
-      mat.sheen = M.sheen;
-      mat.sheenColor = new Color(COLORS.violet);
-      mat.sheenRoughness = M.sheenRoughness;
-    }
-    return mat;
-  };
-  const unlit = (map: Texture): MeshBasicMaterial =>
-    new MeshBasicMaterial({ map, transparent: true, depthWrite: false });
   const unit = new PlaneGeometry(1, 1);
 
   /* ---------- Layout, part 1: measure before any texture is painted ---------- */
@@ -223,79 +167,18 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   }
   computeLayout();
 
-  const meshes: CardMeshes[] = cards.map((card, i) => {
-    const group = new Group();
-    const slabMat = new MeshStandardMaterial({
-      color: 0x1b1b1b,
-      roughness: M.edgeRoughness,
-      metalness: M.edgeMetalness,
-      envMap,
-      envMapIntensity: M.envMapIntensity,
-    });
-    const slab = new Mesh(new RoundedBoxGeometry(1, 1, 1, 2, 0.01), slabMat);
-    slab.userData.index = i;
-    const energetic = card.stage.rankLabel === "S" || card.stage.rankLabel === "S+";
-    const bodyMat = laminated(textures.body(i), energetic);
-    const body = new Mesh(unit, bodyMat);
-    const frame = new Mesh(unit, unlit(textures.frame()));
-    const text = new Mesh(unit, unlit(textures.blank())); // blank until a card is presented
-    const chip = new Mesh(unit, unlit(textures.chip(i)));
-    const backMat = laminated(textures.back(), false);
-    const back = new Mesh(unit, backMat);
-    back.rotation.y = Math.PI;
-    group.add(slab, body, frame, text, chip, back);
-    scene.add(group);
-    return {
-      group,
-      slab,
-      slabMat,
-      body,
-      bodyMat,
-      frame,
-      text,
-      chip,
-      back,
-      backMat,
-      layerMats: [
-        slabMat,
-        bodyMat,
-        frame.material as Material,
-        text.material as Material,
-        chip.material as Material,
-        backMat,
-      ],
-    };
-  });
+  const meshes: CardMeshes[] = buildCards(cards, textures, envMap, unit, params);
+  for (const m of meshes) scene.add(m.group);
   const floor = new Mesh(unit, new MeshBasicMaterial({ color: COLORS.iron }));
   scene.add(floor);
   const slabs = meshes.map((m) => m.slab); // precomputed once; hitAt filters by group visibility
 
+  let front = 0;
+  void front; // the front face's z (world); Task 8's effects planes read this
   /* ---------- Layout, part 2: size the meshes ---------- */
   function applyLayout(): void {
     if (!layout) return;
-    const w = layout.cardW * PX;
-    const h = layout.cardH * PX;
-    const t = M.thickness * PX;
-    const s = layout.cardW / CARD_W;
-    for (const m of meshes) {
-      m.slab.geometry.dispose();
-      m.slab.geometry = new RoundedBoxGeometry(w, h, t, 2, M.cornerRadius * PX);
-      const front = t / 2 + 0.001;
-      m.body.scale.set(w, h, 1);
-      m.body.position.z = front;
-      m.frame.scale.set(w, h, 1);
-      m.frame.position.z = front + M.layerZ.frame * PX;
-      m.text.scale.set(w, h, 1);
-      m.text.position.z = front + M.layerZ.text * PX;
-      m.chip.scale.set(CHIP_W * s * PX, CHIP_H * s * PX, 1);
-      m.chip.position.set(
-        -w / 2 + (12 + CHIP_W / 2) * s * PX,
-        h / 2 - (12 + CHIP_H / 2) * s * PX,
-        front + M.layerZ.chip * PX,
-      );
-      m.back.scale.set(w, h, 1);
-      m.back.position.z = -front;
-    }
+    front = layoutCards(meshes, layout, params);
     floor.scale.set(stageW * PX, 0.01, 1);
     floor.position.set(0, toY(layout.floorY), -0.001);
   }
