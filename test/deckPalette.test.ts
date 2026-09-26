@@ -29,7 +29,14 @@ describe("the deck painters' palette", () => {
   });
 
   it("has no other hex colours in the deck scripts", () => {
-    const allowed = new Set([...Object.values(COLORS), "#2a2a2a", "#1b1526", "#0b0b0b", "#0d0d0d"]);
+    const allowed = new Set([
+      ...Object.values(COLORS),
+      "#2a2a2a",
+      "#1b1526",
+      "#0b0b0b",
+      "#0d0d0d",
+      "#050505",
+    ]);
     for (const file of [
       "deck-paint.ts",
       "deck-pose.ts",
@@ -39,6 +46,7 @@ describe("the deck painters' palette", () => {
       "deck-tier.ts",
       "deck-util.ts",
       "deck-rail.ts",
+      "deck-env.ts",
     ]) {
       const text = readFileSync(`src/scripts/deck/${file}`, "utf8");
       for (const hex of text.match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
