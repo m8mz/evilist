@@ -1,8 +1,10 @@
-# Journey Card Deck, Plan 5: Tune, Retire, Record Implementation Plan
+# Journey Card Deck, Plan 6: Retire, Perf, Record Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Finish the deck: delete the vector-journey pipeline the deck replaced, add `pnpm perf:deck`, close the correctness and memory items deferred from Plans 2–4, tune the look with Marcus through the panel and commit the values, and bring ADR 0004, the spec, CLAUDE.md, the imagery record and the Build Log up to date.
+> **Re-scoped 2026-09-26.** Marcus's review of the deck became Plan 5 (`2026-09-26-journey-deck-5-review.md`: the drive, the aura, the floating cards, the tear); this plan runs after it. Of the tasks below, the halo plane, the smoke gate and the fog scaling (Task 4) and the tuning session (Task 6) moved into Plan 5 and are void here; the rest stand (retire, perf, lazy bodies and readiness, e2e, the record) and get their anchors re-checked against the tree Plan 5 leaves before this plan is dispatched.
+
+**Goal:** Finish the deck: delete the vector-journey pipeline the deck replaced, add `pnpm perf:deck`, close the memory and readiness items deferred from Plans 2–4, and bring ADR 0004, the spec, CLAUDE.md, the imagery record and the Build Log up to date.
 
 **Architecture:** Five kinds of work, kept in separate tasks so each has its own reviewer. (1) A deletion task that removes the scene pipeline, its tests, its dependency and its size-gate rows, and makes the timeline use the deck's portraits unconditionally. (2) A measurement script that drives the production build in Chromium, scrolls the track at a fixed speed cold and warm, and prints frame-time percentiles and the texture estimate, with its arithmetic in a tiny unit-tested module. (3) Memory and readiness in the stage: body textures painted when a card comes within one rank of the active one (spec §9), `data-deck-ready` after the assets settle (spec §9), a `data-deck-mode` attribute, and a relayout hook for the panel. (4) Energy fixes: smoke only while the energetic card is landing or presented (spec §5), the glow halo as a plane in the card's group instead of a billboard behind it, the fog radius scaled with the card, a pending rank for quick double swipes, and the panel rows the tuning session needs. (5) E2E for all of it, then the tuning session, then the record.
 
