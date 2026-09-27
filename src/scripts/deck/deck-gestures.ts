@@ -23,6 +23,18 @@ export function judgeSwipe(
   return dx < 0 ? 1 : -1;
 }
 
+/** The rank a swipe targets: `dir` from whichever rank is already queued (a jump already under
+ * way, so two quick swipes inside one transition step twice), or from `presented` when nothing is
+ * pending; clamped to the deck. */
+export function nextRank(
+  presented: number,
+  pending: number | null,
+  dir: SwipeDirection,
+  count: number,
+): number {
+  return Math.max(0, Math.min(count - 1, (pending ?? presented) + dir));
+}
+
 export interface Orientation {
   /** Front-to-back tilt in degrees (the device's x axis). */
   beta: number;

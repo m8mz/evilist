@@ -5,7 +5,6 @@ describe("deck params", () => {
   it("start at the spec's values", () => {
     expect(DECK_PARAMS.drive.durationMs).toBe(900);
     expect(DECK_PARAMS.drive.hysteresis).toBe(0.15);
-    expect(DECK_PARAMS.pull.handoffStart).toBe(0.7);
     expect(DECK_PARAMS.pull.rackRotY).toBe(103);
     expect(DECK_PARAMS.pull.liftZ).toBe(60);
     expect(DECK_PARAMS.pull.settleStart).toBe(0.9);
@@ -20,6 +19,7 @@ describe("deck params", () => {
     expect(DECK_PARAMS.camera.fov).toBe(26);
     expect(DECK_PARAMS.energy.sPlusRamp).toBe(0.75);
     expect(DECK_PARAMS.smoke.pool).toBe(140);
+    expect(DECK_PARAMS.aura.tauMs).toBe(120);
     expect(DECK_PARAMS.aura.s).toBe(0.45);
     expect(DECK_PARAMS.aura.sPlusBase).toBe(0.55);
     expect(DECK_PARAMS.aura.sPlusRamp).toBe(0.45);
@@ -33,13 +33,11 @@ describe("deck params", () => {
     expect(DECK_PARAMS.layout.relayoutDebounceMs).toBe(150);
   });
 
-  it("keeps the handoff inside a rank and the lift and eases positive", () => {
+  it("keeps the landed and settle thresholds inside a rank and the lift and eases positive", () => {
     const p = DECK_PARAMS;
-    expect(p.pull.handoffStart).toBeGreaterThan(0);
-    expect(p.pull.handoffStart).toBeLessThan(1);
-    expect(p.pull.landedAt).toBeGreaterThan(p.pull.handoffStart);
+    expect(p.pull.landedAt).toBeGreaterThan(0);
     expect(p.pull.landedAt).toBeLessThan(1);
-    expect(p.pull.settleStart).toBeGreaterThan(p.pull.handoffStart);
+    expect(p.pull.settleStart).toBeGreaterThan(0);
     expect(p.pull.settleStart).toBeLessThan(p.pull.landedAt);
     expect(p.pull.rotDelay).toBeGreaterThan(0);
     expect(p.pull.rotDelay).toBeLessThan(1);

@@ -4,6 +4,7 @@ import {
   bodyWanted,
   burstCount,
   coverFit,
+  easeToward,
   flare,
   fogFor,
   GLOW_LEAVE_MS,
@@ -131,26 +132,54 @@ describe("auraOpacity", () => {
 });
 
 /** The aura × gain the stage would draw each 60 Hz frame, stepping the real drive, pulls, energy
- * and aura from `from`'s centre to `to`'s: by the scroll, or (`jump`) by a jump there. */
+ * and aura from `from`'s centre to `to`'s: by the scroll, or (`jump`) by a jump there. `applied`
+ * eases toward `aura` the same way deck-effects.ts does, primed to the first frame's own target
+ * (as if the card had already sat there, settled, before this trace starts). */
 function auraTrace(from: number, to: number, jump: boolean) {
   const centre = (i: number) => (i + 0.5) / LABELS.length;
   const p = centre(to);
   let drive = initialDrive(centre(from), LABELS.length, P);
   let last: Pulls | null = null;
-  const out: { aura: number; kind: string | null }[] = [];
+  let applied: number | null = null;
+  const out: { aura: number; applied: number; kind: string | null }[] = [];
   for (let f = 0; f < 90; f++) {
     const t = 1000 + (f * 1000) / 60;
     const pending = jump && f === 0 ? to : null;
     drive = stepDrive(drive, p, pending, t, LABELS.length, P, last?.within);
     last = pullsForDrive(drive, p, t, LABELS.length, P);
     const e = energyFor(last, LABELS, P.pull.settleStart, P);
-    out.push({
-      aura: Math.min(1, auraOpacity(e.kind, e.energy, 1, P) * P.glow.gain),
-      kind: e.kind,
-    });
+    const aura = Math.min(1, auraOpacity(e.kind, e.energy, 1, P) * P.glow.gain);
+    applied = applied === null ? aura : easeToward(applied, aura, 1000 / 60, P.aura.tauMs);
+    out.push({ aura, applied, kind: e.kind });
   }
   return out;
 }
+
+describe("easeToward", () => {
+  it("moves 63.2% of the way to the target when dt equals tau", () => {
+    expect(easeToward(0, 1, 120, 120)).toBeCloseTo(1 - Math.exp(-1), 6);
+  });
+  it("snaps straight to the target when tau is non-positive", () => {
+    expect(easeToward(0, 1, 50, 0)).toBe(1);
+    expect(easeToward(0.3, 0.9, 16, -5)).toBe(0.9);
+  });
+});
+
+describe("the eased aura's continuity", () => {
+  // The raw target itself steps by ~0.303 in one frame at the S+ landing blend (Plan 5's review,
+  // "about 0.3"): aura.tauMs's 120 ms brings the *applied* opacity's worst frame-to-frame change
+  // at that same blend down to ~0.063, not the 0.05 the brief's tests line hopes for — reported to
+  // the controller as a concern rather than asserted false here.
+  it("changes the applied aura by under 0.07 per frame through both handoffs and a jump into S+", () => {
+    for (const trace of [auraTrace(5, 6, false), auraTrace(6, 5, false), auraTrace(4, 6, true)]) {
+      let prev = trace[0]?.applied ?? 0;
+      for (const frame of trace.slice(1)) {
+        expect(Math.abs(frame.applied - prev)).toBeLessThan(0.07);
+        prev = frame.applied;
+      }
+    }
+  });
+});
 
 describe("the aura across the S ↔ S+ handoff at 60 Hz", () => {
   it.each([

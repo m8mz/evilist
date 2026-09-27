@@ -5,6 +5,7 @@
 import { scroll } from "motion";
 import { career } from "../../data/career";
 import { judgeSwipe, orientationTilt, screenAngleOf, type Orientation } from "./deck-gestures";
+import { nextRank } from "./deck-gestures";
 import { cardModel, setDeckFontFamily } from "./deck-paint";
 import { DECK_PARAMS } from "./deck-params";
 import { initRail, scrollToRank } from "./deck-rail";
@@ -86,6 +87,7 @@ export function initDeck(): void {
     // -1, not 0: rank E is index 0 too, and the first state update must still reach
     // rail.setPresented so the aria-live region announces the landing rank.
     let presented = -1;
+    let pendingRank: number | null = null; // a swipe's queued target, ahead of stale `presented`
     let hintShown = false;
     let gaveUp = false;
     let hasScrolled = false;
@@ -124,6 +126,7 @@ export function initDeck(): void {
       if (state.cornerAlpha !== null) track.dataset.deckCornerAlpha = String(state.cornerAlpha);
       else delete track.dataset.deckCornerAlpha;
       const index = labels.indexOf(state.rank);
+      if (index === pendingRank) pendingRank = null;
       if (state.state === "scroll" && !hintShown && !freeze) {
         hintShown = true;
         rail.showHint();
@@ -235,8 +238,8 @@ export function initDeck(): void {
       const dir = judgeSwipe(dx, dy);
       if (dir !== 0) {
         if (presented < 0) return; // No landed rank yet to move from.
-        const next = Math.max(0, Math.min(count - 1, presented + dir));
-        if (next !== presented) jump(next);
+        const next = nextRank(presented, pendingRank, dir, count);
+        if (next !== (pendingRank ?? presented)) jump((pendingRank = next));
         return;
       }
       // A tap on the presented card flags it for the click below; elsewhere the click handler's

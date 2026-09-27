@@ -1,14 +1,12 @@
-// Dev-only tuning panel (deck spec §9): sliders bound to DECK_PARAMS, a live FPS and VRAM
-// readout, and a button that copies the current values as JSON for deck-params.ts. It loads
-// only under `astro dev` with `?tune` in the URL, so nothing here reaches production. Styles are
-// written through the CSSOM (`el.style.cssText`), never `setAttribute("style", …)`, and every
-// colour routes through the site's tokens so `test/deckPalette.test.ts` can scan this file too.
+// Dev-only tuning panel (deck spec §9): sliders bound to DECK_PARAMS, a live FPS/VRAM readout, and
+// a "copy JSON" button. Loads only under `astro dev` with `?tune`. Styles go through the CSSOM,
+// never `setAttribute("style", …)`; colours route through the tokens (`deckPalette.test.ts` scans).
 import { COLORS, deckFontFamily } from "./deck-paint";
 import { DECK_PARAMS } from "./deck-params";
 
 type Row = [label: string, path: string, min: number, max: number, step: number];
 
-const ROWS: Row[] = [
+export const ROWS: Row[] = [
   ["transition (ms)", "drive.durationMs", 300, 2000, 50],
   ["hysteresis", "drive.hysteresis", 0, 0.45, 0.01],
   ["overshoot", "pull.overshoot", 0, 3, 0.05],
@@ -51,6 +49,22 @@ const ROWS: Row[] = [
   ["bloom strength", "bloom.strength", 0, 3, 0.05],
   ["bloom radius", "bloom.radius", 0, 1.5, 0.01],
   ["bloom threshold", "bloom.threshold", 0, 1, 0.01],
+  ["aura τ (ms)", "aura.tauMs", 0, 600, 10],
+  ["light ambient", "light.ambient", 0, 1, 0.01],
+  ["light key", "light.key", 0, 5, 0.05],
+  ["light rim", "light.rim", 0, 3, 0.05],
+  ["fog strength S", "fog.strengthS", 0, 0.5, 0.01],
+  ["fog radius S", "fog.radiusS", 0, 4, 0.05],
+  ["fog radius S+ base", "fog.radiusSPlusBase", 0, 4, 0.05],
+  ["smoke opacity min", "smoke.opacityMin", 0, 0.5, 0.01],
+  ["smoke burst S", "smoke.burstS", 0, 60, 1],
+  ["smoke burst S+", "smoke.burstSPlus", 0, 120, 1],
+  ["orientation gain", "gestures.orientationGain", 0, 2, 0.05],
+  ["seam S max", "seam.sMax", 0, 1, 0.01],
+  ["clearcoat", "material.clearcoat", 0, 1, 0.05], // next material refresh
+  ["env intensity", "material.envMapIntensity", 0, 2, 0.05], // next material refresh
+  ["card max height", "layout.cardHMax", 320, 800, 10],
+  ["energy pulling", "energy.pulling", 0, 0.5, 0.01],
 ];
 
 function read(path: string): number {
@@ -61,8 +75,7 @@ function read(path: string): number {
 
 function write(path: string, value: number): void {
   const keys = path.split(".");
-  const last = keys.pop();
-  if (!last) return;
+  const last = keys.pop() ?? "";
   const target = keys.reduce<Record<string, unknown>>(
     (o, k) => o[k] as Record<string, unknown>,
     DECK_PARAMS as unknown as Record<string, unknown>,

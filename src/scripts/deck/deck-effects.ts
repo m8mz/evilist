@@ -18,6 +18,7 @@ import { LAYER, type DrawEntry } from "./deck-cards";
 import {
   auraOpacity,
   coverFit,
+  easeToward,
   flare,
   fogFor,
   glowOpacity,
@@ -93,11 +94,12 @@ export class DeckEffects {
   private readonly glowMats: MeshBasicMaterial[];
   private readonly glows: (Mesh | null)[];
   private readonly glowImages: (HTMLImageElement | null)[];
-  // The aura's own plane: violet, additive, only for the ranks that ever show one (as the seam
-  // does), and even then lit only for the currently energetic card.
+  // The aura's own plane: violet, additive, only for ranks that ever show one, lit only when active.
   private readonly auraMats: (MeshBasicMaterial | null)[];
   private readonly auras: (Mesh | null)[];
   private readonly auraImages: (HTMLImageElement | null)[];
+  private readonly auraApplied: number[]; // eased toward the target opacity every frame (easeToward)
+  private frozen = false; // set by prewarm(): the aura's ease then snaps straight to its target
   private readonly seams: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[];
   private readonly seamCanvases: (HTMLCanvasElement | null)[];
   private readonly occluders: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[]; // high tier only: depth-only proxies so the bloom pass, which draws no cards, still occludes
@@ -150,6 +152,7 @@ export class DeckEffects {
     );
     this.auras = new Array<Mesh | null>(n).fill(null);
     this.auraImages = new Array<HTMLImageElement | null>(n).fill(null);
+    this.auraApplied = new Array<number>(n).fill(0);
 
     this.seams = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
     this.seamCanvases = new Array<HTMLCanvasElement | null>(n).fill(null);
@@ -371,8 +374,9 @@ export class DeckEffects {
     }
   }
 
-  /** Runs the smoke `frames` frames from the given state (the frozen deck's cloud). */
+  /** Ages the smoke `frames` frames (the frozen deck's cloud); only under freeze, so it flags it. */
   prewarm(frame: EffectsFrame, frames: number): void {
+    this.frozen = true;
     this.smoke.prewarm(frame, frames);
   }
 
@@ -382,6 +386,7 @@ export class DeckEffects {
     const P = this.params;
     this.rebakeFades();
     const { kind, energy, energyIndex } = frame;
+    const dtMs = this.frozen ? Infinity : frame.frames * (1000 / 60); // frames is dt in 60 Hz units
     const energetic = energyIndex === null ? null : (frame.cards[energyIndex] ?? null);
     const fl = flare(kind, energetic?.sinceLandMs ?? null, P);
 
@@ -402,8 +407,9 @@ export class DeckEffects {
       if (aura && auraMat) {
         const active = kind !== null && i === energyIndex;
         const o = active ? Math.min(1, auraOpacity(kind, energy, fl.glow, P) * P.glow.gain) : 0;
-        auraMat.opacity = o;
-        aura.visible = o > VISIBLE_MIN && auraMat.alphaMap !== null;
+        const applied = easeToward(this.auraApplied[i] ?? 0, o, dtMs, P.aura.tauMs);
+        auraMat.opacity = this.auraApplied[i] = applied;
+        aura.visible = applied > VISIBLE_MIN && auraMat.alphaMap !== null;
       }
       const seam = this.seams[i];
       const k = this.kinds[i];

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   judgeSwipe,
+  nextRank,
   orientationTilt,
   screenAngleOf,
   type ScreenAngle,
@@ -33,6 +34,21 @@ describe("judgeSwipe", () => {
     };
     expect(judgeSwipe(-11, 10, P)).toBe(1);
     expect(judgeSwipe(-11, 12, P)).toBe(0);
+  });
+});
+
+describe("nextRank", () => {
+  it("steps from presented when nothing is pending", () => {
+    expect(nextRank(3, null, 1, 7)).toBe(4);
+    expect(nextRank(3, null, -1, 7)).toBe(2);
+  });
+  it("steps from the pending rank, not presented, so a second quick swipe moves a second rank", () => {
+    expect(nextRank(3, 4, 1, 7)).toBe(5);
+    expect(nextRank(3, 2, -1, 7)).toBe(1);
+  });
+  it("clamps to the deck's ends", () => {
+    expect(nextRank(6, null, 1, 7)).toBe(6);
+    expect(nextRank(0, null, -1, 7)).toBe(0);
   });
 });
 

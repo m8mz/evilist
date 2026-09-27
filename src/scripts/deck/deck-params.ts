@@ -31,8 +31,6 @@ export interface LayoutParams {
 }
 
 export interface PullParams {
-  /** The handoff to the next card starts at this fraction of a rank's scroll stretch. */
-  handoffStart: number;
   /** A card counts as landed above this pull. */
   landedAt: number;
   /** Tilt, float and the landed energy blend in over pull ∈ [settleStart, 1]. */
@@ -85,7 +83,6 @@ export interface DeckParams {
     staggerMs: number;
     holdMs: number;
     pullMs: number;
-    floorMs: number;
     fastForward: number;
     /** How far off-stage the cards start, a fraction of the card's width. */
     entryOffset: number;
@@ -136,10 +133,19 @@ export interface DeckParams {
     kick: number;
     kickMs: number;
   };
-  /** The aura's opacity recipe (deck spec §8 as amended by Plan 5): S's opacity at S's own energy,
-   * S+'s base and ramp, and the window fraction where the glow and aura darken to black, from
-   * `fadeFrom` to `fadeTo` (so neither ever sits on the name plate). */
-  aura: { s: number; sPlusBase: number; sPlusRamp: number; fadeFrom: number; fadeTo: number };
+  /** The aura's opacity recipe (deck spec §8 as amended by Plans 5 and 6): S's opacity at S's own
+   * energy, S+'s base and ramp, the window fraction where the glow and aura darken to black, from
+   * `fadeFrom` to `fadeTo` (so neither ever sits on the name plate), and `tauMs`, the exponential
+   * time constant the applied opacity eases toward that recipe with (deck-energy's `easeToward`),
+   * so a handoff's target never steps onto the card in one frame. */
+  aura: {
+    tauMs: number;
+    s: number;
+    sPlusBase: number;
+    sPlusRamp: number;
+    fadeFrom: number;
+    fadeTo: number;
+  };
   glow: { gain: number; flareScale: number };
   seam: { sMin: number; sMax: number; sPlusMin: number; sPlusMax: number; periodMs: number };
   bloom: { strength: number; radius: number; threshold: number };
@@ -168,7 +174,6 @@ export function defaultDeckParams(): DeckParams {
       relayoutDebounceMs: 150,
     },
     pull: {
-      handoffStart: 0.7,
       landedAt: 0.985,
       settleStart: 0.9,
       rotDelay: 0.15,
@@ -193,7 +198,6 @@ export function defaultDeckParams(): DeckParams {
       staggerMs: 55,
       holdMs: 200,
       pullMs: 700,
-      floorMs: 500,
       fastForward: 4,
       entryOffset: 2.2,
     },
@@ -242,7 +246,7 @@ export function defaultDeckParams(): DeckParams {
       kick: 0.5,
       kickMs: 600,
     },
-    aura: { s: 0.45, sPlusBase: 0.55, sPlusRamp: 0.45, fadeFrom: 0.72, fadeTo: 0.9 },
+    aura: { tauMs: 120, s: 0.45, sPlusBase: 0.55, sPlusRamp: 0.45, fadeFrom: 0.72, fadeTo: 0.9 },
     glow: { gain: 1.2, flareScale: 1.4 },
     seam: { sMin: 0.1, sMax: 0.25, sPlusMin: 0.2, sPlusMax: 0.5, periodMs: 3200 },
     // Threshold 0.5 keeps the soft violet aura and seams out of the blur (their luminance stays

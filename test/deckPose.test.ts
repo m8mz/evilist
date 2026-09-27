@@ -19,37 +19,44 @@ import {
 const LABELS: RankLabel[] = ["E", "D", "C", "B", "A", "S", "S+"];
 const N = 7;
 const D = DECK_PARAMS.drive.durationMs;
-const HANDOFF = DECK_PARAMS.pull.handoffStart;
+// The retired scroll-fraction model's own handoff threshold: kept here only to write these
+// fixtures at the same `local` values the old tests used, not read from the params any more (Plan
+// 6 dropped `pull.handoffStart`, which had no runtime consumer).
+const HANDOFF = 0.7;
 /** Progress at fraction `local` of rank `i`'s stretch, for seven ranks. */
 const at = (i: number, local: number) => (i + local) / 7;
 /** The raw (pre-ease) fraction of the drive's duration that reproduces the old scroll-fraction
  * model's handoff progress at `local` through a rank's stretch. */
 const rawK = (local: number) => (local - HANDOFF) / (1 - HANDOFF);
 
+/** A settled Pulls: `rank` alone at 1, its own scroll position `within`. */
+function settled(rank: number, within: number, count = N): Pulls {
+  const pull = new Array<number>(count).fill(0);
+  pull[rank] = 1;
+  return { active: rank, within, fromWithin: 0, pull, from: null, to: null, k: 0 };
+}
+
+/** A mid-transition Pulls from `from` to `to` at raw (pre-ease) progress `k`, eased the same way
+ * the drive itself eases a transition (`pullsForDrive`). */
+function transition(from: number, to: number, k: number, count = N): Pulls {
+  const eased = easeInOutCubic(clamp01(k));
+  const pull = new Array<number>(count).fill(0);
+  pull[from] = 1 - eased;
+  pull[to] = eased;
+  return { active: eased < 0.5 ? from : to, within: 0, fromWithin: 0, pull, from, to, k: eased };
+}
+
 /**
  * The Pulls the drive produces for a given scroll fraction `p`, seven cards: settled while `p`
  * sits inside a rank's stretch below the old handoff threshold (or once there's no further rank to
- * hand off to), otherwise mid-transition to the next rank — built entirely from the drive's own
- * `initialDrive`/`pullsForDrive`, never re-implementing the curve.
+ * hand off to), otherwise mid-transition to the next rank.
  */
 function pullsAt(p: number, count = N): Pulls {
   const f = clamp01(p) * count;
   const active = Math.min(count - 1, Math.floor(f));
   const local = f - active;
-  if (active >= count - 1 || local <= HANDOFF)
-    return pullsForDrive(initialDrive((active + 0.5) / count, count), p, 0, count);
-  return pullsForDrive(
-    {
-      current: active,
-      wanted: active + 1,
-      // The simulated handoff starts once `local` crosses HANDOFF, so the leaving rank's own
-      // within at that moment is HANDOFF itself.
-      transition: { from: active, to: active + 1, startMs: 0, fromWithin: HANDOFF },
-    },
-    p,
-    D * rawK(local),
-    count,
-  );
+  if (active >= count - 1 || local <= HANDOFF) return settled(active, clamp01(local), count);
+  return transition(active, active + 1, rawK(local), count);
 }
 
 describe("clamp01 and the eases", () => {

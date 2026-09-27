@@ -10,6 +10,15 @@ const TAU = Math.PI * 2;
 
 export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
+/** Exponential glide from `applied` toward `target` over `dtMs`, time constant `tauMs` (deck spec
+ * §8 as amended by Plan 6): so the aura's opacity, drawn every frame, never steps onto a card in
+ * one frame at a handoff. A non-positive `tauMs` snaps straight to the target; `dtMs = Infinity`
+ * (a frozen still, which never advances a clock) does too, since `exp(-Infinity)` is 0. */
+export function easeToward(applied: number, target: number, dtMs: number, tauMs: number): number {
+  if (tauMs <= 0) return target;
+  return applied + (target - applied) * (1 - Math.exp(-dtMs / tauMs));
+}
+
 export interface Flare {
   fog: number;
   glow: number;

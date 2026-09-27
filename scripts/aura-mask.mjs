@@ -18,27 +18,24 @@ const BANDS_PATH = "src/data/deck-glow-bands.json";
 // rim 0.025 → 10 px at width 400: between the controller's two preview rows (0.035 and 0.02).
 export const AURA = { width: 400, rim: 0.025, blur: 3 };
 
-/** Dilates `src` by a disc of radius `r` (separable approximation: a square, then the blur rounds it). */
-function dilate(src, width, height, r) {
-  const rows = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) {
-      let hit = 0;
-      for (let dx = -r; dx <= r && !hit; dx++) {
-        const xx = x + dx;
-        if (xx >= 0 && xx < width && src[y * width + xx]) hit = 255;
-      }
-      rows[y * width + x] = hit;
-    }
+/**
+ * Dilates `src` by a disc of radius `r`: a pixel lights if any figure pixel sits within `r`
+ * (`dx² + dy² ≤ r²`). A stamped disc, one pass over every figure pixel — not the two-pass box this
+ * replaces, which reached a square's corner `r√2` away instead of a disc's `r`.
+ */
+export function dilate(src, width, height, r) {
+  const offsets = [];
+  for (let dy = -r; dy <= r; dy++)
+    for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) offsets.push([dx, dy]);
   const out = new Uint8Array(width * height);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
-      let hit = 0;
-      for (let dy = -r; dy <= r && !hit; dy++) {
+      if (!src[y * width + x]) continue;
+      for (const [dx, dy] of offsets) {
+        const xx = x + dx;
         const yy = y + dy;
-        if (yy >= 0 && yy < height && rows[yy * width + x]) hit = 255;
+        if (xx >= 0 && xx < width && yy >= 0 && yy < height) out[yy * width + xx] = 255;
       }
-      out[y * width + x] = hit;
     }
   return out;
 }

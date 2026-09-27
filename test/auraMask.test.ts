@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { auraMask, silhouetteFromCutout } from "../scripts/aura-mask.mjs";
+import { auraMask, dilate, silhouetteFromCutout } from "../scripts/aura-mask.mjs";
 import bands from "../src/data/deck-glow-bands.json";
 
 /** A 600 × 400 RGBA image, transparent except an opaque 200 × 300 rectangle at (200,50). */
@@ -25,6 +25,18 @@ describe("silhouetteFromCutout", () => {
     // The rectangle (200,50)-(400,350) of 600×400 scales to (133,33)-(267,233) of 400×267.
     expect(at(200, 133)).toBe(255); // inside the rectangle
     expect(at(10, 10)).toBe(0); // outside, far corner
+  });
+});
+
+describe("dilate", () => {
+  it("is a disc: a lone pixel lights the axis neighbour at distance 4, not the diagonal at 4√2", () => {
+    const width = 20;
+    const height = 20;
+    const src = new Uint8Array(width * height);
+    src[10 * width + 10] = 255; // a lone figure pixel at (10, 10)
+    const out = dilate(src, width, height, 4);
+    expect(out[10 * width + 14]).toBe(255); // (14, 10): distance 4, on the axis
+    expect(out[14 * width + 14]).toBe(0); // (14, 14): distance 4√2 ≈ 5.66, outside the disc
   });
 });
 
