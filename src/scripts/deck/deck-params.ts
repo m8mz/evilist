@@ -51,8 +51,15 @@ export interface PullParams {
   rackRotY: number;
 }
 
+export interface DriveParams {
+  /** One rank change plays this long, whatever the wheel does. */
+  durationMs: number;
+  /** A boundary must be passed by this fraction of a stretch before the rank changes. */
+  hysteresis: number;
+}
+
 export interface DeckParams {
-  scroll: { tau: number };
+  drive: DriveParams;
   layout: LayoutParams;
   pull: PullParams;
   tilt: { maxX: number; maxY: number; tau: number };
@@ -146,7 +153,7 @@ export interface DeckParams {
 
 export function defaultDeckParams(): DeckParams {
   return {
-    scroll: { tau: 90 },
+    drive: { durationMs: 900, hysteresis: 0.15 },
     layout: {
       cardHMin: 320,
       cardHMax: 560,

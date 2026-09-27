@@ -1,5 +1,13 @@
 // Small pure helpers shared by the deck's page script and its stage.
 
+/** Clamps to [0, 1]; NaN (an unparsed or missing value) reads as 0. */
+export const clamp01 = (v: number): number =>
+  Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
+
+/** The cubic in-out ease shared by the drive (its transitions) and the pose model (the pull). */
+export const easeInOutCubic = (t: number): number =>
+  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+
 /** Exponential approach toward `target` with time constant `tauMs`; snaps when within 5e-4. */
 export function smooth(current: number, target: number, dtMs: number, tauMs: number): number {
   if (!Number.isFinite(dtMs) || dtMs <= 0) return current;

@@ -6,14 +6,12 @@
 // blend in continuously as `pull` crosses `settleStart`, via `landedFactor`. The `landed` boolean
 // (pull > `landedAt`) still exists, but only decides `phase` and the caller's text print-in.
 import type { RankLabel } from "../../data/career";
+import type { Pulls } from "./deck-drive";
 import type { DeckLayout, Point } from "./deck-layout";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
+import { clamp01, easeInOutCubic } from "./deck-util";
 
-export const clamp01 = (v: number): number =>
-  Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
-
-export const easeInOutCubic = (t: number): number =>
-  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+export { clamp01, easeInOutCubic };
 
 export const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
 
@@ -27,34 +25,6 @@ export function backOut(t: number, overshoot: number): number {
 /** How far `pull` has crossed into `[threshold, 1]`, for blending tilt, float and landed energy. */
 function landedFactor(pull: number, threshold: number): number {
   return clamp01((pull - threshold) / (1 - threshold));
-}
-
-export interface Pulls {
-  active: number;
-  within: number;
-  /** Handoff progress, 0 outside the window. */
-  k: number;
-  /** Per card: 0 racked, 1 presented. */
-  pull: number[];
-}
-
-/** Which card is out, and how far the next one is on its way (spec §7). */
-export function pullsFor(
-  p: number,
-  count: number,
-  handoffStart: number = DECK_PARAMS.pull.handoffStart,
-): Pulls {
-  const f = clamp01(p) * count;
-  const active = Math.min(count - 1, Math.floor(f));
-  const within = f - active;
-  const k =
-    active < count - 1 && within > handoffStart
-      ? clamp01((within - handoffStart) / (1 - handoffStart))
-      : 0;
-  const pull = new Array<number>(count).fill(0);
-  pull[active] = 1 - easeInOutCubic(k);
-  if (active + 1 < count) pull[active + 1] = easeInOutCubic(k);
-  return { active, within, k, pull };
 }
 
 export type CardPhase = "racked" | "pulling" | "landing" | "presented" | "leaving";
@@ -134,7 +104,7 @@ export interface IntroPose {
 }
 
 export interface PoseInput {
-  p: number;
+  pulls: Pulls;
   labels: readonly RankLabel[];
   layout: DeckLayout;
   /** Degrees, already smoothed by the caller. */
@@ -167,16 +137,19 @@ interface RestPose {
 }
 
 /**
- * Where card `i` sits when it is not presented. Desktop: its rack slot. Phone: the active card and
- * the played ones belong at `exit` (half transparent, off the stage's left edge); the cards to
- * come wait at `next`, stacked, where only the visible next one is opaque. During a handoff
- * (`k > 0`) the incoming card `active + 1` arrives from `next` and `active + 2` becomes the
- * visible next, so the stack never pops.
+ * Where card `i` sits when it is not presented. Desktop: its rack slot. Phone: the played cards
+ * belong at `exit` (half transparent, off the stage's left edge); the cards to come wait at
+ * `next`, stacked, where only the visible next one is opaque. `playedUpTo` is the rank the deck has
+ * settled on, or, mid-transition, the rank it's leaving — it stays fixed for the whole transition
+ * (never the eased `pulls.active`, which can flip mid-flight and would otherwise reclassify the
+ * arriving card as already played). The incoming card `playedUpTo + 1` arrives from `next` and the
+ * card after the transition's target becomes the visible next, so the stack never pops even when
+ * the target is several ranks away (a direct jump).
  */
 function restPose(
   i: number,
-  active: number,
-  k: number,
+  playedUpTo: number,
+  to: number | null,
   layout: DeckLayout,
   params: DeckParams,
 ): RestPose {
@@ -184,14 +157,14 @@ function restPose(
     const slot = layout.slots[i] ?? layout.slots[layout.slots.length - 1]!;
     return { x: slot.x, y: slot.y, rotY: params.pull.rackRotY, opacity: 1 };
   }
-  if (i <= active) {
+  if (i <= playedUpTo) {
     return { ...layout.exit!, rotY: params.layout.phoneExitRotY, opacity: 0.5 };
   }
-  const visibleNext = k > 0 ? active + 2 : active + 1;
+  const visibleNext = (to ?? playedUpTo) + 1;
   return {
     ...layout.next!,
     rotY: params.layout.phoneNextRotY,
-    opacity: i === active + 1 || i === visibleNext ? 1 : 0,
+    opacity: i === playedUpTo + 1 || i === visibleNext ? 1 : 0,
   };
 }
 
@@ -300,11 +273,10 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
     // introPose always populates `intro`; the field is nullable only in StagePose's general shape.
     if (!intro.intro!.done) return intro;
   }
-  const count = input.labels.length;
-  const pulls = pullsFor(input.p, count, params.pull.handoffStart);
+  const pulls = input.pulls;
   const cards = input.labels.map((_, i) => {
-    const leaving = i === pulls.active && pulls.k > 0;
-    const rest = restPose(i, pulls.active, pulls.k, input.layout, params);
+    const leaving = pulls.from !== null && i === pulls.from;
+    const rest = restPose(i, pulls.from ?? pulls.active, pulls.to, input.layout, params);
     const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params, !leaving);
     if (input.layout.mode === "desktop") {
       // The hover lift fades out over the pull instead of cutting off the instant a hovered card
@@ -359,7 +331,7 @@ function introPose(input: PoseInput, params: DeckParams): StagePose {
     const rest =
       phone && i === 0
         ? { ...input.layout.next!, rotY: params.layout.phoneNextRotY, opacity: 1 }
-        : restPose(i, 0, 0, input.layout, params);
+        : restPose(i, 0, null, input.layout, params);
     if (phone && i > 1) return interpolate({ ...rest, opacity: 0 }, 0, input.layout, params, true);
     if (i === 0 && t >= pullStart) {
       const pull = easeInOutCubic(clamp01((t - pullStart) / I.pullMs));

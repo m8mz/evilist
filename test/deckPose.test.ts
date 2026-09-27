@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RankLabel } from "../src/data/career";
+import { initialDrive, pullsForDrive, type Pulls } from "../src/scripts/deck/deck-drive";
 import { columnFor, deckLayout } from "../src/scripts/deck/deck-layout";
 import { DECK_PARAMS } from "../src/scripts/deck/deck-params";
 import {
@@ -9,13 +10,42 @@ import {
   easeInOutCubic,
   energyFor,
   introDurationMs,
-  pullsFor,
   type PoseInput,
 } from "../src/scripts/deck/deck-pose";
 
 const LABELS: RankLabel[] = ["E", "D", "C", "B", "A", "S", "S+"];
+const N = 7;
+const D = DECK_PARAMS.drive.durationMs;
+const HANDOFF = DECK_PARAMS.pull.handoffStart;
 /** Progress at fraction `local` of rank `i`'s stretch, for seven ranks. */
 const at = (i: number, local: number) => (i + local) / 7;
+/** The raw (pre-ease) fraction of the drive's duration that reproduces the old scroll-fraction
+ * model's handoff progress at `local` through a rank's stretch. */
+const rawK = (local: number) => (local - HANDOFF) / (1 - HANDOFF);
+
+/**
+ * The Pulls the drive produces for a given scroll fraction `p`, seven cards: settled while `p`
+ * sits inside a rank's stretch below the old handoff threshold (or once there's no further rank to
+ * hand off to), otherwise mid-transition to the next rank — built entirely from the drive's own
+ * `initialDrive`/`pullsForDrive`, never re-implementing the curve.
+ */
+function pullsAt(p: number, count = N): Pulls {
+  const f = clamp01(p) * count;
+  const active = Math.min(count - 1, Math.floor(f));
+  const local = f - active;
+  if (active >= count - 1 || local <= HANDOFF)
+    return pullsForDrive(initialDrive((active + 0.5) / count, count), p, 0, count);
+  return pullsForDrive(
+    {
+      current: active,
+      wanted: active + 1,
+      transition: { from: active, to: active + 1, startMs: 0 },
+    },
+    0,
+    D * rawK(local),
+    count,
+  );
+}
 
 describe("clamp01 and the eases", () => {
   it("clamps and turns NaN into 0", () => {
@@ -35,49 +65,49 @@ describe("clamp01 and the eases", () => {
   });
 });
 
-describe("pullsFor", () => {
+describe("pulls built from the drive", () => {
   it("presents the active rank alone outside the handoff window", () => {
-    const r = pullsFor(at(3, 0.5), 7);
+    const r = pullsAt(at(3, 0.5));
     expect(r.active).toBe(3);
     expect(r.within).toBeCloseTo(0.5, 6);
     expect(r.k).toBe(0);
     expect(r.pull).toEqual([0, 0, 0, 1, 0, 0, 0]);
   });
 
-  it("hands off during the last 30% of a rank, cubic in-out", () => {
-    const start = pullsFor(at(0, 0.7), 7);
+  it("hands off over the drive's duration, cubic in-out", () => {
+    const start = pullsAt(at(0, 0.7));
     expect(start.k).toBeCloseTo(0, 6);
-    const half = pullsFor(at(0, 0.85), 7);
+    const half = pullsAt(at(0, 0.85));
     expect(half.k).toBeCloseTo(0.5, 6);
     expect(half.pull[0]).toBeCloseTo(0.5, 6);
     expect(half.pull[1]).toBeCloseTo(0.5, 6);
-    const quarter = pullsFor(at(0, 0.775), 7);
+    const quarter = pullsAt(at(0, 0.775));
     expect(quarter.pull[1]).toBeCloseTo(easeInOutCubic(0.25), 6);
     expect(quarter.pull[0]).toBeCloseTo(1 - easeInOutCubic(0.25), 6);
   });
 
-  it("is continuous across the rank boundary", () => {
-    const before = pullsFor(at(1, 0) - 1e-9, 7);
-    const after = pullsFor(at(1, 0), 7);
+  it("is continuous across the transition's end", () => {
+    const before = pullsAt(at(1, 0) - 1e-9);
+    const after = pullsAt(at(1, 0));
     expect(before.pull[1]).toBeCloseTo(1, 4);
     expect(after.pull[1]).toBe(1);
     expect(before.pull[0]).toBeCloseTo(0, 4);
   });
 
   it("keeps E presented at the top and S+ presented at the end", () => {
-    expect(pullsFor(0, 7).pull[0]).toBe(1);
-    expect(pullsFor(-0.5, 7).pull[0]).toBe(1);
-    expect(pullsFor(at(6, 0.9), 7).pull[6]).toBe(1);
-    expect(pullsFor(1, 7).pull[6]).toBe(1);
-    expect(pullsFor(1.3, 7).pull[6]).toBe(1);
-    expect(pullsFor(Number.NaN, 7).pull[0]).toBe(1);
+    expect(pullsAt(0).pull[0]).toBe(1);
+    expect(pullsAt(-0.5).pull[0]).toBe(1);
+    expect(pullsAt(at(6, 0.9)).pull[6]).toBe(1);
+    expect(pullsAt(1).pull[6]).toBe(1);
+    expect(pullsAt(1.3).pull[6]).toBe(1);
+    expect(pullsAt(Number.NaN).pull[0]).toBe(1);
   });
 });
 
 describe("energyFor", () => {
   it("is zero through rank A", () => {
     for (const i of [0, 1, 2, 3, 4]) {
-      expect(energyFor(pullsFor(at(i, 0.5), 7), LABELS)).toEqual({
+      expect(energyFor(pullsAt(at(i, 0.5)), LABELS)).toEqual({
         energy: 0,
         kind: null,
         index: null,
@@ -86,28 +116,28 @@ describe("energyFor", () => {
   });
 
   it("breathes at 0.3 while S is presented and grows through S+", () => {
-    expect(energyFor(pullsFor(at(5, 0.5), 7), LABELS)).toEqual({
+    expect(energyFor(pullsAt(at(5, 0.5)), LABELS)).toEqual({
       energy: 0.3,
       kind: "S",
       index: 5,
     });
-    const early = energyFor(pullsFor(at(6, 0), 7), LABELS);
+    const early = energyFor(pullsAt(at(6, 0)), LABELS);
     expect(early.kind).toBe("S+");
     expect(early.energy).toBeCloseTo(0.25, 6);
-    const mid = energyFor(pullsFor(at(6, 0.35), 7), LABELS);
+    const mid = energyFor(pullsAt(at(6, 0.35)), LABELS);
     expect(mid.energy).toBeCloseTo(0.25 + 0.75 * 0.5, 6);
-    const late = energyFor(pullsFor(at(6, 0.9), 7), LABELS);
+    const late = energyFor(pullsAt(at(6, 0.9)), LABELS);
     expect(late.energy).toBeCloseTo(1, 6);
   });
 
   it("scales with the pull while S is arriving, and follows the larger pull in the S → S+ handoff", () => {
-    const arriving = energyFor(pullsFor(at(4, 0.85), 7), LABELS); // S at pull 0.5
+    const arriving = energyFor(pullsAt(at(4, 0.85)), LABELS); // S at pull 0.5
     expect(arriving.kind).toBe("S");
     expect(arriving.energy).toBeCloseTo(0.15 * 0.5, 6);
-    const leavingS = energyFor(pullsFor(at(5, 0.775), 7), LABELS); // S 0.9375, S+ 0.0625
+    const leavingS = energyFor(pullsAt(at(5, 0.775)), LABELS); // S 0.9375, S+ 0.0625
     expect(leavingS.kind).toBe("S");
     expect(leavingS.index).toBe(5);
-    const arrivingSPlus = energyFor(pullsFor(at(5, 0.925), 7), LABELS); // S 0.0625, S+ 0.9375
+    const arrivingSPlus = energyFor(pullsAt(at(5, 0.925)), LABELS); // S 0.0625, S+ 0.9375
     expect(arrivingSPlus.kind).toBe("S+");
     expect(arrivingSPlus.index).toBe(6);
     // S+'s pull (0.9375) is past settleStart (0.9), so its energy is no longer the pure
@@ -125,10 +155,10 @@ describe("energyFor", () => {
     // Just before crossing into S+'s own stretch, S+'s pull is ≈ 1 but `within` still belongs to
     // S's handoff (≈ 0.99); the old code fed that into S+'s ramp and spiked energy to ≈ 1, then
     // dropped it back to 0.25 the instant the boundary crossed. It must stay ≈ 0.25 throughout.
-    const arriving = energyFor(pullsFor(at(5, 0.99), 7), LABELS);
+    const arriving = energyFor(pullsAt(at(5, 0.99)), LABELS);
     expect(arriving.kind).toBe("S+");
     expect(arriving.energy).toBeCloseTo(0.25, 3);
-    const justAfter = energyFor(pullsFor(at(6, 0), 7), LABELS);
+    const justAfter = energyFor(pullsAt(at(6, 0)), LABELS);
     expect(justAfter.kind).toBe("S+");
     expect(justAfter.energy).toBeCloseTo(0.25, 6);
   });
@@ -151,7 +181,7 @@ const phoneLayout = deckLayout({
 });
 const none = [null, null, null, null, null, null, null];
 const input = (over: Partial<PoseInput>): PoseInput => ({
-  p: 0,
+  pulls: pullsAt(0),
   labels: LABELS,
   layout: desktopLayout,
   tilt: { x: 0, y: 0 },
@@ -170,7 +200,7 @@ const finite = (value: unknown): void => {
 
 describe("deckPose on desktop", () => {
   it("racks every card but the presented one, backs to the viewer at 103°", () => {
-    const s = deckPose(input({ p: at(3, 0.5) }));
+    const s = deckPose(input({ pulls: pullsAt(at(3, 0.5)) }));
     expect(s.active).toBe(3);
     for (const i of [0, 1, 2, 4, 5, 6]) {
       const c = s.cards[i]!;
@@ -185,7 +215,7 @@ describe("deckPose on desktop", () => {
   });
 
   it("presents the active card flat, lifted 60 px toward the viewer, at the presented anchor", () => {
-    const c = deckPose(input({ p: at(3, 0.5) })).cards[3]!;
+    const c = deckPose(input({ pulls: pullsAt(at(3, 0.5)) })).cards[3]!;
     expect(c.landed).toBe(true);
     // landedAt[3] is still null (the default `none`): this is the first landed frame, before the
     // caller has had a chance to record it, so the phase is "landing", not "presented" yet.
@@ -199,7 +229,7 @@ describe("deckPose on desktop", () => {
   });
 
   it("moves the incoming card along the pull curve and swings it past flat", () => {
-    const half = deckPose(input({ p: at(0, 0.85) })); // pull 0.5 each
+    const half = deckPose(input({ pulls: pullsAt(at(0, 0.85)) })); // pull 0.5 each
     const inc = half.cards[1]!;
     const out = half.cards[0]!;
     expect(inc.phase).toBe("pulling");
@@ -211,22 +241,22 @@ describe("deckPose on desktop", () => {
     expect(inc.scale).toBeCloseTo(1.06, 6);
     const r = (0.5 - 0.15) / (1 - 0.15);
     expect(inc.rotY).toBeCloseTo(103 * (1 - backOut(r, 1.3)), 6);
-    const late = deckPose(input({ p: at(0, 0.7 + 0.3 * 0.9) })).cards[1]!; // pull ≈ 0.996
+    const late = deckPose(input({ pulls: pullsAt(at(0, 0.7 + 0.3 * 0.9)) })).cards[1]!; // pull ≈ 0.996
     expect(late.landed).toBe(true);
-    const swing = deckPose(input({ p: at(0, 0.7 + 0.3 * 0.78) })).cards[1]!; // k 0.78 → pull 0.95
+    const swing = deckPose(input({ pulls: pullsAt(at(0, 0.7 + 0.3 * 0.78)) })).cards[1]!; // k 0.78 → pull 0.95
     expect(swing.rotY).toBeLessThan(0);
   });
 
   it("delays rotation until the pull has slid and lifted the card (Finding 5b)", () => {
     // At k = 0.8, pull ≈ 0.148, below rotDelay (0.15): the card has moved but not yet turned.
-    const c = deckPose(input({ p: at(0, 0.8) })).cards[1]!;
+    const c = deckPose(input({ pulls: pullsAt(at(0, 0.8)) })).cards[1]!;
     expect(c.pull).toBeCloseTo(easeInOutCubic((0.8 - 0.7) / 0.3), 6);
     expect(c.rotY).toBeCloseTo(103, 6);
     expect(c.x).not.toBeCloseTo(desktopLayout.slots[1]!.x, 3);
   });
 
   it("keeps the leaving card on a low path so it never shares depth with the incoming card (Finding 5a)", () => {
-    const half = deckPose(input({ p: at(0, 0.85) })); // pull 0.5 each
+    const half = deckPose(input({ pulls: pullsAt(at(0, 0.85)) })); // pull 0.5 each
     const out = half.cards[0]!;
     const inc = half.cards[1]!;
     expect(out.z).toBeCloseTo(60 * 0.5, 6);
@@ -236,7 +266,7 @@ describe("deckPose on desktop", () => {
   });
 
   it("adds the smoothed tilt only to the landed card", () => {
-    const s = deckPose(input({ p: at(2, 0.5), tilt: { x: -3, y: 7 } }));
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.5)), tilt: { x: -3, y: 7 } }));
     expect(s.cards[2]!.rotX).toBeCloseTo(-3, 6);
     expect(s.cards[2]!.rotY).toBeCloseTo(7, 6);
     expect(s.cards[3]!.rotY).toBe(103);
@@ -244,9 +274,9 @@ describe("deckPose on desktop", () => {
   });
 
   it("blends tilt in continuously as the incoming card nears landed, rather than snapping (Finding 2)", () => {
-    const p = at(0, 0.7 + 0.3 * 0.78); // pull ≈ 0.957, lands nothing
-    const base = deckPose(input({ p })).cards[1]!;
-    const tilted = deckPose(input({ p, tilt: { x: 0, y: 10 } })).cards[1]!;
+    const pulls = pullsAt(at(0, 0.7 + 0.3 * 0.78)); // pull ≈ 0.957, lands nothing
+    const base = deckPose(input({ pulls })).cards[1]!;
+    const tilted = deckPose(input({ pulls, tilt: { x: 0, y: 10 } })).cards[1]!;
     expect(tilted.landed).toBe(false);
     const pull = easeInOutCubic(0.78);
     const lf = clamp01((pull - DECK_PARAMS.pull.settleStart) / (1 - DECK_PARAMS.pull.settleStart));
@@ -256,35 +286,44 @@ describe("deckPose on desktop", () => {
   });
 
   it("lifts a hovered racked card 6 px toward the viewer and 3 px up", () => {
-    const s = deckPose(input({ p: at(2, 0.5), hover: [0, 0, 0, 0, 1, 0, 0] }));
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.5)), hover: [0, 0, 0, 0, 1, 0, 0] }));
     expect(s.cards[4]!.z).toBeCloseTo(6, 6);
     expect(s.cards[4]!.y).toBeCloseTo(desktopLayout.slots[4]!.y - 3, 6);
     expect(s.cards[2]!.z).toBeCloseTo(60, 6); // the presented card ignores hover
   });
 
   it("fades the hover lift by (1 − pull) instead of cutting off the instant a card starts pulling", () => {
-    const p = at(0, 0.8); // card 1's pull ≈ 0.148 (below rotDelay, still early in the pull)
-    const s = deckPose(input({ p, hover: [0, 1, 0, 0, 0, 0, 0] }));
+    const pulls = pullsAt(at(0, 0.8)); // card 1's pull ≈ 0.148 (below rotDelay, still early in the pull)
+    const s = deckPose(input({ pulls, hover: [0, 1, 0, 0, 0, 0, 0] }));
     const c = s.cards[1]!;
     expect(c.pull).toBeCloseTo(easeInOutCubic((0.8 - 0.7) / 0.3), 6);
-    const withoutHover = deckPose(input({ p, hover: [0, 0, 0, 0, 0, 0, 0] })).cards[1]!;
+    const withoutHover = deckPose(input({ pulls, hover: [0, 0, 0, 0, 0, 0, 0] })).cards[1]!;
     expect(c.z - withoutHover.z).toBeCloseTo(6 * (1 - c.pull), 6);
     expect(c.y - withoutHover.y).toBeCloseTo(-3 * (1 - c.pull), 6);
 
-    const landed = deckPose(input({ p: at(2, 0.5), hover: [0, 0, 1, 0, 0, 0, 0] })).cards[2]!; // pull 1: hover adds nothing
-    const landedNoHover = deckPose(input({ p: at(2, 0.5) })).cards[2]!;
+    const landed = deckPose(input({ pulls: pullsAt(at(2, 0.5)), hover: [0, 0, 1, 0, 0, 0, 0] }))
+      .cards[2]!; // pull 1: hover adds nothing
+    const landedNoHover = deckPose(input({ pulls: pullsAt(at(2, 0.5)) })).cards[2]!;
     expect(landed.z).toBeCloseTo(landedNoHover.z, 6);
     expect(landed.y).toBeCloseTo(landedNoHover.y, 6);
   });
 
   it("floats the presented card once landed, fading the amplitude in over 1.5 s", () => {
     const rest = deckPose(
-      input({ p: at(2, 0.5), time: 5000, landedAt: [null, null, 5000, ...none.slice(3)] }),
+      input({
+        pulls: pullsAt(at(2, 0.5)),
+        time: 5000,
+        landedAt: [null, null, 5000, ...none.slice(3)],
+      }),
     );
     expect(rest.cards[2]!.y).toBeCloseTo(desktopLayout.presented.y, 6);
     const t = 5000 + 1050; // a quarter of the y period after landing, amplitude 0.7
     const s = deckPose(
-      input({ p: at(2, 0.5), time: t, landedAt: [null, null, 5000, ...none.slice(3)] }),
+      input({
+        pulls: pullsAt(at(2, 0.5)),
+        time: t,
+        landedAt: [null, null, 5000, ...none.slice(3)],
+      }),
     );
     const a = 1050 / 1500;
     expect(s.cards[2]!.y).toBeCloseTo(
@@ -299,18 +338,18 @@ describe("deckPose on desktop", () => {
 
   it("reports landing for 700 ms after a card lands, then presented", () => {
     const landed = [null, null, 5000, ...none.slice(3)];
-    expect(deckPose(input({ p: at(2, 0.5), time: 5300, landedAt: landed })).cards[2]!.phase).toBe(
-      "landing",
-    );
-    expect(deckPose(input({ p: at(2, 0.5), time: 5800, landedAt: landed })).cards[2]!.phase).toBe(
-      "presented",
-    );
+    expect(
+      deckPose(input({ pulls: pullsAt(at(2, 0.5)), time: 5300, landedAt: landed })).cards[2]!.phase,
+    ).toBe("landing");
+    expect(
+      deckPose(input({ pulls: pullsAt(at(2, 0.5)), time: 5800, landedAt: landed })).cards[2]!.phase,
+    ).toBe("presented");
   });
 
   it("reports landing (not presented) on the first landed frame, while landedAt is still null", () => {
     // The caller hasn't recorded landedAt yet on this very frame — that's how it knows this is the
     // first landed frame and to record it now — so the phase must not jump straight to "presented".
-    const s = deckPose(input({ p: at(2, 0.5), time: 5000, landedAt: none }));
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.5)), time: 5000, landedAt: none }));
     expect(s.cards[2]!.landed).toBe(true);
     expect(s.cards[2]!.phase).toBe("landing");
   });
@@ -319,7 +358,7 @@ describe("deckPose on desktop", () => {
     // Card 0 is leaving (k = 0.22 into the handoff to rank 1); by easeInOutCubic's symmetry
     // (e(0.22) = 1 - e(0.78)) its pull is ≈ 0.957 — the same magnitude Finding 2 uses for the
     // incoming card — so lf ≈ 0.57, not the 0 a hard cutoff at landed (pull 0.985) would give.
-    const p = at(0, 0.7 + 0.3 * 0.22);
+    const pulls = pullsAt(at(0, 0.7 + 0.3 * 0.22));
     const time = 5000 + 1500; // float's 1.5 s fade-in is complete (a = 1)
     const landedAt = [5000, null, null, null, null, null, null];
     const pull = 1 - easeInOutCubic(0.22);
@@ -327,14 +366,14 @@ describe("deckPose on desktop", () => {
     const lf = clamp01((pull - DECK_PARAMS.pull.settleStart) / (1 - DECK_PARAMS.pull.settleStart));
     expect(lf).toBeCloseTo(0.574, 3);
 
-    const base = deckPose(input({ p, time, landedAt })).cards[0]!;
+    const base = deckPose(input({ pulls, time, landedAt })).cards[0]!;
     expect(base.landed).toBe(false);
     expect(base.phase).toBe("leaving");
 
-    const tilted = deckPose(input({ p, time, landedAt, tilt: { x: 0, y: 10 } })).cards[0]!;
+    const tilted = deckPose(input({ pulls, time, landedAt, tilt: { x: 0, y: 10 } })).cards[0]!;
     expect(tilted.rotY - base.rotY).toBeCloseTo(10 * lf, 6);
 
-    const noLanding = deckPose(input({ p, time, landedAt: none })).cards[0]!;
+    const noLanding = deckPose(input({ pulls, time, landedAt: none })).cards[0]!;
     const F = DECK_PARAMS.float;
     expect(base.y - noLanding.y).toBeCloseTo(
       lf * F.y.amp * Math.sin((2 * Math.PI * time) / F.y.periodMs),
@@ -348,20 +387,20 @@ describe("deckPose on desktop", () => {
 
   it("never emits NaN, whatever the progress", () => {
     for (const p of [-1, 0, 0.123, 0.5, 0.999, 1, 2, Number.NaN]) {
-      finite(deckPose(input({ p, time: 123 })));
+      finite(deckPose(input({ pulls: pullsAt(p), time: 123 })));
     }
   });
 
   it("carries the energy through", () => {
-    const s = deckPose(input({ p: at(6, 0.35) }));
+    const s = deckPose(input({ pulls: pullsAt(at(6, 0.35)) }));
     expect(s.kind).toBe("S+");
     expect(s.energyIndex).toBe(6);
     expect(s.energy).toBeCloseTo(0.625, 6);
   });
 
   it("blends S's energy in as it nears landed during A's handoff, without snapping (Finding 2)", () => {
-    const p = at(4, 0.7 + 0.3 * 0.78); // S arriving at pull ≈ 0.957
-    const s = deckPose(input({ p }));
+    const pulls = pullsAt(at(4, 0.7 + 0.3 * 0.78)); // S arriving at pull ≈ 0.957
+    const s = deckPose(input({ pulls }));
     const pull = easeInOutCubic(0.78);
     expect(s.kind).toBe("S");
     expect(s.energy).toBeGreaterThan(0.15 * pull);
@@ -371,7 +410,7 @@ describe("deckPose on desktop", () => {
 
 describe("deckPose on phones", () => {
   it("centres the presented card and parks the next one at the right edge, back to the viewer", () => {
-    const s = deckPose(input({ p: at(2, 0.5), layout: phoneLayout }));
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.5)), layout: phoneLayout }));
     expect(s.cards[2]!.x).toBe(phoneLayout.presented.x);
     expect(s.cards[3]!.x).toBe(phoneLayout.next!.x);
     expect(s.cards[3]!.rotY).toBe(-80);
@@ -381,7 +420,7 @@ describe("deckPose on phones", () => {
   });
 
   it("sends played cards to the exit at 70°, half transparent", () => {
-    const s = deckPose(input({ p: at(2, 0.5), layout: phoneLayout }));
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.5)), layout: phoneLayout }));
     expect(s.cards[1]!.x).toBe(phoneLayout.exit!.x);
     expect(s.cards[1]!.rotY).toBe(70);
     expect(s.cards[1]!.opacity).toBe(0.5);
@@ -389,7 +428,7 @@ describe("deckPose on phones", () => {
   });
 
   it("pulls the incoming card in from the right and the leaving card out to the left", () => {
-    const s = deckPose(input({ p: at(2, 0.85), layout: phoneLayout })); // pull 0.5 each
+    const s = deckPose(input({ pulls: pullsAt(at(2, 0.85)), layout: phoneLayout })); // pull 0.5 each
     const inc = s.cards[3]!;
     const out = s.cards[2]!;
     expect(inc.x).toBeCloseTo(
@@ -407,15 +446,17 @@ describe("deckPose on phones", () => {
   });
 
   it("is continuous across the boundary for the waiting stack", () => {
-    const before = deckPose(input({ p: at(3, 0) - 1e-9, layout: phoneLayout }));
-    const after = deckPose(input({ p: at(3, 0), layout: phoneLayout }));
+    const before = deckPose(input({ pulls: pullsAt(at(3, 0) - 1e-9), layout: phoneLayout }));
+    const after = deckPose(input({ pulls: pullsAt(at(3, 0)), layout: phoneLayout }));
     expect(before.cards[4]!.opacity).toBe(1);
     expect(after.cards[4]!.opacity).toBe(1);
     expect(before.cards[4]!.x).toBe(after.cards[4]!.x);
   });
 
   it("ignores hover on phones", () => {
-    const s = deckPose(input({ p: at(2, 0.5), layout: phoneLayout, hover: [0, 0, 0, 1, 0, 0, 0] }));
+    const s = deckPose(
+      input({ pulls: pullsAt(at(2, 0.5)), layout: phoneLayout, hover: [0, 0, 0, 1, 0, 0, 0] }),
+    );
     expect(s.cards[3]!.z).toBe(0);
   });
 });
@@ -480,7 +521,7 @@ describe("the intro", () => {
     expect(last.cards[0]!.landed).toBe(true);
     const done = deckPose(input({ intro: { elapsed: end }, time: end }));
     expect(done.intro).toBeNull(); // handed over to the scroll model
-    const scroll = deckPose(input({ p: 0 }));
+    const scroll = deckPose(input({ pulls: pullsAt(0) }));
     expect(done.cards[0]!.x).toBeCloseTo(scroll.cards[0]!.x, 6);
     expect(done.cards[0]!.z).toBeCloseTo(scroll.cards[0]!.z, 6);
   });
@@ -508,7 +549,7 @@ describe("the intro", () => {
     const laterTime = 5800;
     const later = deckPose(input({ intro: { elapsed: end - 1 }, time: laterTime, tilt, landedAt }));
     expect(later.cards[0]!.phase).toBe("presented");
-    const scroll = deckPose(input({ p: 0, time: laterTime, tilt, landedAt }));
+    const scroll = deckPose(input({ pulls: pullsAt(0), time: laterTime, tilt, landedAt }));
     expect(later.cards[0]!.rotX).toBeCloseTo(scroll.cards[0]!.rotX, 3);
     expect(later.cards[0]!.rotY).toBeCloseTo(scroll.cards[0]!.rotY, 3);
     expect(later.cards[0]!.y).toBeCloseTo(scroll.cards[0]!.y, 3);
@@ -521,7 +562,7 @@ describe("the intro", () => {
     expect(s.cards[1]!.opacity).toBe(1);
     expect(s.cards[2]!.opacity).toBe(0);
     const done = deckPose(input({ intro: { elapsed: end }, time: end, layout: phoneLayout }));
-    const scroll = deckPose(input({ p: 0, layout: phoneLayout }));
+    const scroll = deckPose(input({ pulls: pullsAt(0), layout: phoneLayout }));
     expect(done.cards[0]!.x).toBeCloseTo(scroll.cards[0]!.x, 6);
     expect(done.cards[1]!.x).toBeCloseTo(scroll.cards[1]!.x, 6);
   });

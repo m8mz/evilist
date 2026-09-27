@@ -3,7 +3,8 @@ import { DECK_PARAMS, defaultDeckParams } from "../src/scripts/deck/deck-params"
 
 describe("deck params", () => {
   it("start at the spec's values", () => {
-    expect(DECK_PARAMS.scroll.tau).toBe(90);
+    expect(DECK_PARAMS.drive.durationMs).toBe(900);
+    expect(DECK_PARAMS.drive.hysteresis).toBe(0.15);
     expect(DECK_PARAMS.pull.handoffStart).toBe(0.7);
     expect(DECK_PARAMS.pull.rackRotY).toBe(103);
     expect(DECK_PARAMS.pull.liftZ).toBe(60);
@@ -45,8 +46,8 @@ describe("deck params", () => {
 
   it("hands out independent copies", () => {
     const a = defaultDeckParams();
-    a.scroll.tau = 1;
-    expect(DECK_PARAMS.scroll.tau).toBe(90);
-    expect(defaultDeckParams().scroll.tau).toBe(90);
+    a.drive.durationMs = 1;
+    expect(DECK_PARAMS.drive.durationMs).toBe(900);
+    expect(defaultDeckParams().drive.durationMs).toBe(900);
   });
 });

@@ -9,7 +9,6 @@ import { DECK_PARAMS } from "./deck-params";
 type Row = [label: string, path: string, min: number, max: number, step: number];
 
 const ROWS: Row[] = [
-  ["scroll τ (ms)", "scroll.tau", 0, 400, 5],
   ["handoff start", "pull.handoffStart", 0.4, 0.95, 0.01],
   ["overshoot", "pull.overshoot", 0, 3, 0.05],
   ["lift z (px)", "pull.liftZ", 0, 200, 2],
