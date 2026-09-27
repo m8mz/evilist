@@ -37,6 +37,18 @@ export interface Energy {
 }
 
 /**
+ * Each card's own scroll `within`, never another's: the arriving rank (`to`) ramps it in from the
+ * drive, the leaving rank (`from`) ramps its captured `fromWithin` out, a settled active card reads
+ * the scroll directly, and every other card gets 0 — so a card still arriving during the previous
+ * rank's handoff can't race ahead to the ramp's end, and the leaving rank never steps to 0 either.
+ */
+function withinFor(pulls: Pulls, i: number): number {
+  if (pulls.to !== null)
+    return i === pulls.to ? pulls.within : i === pulls.from ? pulls.fromWithin : 0;
+  return i === pulls.active ? pulls.within : 0;
+}
+
+/**
  * The stage's energy: S breathes, S+ grows with its rank; during a handoff the larger pull wins.
  * Energy scales with the pull below `landedThreshold`, then blends toward the landed value over
  * pull ∈ [landedThreshold, 1] (`landedFactor`), so it never snaps.
@@ -56,11 +68,7 @@ export function energyFor(
     if (pull <= 0 || pull <= best) return;
     best = pull;
     const pulling = E.pulling * pull;
-    // Only the rank that's actually active ramps its own S+ energy with `within`; a card still
-    // arriving during the previous rank's handoff hasn't started its own stretch yet, so it must
-    // not race ahead to the ramp's end just because `within` (the *previous* rank's within) is
-    // high.
-    const within = i === pulls.active ? pulls.within : 0;
+    const within = withinFor(pulls, i);
     const landedValue =
       label === "S" ? E.s : E.sPlusBase + E.sPlusRamp * Math.min(1, within / E.sPlusWindow);
     const lf = landedFactor(pull, landedThreshold);
@@ -137,16 +145,18 @@ interface RestPose {
 /**
  * Where card `i` sits when it is not presented. Desktop: its rack slot. Phone: the played cards
  * belong at `exit` (half transparent, off the stage's left edge); the cards to come wait at
- * `next`, stacked, where only the visible next one is opaque. `playedUpTo` is the rank the deck has
- * settled on, or, mid-transition, the rank it's leaving — it stays fixed for the whole transition
- * (never the eased `pulls.active`, which can flip mid-flight and would otherwise reclassify the
- * arriving card as already played). The incoming card `playedUpTo + 1` arrives from `next` and the
- * card after the transition's target becomes the visible next, so the stack never pops even when
- * the target is several ranks away (a direct jump).
+ * `next`, stacked, where only the visible next one is opaque. The split is `min(from, to)` (or
+ * `active` when settled, `from`/`to` both null) — not `from` alone — so a *backward* transition
+ * puts the target at `exit` (it's already been played) and sends the leaving card back to `next`,
+ * the mirror of a forward handoff, instead of both cards riding the same track. The visible next is
+ * `max(from, to) + 1`. During a jump several ranks away, the cards strictly between `from` and `to`
+ * keep their current classification (so they don't move) until the settle frame reclassifies them,
+ * when at most one sliver's content changes.
  */
 function restPose(
   i: number,
-  playedUpTo: number,
+  active: number,
+  from: number | null,
   to: number | null,
   layout: DeckLayout,
   params: DeckParams,
@@ -155,14 +165,15 @@ function restPose(
     const slot = layout.slots[i] ?? layout.slots[layout.slots.length - 1]!;
     return { x: slot.x, y: slot.y, rotY: params.pull.rackRotY, opacity: 1 };
   }
-  if (i <= playedUpTo) {
+  const lo = from === null || to === null ? active : Math.min(from, to);
+  const hi = from === null || to === null ? active : Math.max(from, to);
+  if (i <= lo) {
     return { ...layout.exit!, rotY: params.layout.phoneExitRotY, opacity: 0.5 };
   }
-  const visibleNext = (to ?? playedUpTo) + 1;
   return {
     ...layout.next!,
     rotY: params.layout.phoneNextRotY,
-    opacity: i === playedUpTo + 1 || i === visibleNext ? 1 : 0,
+    opacity: i === lo + 1 || i === hi + 1 ? 1 : 0,
   };
 }
 
@@ -274,7 +285,7 @@ export function deckPose(input: PoseInput, params: DeckParams = DECK_PARAMS): St
   const pulls = input.pulls;
   const cards = input.labels.map((_, i) => {
     const leaving = pulls.from !== null && i === pulls.from;
-    const rest = restPose(i, pulls.from ?? pulls.active, pulls.to, input.layout, params);
+    const rest = restPose(i, pulls.active, pulls.from, pulls.to, input.layout, params);
     const pose = interpolate(rest, pulls.pull[i] ?? 0, input.layout, params, !leaving);
     if (input.layout.mode === "desktop") {
       // The hover lift fades out over the pull instead of cutting off the instant a hovered card
@@ -329,7 +340,7 @@ function introPose(input: PoseInput, params: DeckParams): StagePose {
     const rest =
       phone && i === 0
         ? { ...input.layout.next!, rotY: params.layout.phoneNextRotY, opacity: 1 }
-        : restPose(i, 0, null, input.layout, params);
+        : restPose(i, 0, null, null, input.layout, params);
     if (phone && i > 1) return interpolate({ ...rest, opacity: 0 }, 0, input.layout, params, true);
     if (i === 0 && t >= pullStart) {
       const pull = easeInOutCubic(clamp01((t - pullStart) / I.pullMs));

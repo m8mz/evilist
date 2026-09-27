@@ -39,9 +39,11 @@ function pullsAt(p: number, count = N): Pulls {
     {
       current: active,
       wanted: active + 1,
-      transition: { from: active, to: active + 1, startMs: 0 },
+      // The simulated handoff starts once `local` crosses HANDOFF, so the leaving rank's own
+      // within at that moment is HANDOFF itself.
+      transition: { from: active, to: active + 1, startMs: 0, fromWithin: HANDOFF },
     },
-    0,
+    p,
     D * rawK(local),
     count,
   );
@@ -161,6 +163,48 @@ describe("energyFor", () => {
     const justAfter = energyFor(pullsAt(at(6, 0)), LABELS);
     expect(justAfter.kind).toBe("S+");
     expect(justAfter.energy).toBeCloseTo(0.25, 6);
+  });
+
+  it("ramps S+'s energy back out on a backward transition, instead of stepping down (Important 2)", () => {
+    // S+ presented with its own within at the ramp's cap (energy 1.0): a scroll-up starts a
+    // transition straight back to S.
+    const settledSPlus = pullsForDrive(initialDrive(at(6, 0.5), N), (6 + 0.7) / N, 0, N);
+    const settledEnergy = energyFor(settledSPlus, LABELS).energy;
+    expect(settledEnergy).toBeCloseTo(1, 6);
+
+    const back = {
+      current: 6,
+      wanted: 5,
+      transition: { from: 6, to: 5, startMs: 0, fromWithin: 0.7 },
+    };
+    const atStart = energyFor(pullsForDrive(back, at(5, 0.5), 0, N), LABELS);
+    expect(atStart.energy).toBeCloseTo(settledEnergy, 6); // k = 0: no step off S+'s settled value
+
+    // At k = 0.5 both pulls tie (0.5 each), so the label order's earlier "S" wins the combined
+    // reading — it must still have genuinely moved, smoothly, not sit frozen at the start value.
+    const mid = energyFor(pullsForDrive(back, at(5, 0.5), D / 2, N), LABELS);
+    expect(mid.energy).toBeLessThan(atStart.energy);
+    expect(mid.energy).toBeGreaterThan(0);
+
+    const settledS = energyFor(
+      pullsForDrive(initialDrive(at(5, 0.5), N), at(5, 0.5), 0, N),
+      LABELS,
+    );
+    const atEnd = energyFor(pullsForDrive(back, at(5, 0.5), D, N), LABELS);
+    expect(atEnd.energy).toBeCloseTo(settledS.energy, 6); // k = 1: settles on S's value, no step
+  });
+
+  it("never steps S+'s energy across a forward settle either (Important 2)", () => {
+    const forward = {
+      current: 5,
+      wanted: 6,
+      transition: { from: 5, to: 6, startMs: 0, fromWithin: 1 },
+    };
+    const pAtSPlus = (6 + 0.2) / N;
+    const oneFrameEarlier = energyFor(pullsForDrive(forward, pAtSPlus, D - 16, N), LABELS);
+    const atSettle = energyFor(pullsForDrive(forward, pAtSPlus, D, N), LABELS);
+    expect(atSettle.kind).toBe("S+");
+    expect(Math.abs(atSettle.energy - oneFrameEarlier.energy)).toBeLessThan(0.02);
   });
 });
 
@@ -443,6 +487,56 @@ describe("deckPose on phones", () => {
     // While the handoff runs, the card after the incoming one is the visible "next".
     expect(s.cards[4]!.opacity).toBe(1);
     expect(s.cards[5]!.opacity).toBe(0);
+  });
+
+  it("sends the leaving card back to next and the arriving card in from exit, on a backward transition (Important 1)", () => {
+    // Rank 2 is presented; the scroll goes back up toward rank 1. min(from, to) = 1 puts the
+    // *target* at exit (it was already played) and sends the *leaving* card back to next — the
+    // mirror image of the forward case above, not the same track in reverse.
+    const back = pullsForDrive(
+      { current: 2, wanted: 1, transition: { from: 2, to: 1, startMs: 0, fromWithin: 0.5 } },
+      0,
+      D / 2,
+      N,
+    );
+    const s = deckPose(input({ pulls: back, layout: phoneLayout }));
+    const leaving = s.cards[2]!; // from
+    const arriving = s.cards[1]!; // to
+    expect(leaving.x).toBeCloseTo(
+      phoneLayout.next!.x + (phoneLayout.presented.x - phoneLayout.next!.x) * 0.5,
+      6,
+    );
+    expect(leaving.opacity).toBeCloseTo(1, 6);
+    expect(arriving.x).toBeCloseTo(
+      phoneLayout.exit!.x + (phoneLayout.presented.x - phoneLayout.exit!.x) * 0.5,
+      6,
+    );
+    expect(arriving.opacity).toBeCloseTo(0.75, 6);
+    // max(from, to) + 1 = 3 is the visible next, same as a forward handoff off rank 2.
+    expect(s.cards[3]!.opacity).toBe(1);
+    expect(s.cards[4]!.opacity).toBe(0);
+  });
+
+  it("moves only from and to during a multi-rank forward jump; the cards between stay put until the settle (Important 1)", () => {
+    const jump = {
+      current: 1,
+      wanted: 5,
+      transition: { from: 1, to: 5, startMs: 0, fromWithin: 1 },
+    };
+    const early = deckPose(
+      input({ pulls: pullsForDrive(jump, 0, D * 0.1, N), layout: phoneLayout }),
+    );
+    const late = deckPose(
+      input({ pulls: pullsForDrive(jump, 0, D * 0.9, N), layout: phoneLayout }),
+    );
+    expect(early.cards[1]!.pull).toBeGreaterThan(0);
+    expect(early.cards[5]!.pull).toBeGreaterThan(0);
+    for (const i of [2, 3, 4]) {
+      expect(early.cards[i]!.pull).toBe(0);
+      expect(late.cards[i]!.x).toBe(early.cards[i]!.x);
+      expect(late.cards[i]!.y).toBe(early.cards[i]!.y);
+      expect(late.cards[i]!.opacity).toBe(early.cards[i]!.opacity);
+    }
   });
 
   it("is continuous across the boundary for the waiting stack", () => {
