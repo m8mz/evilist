@@ -21,7 +21,8 @@
     "build:og": "astro build && node scripts/build-og.mjs",
     "size": "node scripts/check-bundle-size.mjs",
     "test:visual": "playwright test --grep @visual",
-    "tear:deck": "node scripts/deck-tear.mjs"
+    "tear:deck": "node scripts/deck-tear.mjs",
+    "perf:deck": "node scripts/deck-perf.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "8.0.2",
