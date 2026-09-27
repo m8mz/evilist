@@ -9,7 +9,8 @@ import { DECK_PARAMS } from "./deck-params";
 type Row = [label: string, path: string, min: number, max: number, step: number];
 
 const ROWS: Row[] = [
-  ["handoff start", "pull.handoffStart", 0.4, 0.95, 0.01],
+  ["transition (ms)", "drive.durationMs", 300, 2000, 50],
+  ["hysteresis", "drive.hysteresis", 0, 0.45, 0.01],
   ["overshoot", "pull.overshoot", 0, 3, 0.05],
   ["lift z (px)", "pull.liftZ", 0, 200, 2],
   ["lift peak", "pull.liftPeak", 0, 4, 0.1],
@@ -41,8 +42,11 @@ const ROWS: Row[] = [
   ["fog strength S+", "fog.strengthSPlus", 0, 1, 0.01],
   ["fog radius S+ ramp", "fog.radiusSPlusRamp", 0, 6, 0.1],
   ["glow gain", "glow.gain", 0, 3, 0.05],
+  ["aura S", "aura.s", 0, 1, 0.01],
+  ["aura S+ base", "aura.sPlusBase", 0, 1, 0.01],
   ["aura S+ ramp", "aura.sPlusRamp", 0, 1, 0.01],
-  ["aura fade to", "aura.fadeTo", 0.5, 1, 0.01],
+  ["aura fade from", "aura.fadeFrom", 0.3, 0.88, 0.01],
+  ["aura fade to", "aura.fadeTo", 0.74, 1, 0.01],
   ["seam S+ max", "seam.sPlusMax", 0, 1, 0.01],
   ["bloom strength", "bloom.strength", 0, 3, 0.05],
   ["bloom radius", "bloom.radius", 0, 1.5, 0.01],
