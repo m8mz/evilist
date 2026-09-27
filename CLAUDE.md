@@ -11,7 +11,7 @@ Astro 7 · TypeScript · Tailwind 4 · Motion · pnpm · self-hosted (rootless P
 >
 > **Vector journey done.** Spec: docs/superpowers/specs/2026-09-25-vector-journey-design.md; plan: docs/superpowers/plans/2026-09-25-vector-journey.md. The journey's clips are replaced by one traced-and-rigged SVG scene that ranks the character up with the scroll.
 >
-> **Journey card deck done.** Spec: docs/superpowers/specs/2026-09-25-journey-card-deck-design.md; plans: docs/superpowers/plans/2026-09-25-journey-deck-*.md; ADR 0004. Plans 0–5 are done (character, foundations, stage, energy, phone, drive and aura); Plan 6 follows (tuning and retirement).
+> **Journey card deck done.** Spec: docs/superpowers/specs/2026-09-25-journey-card-deck-design.md; plans: docs/superpowers/plans/2026-09-25-journey-deck-*.md; ADR 0004. Plans 0–6 are done (character, foundations, stage, energy, phone, drive and aura, retirement and perf); the vector pipeline is deleted. Next is rebuild Phase 7 (container, HAProxy, VPS runbook, release pipeline), on hold until Marcus says development is done.
 
 ## Commands
 
