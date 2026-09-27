@@ -117,6 +117,20 @@ export function auraOpacity(
   return Math.min(1, (A.sPlusBase + A.sPlusRamp * energy) * rise * flareGlow);
 }
 
+/**
+ * Whether card `index`'s body should be painted (deck spec §9: "painted lazily when the card comes
+ * within one rank of the active one"), or any card being pulled. `to`, a running transition's
+ * target, counts as active too: `active` flips to it only at k = 0.5, and on a phone the card after
+ * it waits face on at `next` from the transition's first frame.
+ */
+export const bodyWanted = (
+  index: number,
+  active: number,
+  pull: number,
+  to: number | null = null,
+): boolean =>
+  Math.abs(index - active) <= 1 || pull > 0 || (to !== null && Math.abs(index - to) <= 1);
+
 /** Continuous smoke only emits while a card is landing or presented; a leaving (or pulled-back)
  * card's landing burst still plays out, but no more puffs spawn behind it. */
 export function smokeActive(phase: CardPhase): boolean {

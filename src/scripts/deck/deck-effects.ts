@@ -41,6 +41,7 @@ const SEAM_HYSTERESIS = 0.1; // deck-textures.ts's rule: repaint only past a 10 
 const OCCLUDER_INSET = 0.0005; // just inside the front face: the glow plane at front + 0.002 stays ahead of it, everything behind the card falls behind it
 const VISIBLE_MIN = 0.001; // below this opacity or fog strength, hide the object outright
 const MIPMAP = 1.33; // every texture here mipmaps; deck-textures.ts uses the same 4/3 chain factor
+const FADE_MIN = 0.02; // the masks' fade spans at least this much of the height, whatever the panel says
 
 export interface EffectsOptions {
   scene: Scene;
@@ -108,10 +109,12 @@ export class DeckEffects {
   private fogT0: number | null = null;
   private readonly textures: Texture[] = [];
   private layout: EffectsLayout | null = null;
+  private baked: { fadeFrom: number; fadeTo: number }; // the aura fade the masks were painted with
 
   constructor(opts: EffectsOptions) {
     this.scene = opts.scene;
     this.params = opts.params;
+    this.baked = { fadeFrom: opts.params.aura.fadeFrom, fadeTo: opts.params.aura.fadeTo };
     this.kinds = opts.kinds;
     this.highTier = opts.tier === "high";
     this.seamDensity = Math.min(opts.pixelRatio, SEAM_DENSITY_MAX);
@@ -236,18 +239,38 @@ export class DeckEffects {
     return draw;
   }
 
-  /** A canvas the size of `image`, darkened to nothing between params.aura.fadeFrom and fadeTo of
-   * the height, as a texture — the glow and aura planes both use this same treatment. */
-  private fadedMaskTexture(image: HTMLImageElement): CanvasTexture {
-    const iw = image.naturalWidth || image.width;
-    const ih = image.naturalHeight || image.height;
-    const canvas = document.createElement("canvas");
-    canvas.width = iw;
-    canvas.height = ih;
+  /** Paints `image` into `canvas` darkened to nothing between params.aura.fadeFrom and fadeTo of
+   * the height, fadeTo held FADE_MIN past fadeFrom so the panel's ranges can never invert it. */
+  private paintFaded(canvas: HTMLCanvasElement, image: HTMLImageElement): void {
     const ctx = canvas.getContext("2d");
-    const A = this.params.aura;
-    if (ctx) paintMaskFaded(ctx, image, iw, ih, A.fadeFrom, A.fadeTo);
+    const { fadeFrom, fadeTo } = this.params.aura;
+    const to = Math.max(fadeTo, fadeFrom + FADE_MIN);
+    if (ctx) paintMaskFaded(ctx, image, canvas.width, canvas.height, fadeFrom, to);
+  }
+
+  /** A canvas the size of `image`, faded (paintFaded), as a texture — the glow and aura planes both
+   * use this same treatment. */
+  private fadedMaskTexture(image: HTMLImageElement): CanvasTexture {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    this.paintFaded(canvas, image);
     return new CanvasTexture(canvas);
+  }
+
+  /** The panel moved aura.fadeFrom or fadeTo: repaint every loaded mask in place, once per change. */
+  private rebakeFades(): void {
+    const { fadeFrom, fadeTo } = this.params.aura;
+    if (fadeFrom === this.baked.fadeFrom && fadeTo === this.baked.fadeTo) return;
+    this.baked = { fadeFrom, fadeTo };
+    const rebake = (mat: MeshBasicMaterial | null | undefined, image: HTMLImageElement | null) => {
+      const canvas = mat?.alphaMap?.image;
+      if (!image || !mat?.alphaMap || !(canvas instanceof HTMLCanvasElement)) return;
+      this.paintFaded(canvas, image);
+      mat.alphaMap.needsUpdate = true; // same size, same material program: a re-upload only
+    };
+    this.glowMats.forEach((m, i) => rebake(m, this.glowImages[i] ?? null));
+    this.auraMats.forEach((m, i) => rebake(m, this.auraImages[i] ?? null));
   }
 
   setGlow(index: number, image: HTMLImageElement | null): void {
@@ -357,6 +380,7 @@ export class DeckEffects {
     const L = this.layout;
     if (!L) return;
     const P = this.params;
+    this.rebakeFades();
     const { kind, energy, energyIndex } = frame;
     const energetic = energyIndex === null ? null : (frame.cards[energyIndex] ?? null);
     const fl = flare(kind, energetic?.sinceLandMs ?? null, P);

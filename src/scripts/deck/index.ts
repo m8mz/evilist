@@ -24,6 +24,7 @@ function fallback(root: HTMLElement, track: HTMLElement): void {
   delete track.dataset.deckBloom;
   delete track.dataset.deckCornerAlpha;
   delete track.dataset.deckTilt;
+  delete track.dataset.deckMode;
 }
 
 /**
@@ -119,6 +120,7 @@ export function initDeck(): void {
       if (state.slots) track.dataset.deckSlots = state.slots;
       else delete track.dataset.deckSlots;
       track.dataset.deckBloom = state.bloom ? "on" : "off";
+      track.dataset.deckMode = state.mode;
       if (state.cornerAlpha !== null) track.dataset.deckCornerAlpha = String(state.cornerAlpha);
       else delete track.dataset.deckCornerAlpha;
       const index = labels.indexOf(state.rank);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auraOpacity,
+  bodyWanted,
   burstCount,
   coverFit,
   flare,
@@ -215,5 +216,25 @@ describe("coverFit", () => {
     expect(fit.repeatX).toBeCloseTo(1, 9);
     expect(fit.repeatY).toBeCloseTo(0.25, 9);
     expect(fit.offsetY).toBeCloseTo(0.75, 9);
+  });
+});
+
+describe("bodyWanted", () => {
+  it("wants the active card, its neighbours and any card being pulled", () => {
+    expect(bodyWanted(3, 3, 0)).toBe(true);
+    expect(bodyWanted(2, 3, 0)).toBe(true);
+    expect(bodyWanted(4, 3, 0)).toBe(true);
+    expect(bodyWanted(5, 3, 0)).toBe(false);
+    expect(bodyWanted(6, 3, 0.2)).toBe(true);
+    expect(bodyWanted(0, 6, 0)).toBe(false);
+  });
+
+  it("wants the transition target's neighbours too, before `active` flips to it at k = 0.5", () => {
+    // D → C on a phone: the card after C waits at `next`, face on, from the transition's first frame.
+    expect(bodyWanted(3, 1, 0, 2)).toBe(true);
+    expect(bodyWanted(4, 1, 0, 2)).toBe(false);
+    // A backward jump S+ → D: C peeks at `next` while `active` is still S+.
+    expect(bodyWanted(2, 6, 0, 1)).toBe(true);
+    expect(bodyWanted(3, 1, 0, null)).toBe(false);
   });
 });

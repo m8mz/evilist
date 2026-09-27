@@ -24,7 +24,7 @@ import { glFactory } from "./deck-canvas";
 import { freezeDrive, initialDrive, pullsForDrive, stepDrive, type DriveState } from "./deck-drive";
 import type { Pulls } from "./deck-drive";
 import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
-import type { EnergyKind } from "./deck-energy";
+import { bodyWanted, type EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
 import { StageInput } from "./deck-input";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
@@ -51,6 +51,7 @@ export interface StageState {
   slots: string | null;
   bloom: boolean;
   cornerAlpha: number | null;
+  mode: DeckMode;
 }
 
 export interface StageOptions {
@@ -167,6 +168,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     stageH = Math.max(1, stage.clientHeight);
     renderer.setSize(stageW, stageH, false);
     camera.aspect = stageW / stageH;
+    camera.fov = params.camera.fov; // the tuning panel's slider acts through deck:relayout
     camera.position.z = (stageH * PX) / 2 / Math.tan((params.camera.fov / 2) * DEG);
     camera.updateProjectionMatrix();
   }
@@ -256,6 +258,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const onOrientation = (): void => scheduleRelayout();
   portraitQuery?.addEventListener("change", onOrientation);
   desktopQuery?.addEventListener("change", onOrientation);
+  stage.addEventListener("deck:relayout", scheduleRelayout); // the tuning panel's camera/layout rows
 
   /* ---------- Portraits and the mark ---------- */
   const portraitLoads = opts.portraits.map((p, i) =>
@@ -263,7 +266,8 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       if (img) textures.setPortrait(i, img);
       return Promise.all([
         loadImage(p.glow).then((g) => effects.setGlow(i, g)), // the eye-tinted glow mask
-        loadImage(p.aura).then((a) => effects.setAura(i, a)), // the silhouette's violet rim
+        // The silhouette's violet rim, fetched only for the kinds whose plane shows it (S, S+).
+        loadImage(kinds[i] ? p.aura : null).then((a) => effects.setAura(i, a)),
       ]);
     }),
   );
@@ -319,6 +323,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   let readyResolve: (() => void) | null = null;
   const ready = new Promise<void>((resolve) => (readyResolve = resolve));
   let readyDone = false;
+  let assetsReady = false; // `ready` waits for them in live mode too, not only under freeze
   const raycaster = new Raycaster();
   const ndc = new Vector2();
 
@@ -377,7 +382,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     }
   }
 
-  function emitState(pose: StagePose): void {
+  function emitState(pose: StagePose, L: DeckLayout): void {
     const presentedCard = pose.cards.reduce((a, b) => (b.pull > a.pull ? b : a));
     const rank = labels[pose.active];
     if (!rank) return;
@@ -392,11 +397,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       energy: Math.round(pose.energy * 20) / 20,
       vram: Math.round((bytes / 1_048_576) * 10) / 10,
       slots:
-        freeze && layout?.mode === "desktop"
-          ? layout.slots.map((s) => `${Math.round(s.x)},${Math.round(s.y)}`).join(";")
+        freeze && L.mode === "desktop"
+          ? L.slots.map((s) => `${Math.round(s.x)},${Math.round(s.y)}`).join(";")
           : null,
       bloom: bloom !== null,
       cornerAlpha,
+      mode: L.mode,
     };
     const key = JSON.stringify(state);
     if (key === lastState) return;
@@ -477,6 +483,11 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
         ec.sinceLandMs = at === null ? null : time - at;
         ec.sinceLeaveMs = leftAt === null ? null : time - leftAt;
       }
+      // Spec §9: a body paints the first frame its card is wanted, before that frame renders.
+      // Three's program key reads the emissive map's presence, uv channel and video decode, never
+      // the texture itself (WebGLPrograms.js, r186): the swap recompiles nothing, no needsUpdate.
+      if (!textures.hasBody(i) && bodyWanted(i, pose.active, c.pull, pulls.to))
+        m.bodyMat.emissiveMap = textures.body(i);
       applyText(i, c.phase, time);
       applyDrawPolicy(m.draw, drawPolicy(c.phase), c.opacity); // band, depth test, opacity
       m.group.position.set(toX(c.x), toY(c.y), c.z * PX);
@@ -504,10 +515,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       gl.readPixels(4, 4, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // (4, 4) from the bottom-left: the stage's corner, no card there
       cornerAlpha = px[3] ?? null;
     }
-    emitState(pose);
+    emitState(pose, layout);
     firstFrameDone = true;
-    if (!readyDone) {
-      readyDone = true;
+    if (!readyDone && assetsReady) {
+      readyDone = true; // spec §9: the first frame drawn after the portraits, masks and mark settled
       readyResolve?.();
     }
     if (!freeze && visible && !disposed) raf = requestAnimationFrame(frame);
@@ -547,9 +558,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   /* ---------- Start ---------- */
   if (freeze) {
     await Promise.all([assets, bloomLoad]);
-    assetsSettled = true;
+    assetsSettled = assetsReady = true;
   } else {
-    void assets.then(() => requestRender());
+    void assets.then(() => {
+      assetsReady = true;
+      requestRender();
+    });
     void bloomLoad.then(() => requestRender());
   }
   requestRender();
@@ -596,6 +610,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       clearTimeout(relayoutTimer);
       portraitQuery?.removeEventListener("change", onOrientation);
       desktopQuery?.removeEventListener("change", onOrientation);
+      stage.removeEventListener("deck:relayout", scheduleRelayout);
       resizer.disconnect();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);

@@ -57,6 +57,7 @@ export interface CardMeshes {
   slab: Mesh;
   slabMat: MeshStandardMaterial;
   body: Mesh;
+  /** On `DeckTextures.placeholder()` until the stage paints the card's body into its emissive map. */
   bodyMat: MeshPhysicalMaterial;
   frame: Mesh;
   text: Mesh;
@@ -133,7 +134,9 @@ export function buildCards(
     const slab = new Mesh(new RoundedBoxGeometry(1, 1, 1, 2, 0.01), slabMat);
     slab.userData.index = i;
     const energetic = card.stage.rankLabel === "S" || card.stage.rankLabel === "S+";
-    const bodyMat = laminated(textures.body(i), envMap, energetic, params);
+    // The body starts on the shared placeholder; the stage swaps its painted texture into
+    // `emissiveMap` (the one slot `laminated` fills from the map) the first frame it is wanted.
+    const bodyMat = laminated(textures.placeholder(), envMap, energetic, params);
     const body = new Mesh(unit, bodyMat);
     const frame = new Mesh(unit, unlit(textures.frame()));
     const text = new Mesh(unit, unlit(textures.blank())); // blank until a card is presented

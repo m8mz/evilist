@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Texture } from "three";
+import { SRGBColorSpace, type Texture } from "three";
 import { career } from "../src/data/career";
-import { cardModel } from "../src/scripts/deck/deck-paint";
+import { cardModel, COLORS } from "../src/scripts/deck/deck-paint";
 import { DeckTextures, textureSize, type TextureFactory } from "../src/scripts/deck/deck-textures";
 import { FakeContext, fakeImage } from "./helpers/fakeCanvas";
 
@@ -227,5 +227,42 @@ describe("DeckTextures", () => {
     expect(t.estimateBytes()).toBeCloseTo(9 * layer + 2 * textLayer + 7 * chip, -3);
     t.dispose();
     expect(made.every((m) => m.disposed)).toBe(true);
+  });
+
+  it("hands out one shared 4 × 4 carbon placeholder with no mipmaps, counted once, disposed with the rest", () => {
+    const { f, made } = factory();
+    const t = new DeckTextures(cards, f);
+    t.setSize(370, 2);
+    const p = t.placeholder();
+    expect(t.placeholder()).toBe(p);
+    expect(made).toHaveLength(1);
+    const layer = made[0]!;
+    expect(layer.canvas.width).toBe(4);
+    expect(layer.canvas.height).toBe(4);
+    expect(layer.canvas.ctx.rects()).toEqual([{ x: 0, y: 0, w: 4, h: 4, color: COLORS.carbon }]);
+    const texture = p as unknown as { generateMipmaps: boolean; colorSpace: string };
+    expect(texture.generateMipmaps).toBe(false);
+    expect(texture.colorSpace).toBe(SRGBColorSpace);
+    expect(layer.needsUpdate).toBe(true);
+    // Counted once, however often it is asked for, and never as a body.
+    t.placeholder();
+    expect(t.estimateBytes()).toBe(4 * 4 * 4);
+    t.dispose();
+    expect(layer.disposed).toBe(true);
+  });
+
+  it("says whether a body has painted, and counts only the painted bodies", () => {
+    const { f } = factory();
+    const t = new DeckTextures(cards, f);
+    t.setSize(370, 2);
+    t.placeholder();
+    expect(t.hasBody(3)).toBe(false);
+    t.setPortrait(3, fakeImage(800, 533)); // kept for later, not painted
+    expect(t.hasBody(3)).toBe(false);
+    const before = t.estimateBytes();
+    t.body(3);
+    expect(t.hasBody(3)).toBe(true);
+    expect(t.hasBody(4)).toBe(false);
+    expect(t.estimateBytes() - before).toBeCloseTo(740 * 1036 * 4 * 1.33, -3);
   });
 });

@@ -102,6 +102,10 @@ export function mountTunePanel(track: HTMLElement): void {
     input.addEventListener("input", () => {
       write(path, Number(input.value));
       value.textContent = input.value;
+      // The fov and the layout are read at relayout, not per frame; the aura fade rows need no
+      // event (deck-effects.ts re-bakes its masks when it sees the values change).
+      if (path.startsWith("camera.") || path.startsWith("layout."))
+        track.querySelector(".journey__stage")?.dispatchEvent(new Event("deck:relayout"));
     });
     row.append(name, input, value);
     panel.append(row);

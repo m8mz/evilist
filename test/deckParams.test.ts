@@ -51,6 +51,10 @@ describe("deck params", () => {
     expect(p.layout.columnFraction).toBeLessThan(1);
   });
 
+  it("fades the glow and aura masks over a real span: fadeFrom before fadeTo", () => {
+    expect(DECK_PARAMS.aura.fadeFrom).toBeLessThan(DECK_PARAMS.aura.fadeTo);
+  });
+
   it("hands out independent copies", () => {
     const a = defaultDeckParams();
     a.drive.durationMs = 1;

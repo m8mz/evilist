@@ -2,11 +2,12 @@
 // painted lazily; one frame and one back, shared; one chip per rank; two text slots that cards
 // borrow while presented, so a fast handoff can never show one card's lines on another. The
 // factory is injected: the stage passes CanvasTexture, the tests pass a recorder.
-import type { Texture } from "three";
+import { LinearFilter, SRGBColorSpace, type Texture } from "three";
 import {
   CARD_W,
   CHIP_H,
   CHIP_W,
+  COLORS,
   paintBack,
   paintBody,
   paintChip,
@@ -62,6 +63,7 @@ export class DeckTextures {
   private mark: CanvasImageSource | null = null;
   private slots: TextSlot[] = [];
   private blankLayer: Layer | null = null;
+  private placeholderLayer: Layer | null = null;
   private tick = 0;
 
   constructor(
@@ -163,6 +165,25 @@ export class DeckTextures {
       this.dirty(layer);
     }
     return layer.texture;
+  }
+
+  hasBody(index: number): boolean {
+    return this.bodies.has(index);
+  }
+
+  /** The 4 × 4 carbon stand-in every body shows until its own paints: sRGB like the bodies, no
+   * mipmaps, one for the deck and counted once. */
+  placeholder(): Texture {
+    if (!this.placeholderLayer) {
+      const layer = (this.placeholderLayer = this.make(4, 4, "art", false));
+      layer.ctx.fillStyle = COLORS.carbon;
+      layer.ctx.fillRect(0, 0, 4, 4);
+      layer.texture.colorSpace = SRGBColorSpace;
+      layer.texture.generateMipmaps = false;
+      layer.texture.minFilter = LinearFilter;
+      this.dirty(layer);
+    }
+    return this.placeholderLayer.texture;
   }
 
   setPortrait(index: number, image: CanvasImageSource | null): void {
@@ -285,6 +306,7 @@ export class DeckTextures {
     for (const slot of this.slots) total += bytes(slot.layer);
     if (this.frameLayer) total += bytes(this.frameLayer);
     if (this.backLayer) total += bytes(this.backLayer);
+    if (this.placeholderLayer) total += bytes(this.placeholderLayer);
     return total;
   }
 
@@ -296,6 +318,7 @@ export class DeckTextures {
       this.frameLayer,
       this.backLayer,
       this.blankLayer,
+      this.placeholderLayer,
     ];
     for (const layer of all) layer?.texture.dispose();
     this.bodies.clear();
@@ -304,5 +327,6 @@ export class DeckTextures {
     this.frameLayer = null;
     this.backLayer = null;
     this.blankLayer = null;
+    this.placeholderLayer = null;
   }
 }
