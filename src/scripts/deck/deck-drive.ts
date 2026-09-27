@@ -24,7 +24,8 @@ export interface DriveState {
 /** The pulls the pose model consumes: one per card, plus who is moving. */
 export interface Pulls {
   active: number;
-  /** The active rank's own scroll position, 0–1, ramped in with `k` from 0 while arriving (`to`). */
+  /** `to`'s own scroll position while a transition runs (even before `active` flips to it at k =
+   * 0.5), ramped in with `k` from 0; the settled rank's own scroll position otherwise. */
   within: number;
   /** `from`'s `within` at the moment the transition started, ramped out with `k`; 0 when settled. */
   fromWithin: number;
@@ -62,9 +63,10 @@ export function initialDrive(
   count: number,
   params: DeckParams = DECK_PARAMS,
 ): DriveState {
-  // Anchored on the scroll's own rank, not always 0, so a mount just past a boundary settles right.
-  const naive = Math.min(count - 1, Math.max(0, Math.floor(clamp01(p) * count)));
-  const rank = rankFromScroll(p, naive, count, params.drive.hysteresis);
+  // The scroll's own rank at mount: `rankFromScroll` anchored on it is always a no-op (`f` is
+  // inside `[naive, naive + 1)` by construction, always inside its own hysteresis band), so this
+  // reads it directly rather than call through it.
+  const rank = Math.min(count - 1, Math.max(0, Math.floor(clamp01(p) * count)));
   return { current: rank, wanted: rank, transition: null };
 }
 
@@ -98,7 +100,14 @@ export function transitionK(
   return clamp01((timeMs - t.startMs) / params.drive.durationMs);
 }
 
-/** One frame of the queue: settle a finished transition, read the wanted rank, start the next. */
+/**
+ * One frame of the queue: settle a finished transition, read the wanted rank, start the next.
+ * `drawnWithin`, when given, is the `within` the caller actually drew last frame for the rank
+ * that's about to leave: a jump can land between the frame Motion delivers the new scroll position
+ * and the frame that consumes it, so recomputing `fromWithin` from this frame's `p` can read the
+ * *target* rank's own (near-zero) position instead of the leaving rank's. Passing what was drawn
+ * keeps the leaving card's energy continuous with what's on screen either way.
+ */
 export function stepDrive(
   state: DriveState,
   p: number,
@@ -106,6 +115,7 @@ export function stepDrive(
   timeMs: number,
   count: number,
   params: DeckParams = DECK_PARAMS,
+  drawnWithin?: number,
 ): DriveState {
   let { current, transition } = state;
   if (transition && transitionK(transition, timeMs, params) >= 1) {
@@ -117,7 +127,7 @@ export function stepDrive(
       ? Math.min(count - 1, Math.max(0, Math.round(jump)))
       : rankFromScroll(p, state.wanted, count, params.drive.hysteresis);
   if (!transition && wanted !== current) {
-    const fromWithin = withinOf(p, current, count);
+    const fromWithin = typeof drawnWithin === "number" ? drawnWithin : withinOf(p, current, count);
     transition = { from: current, to: wanted, startMs: timeMs, fromWithin };
   }
   if (current === state.current && wanted === state.wanted && transition === state.transition)

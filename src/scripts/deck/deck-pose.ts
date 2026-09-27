@@ -150,8 +150,10 @@ interface RestPose {
  * puts the target at `exit` (it's already been played) and sends the leaving card back to `next`,
  * the mirror of a forward handoff, instead of both cards riding the same track. The visible next is
  * `max(from, to) + 1`. During a jump several ranks away, the cards strictly between `from` and `to`
- * keep their current classification (so they don't move) until the settle frame reclassifies them,
- * when at most one sliver's content changes.
+ * don't move: on a *forward* jump `lo` stays `from` until the settle frame moves it to `to`, so
+ * they reclassify then; on a *backward* one `lo` is already `min(from, to) = to`, the same as once
+ * settled, so they're already reclassified on the transition's very first frame. Either way at most
+ * one sliver's content changes.
  */
 function restPose(
   i: number,

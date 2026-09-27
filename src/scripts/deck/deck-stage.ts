@@ -22,6 +22,7 @@ import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
 import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
 import { freezeDrive, initialDrive, pullsForDrive, stepDrive, type DriveState } from "./deck-drive";
+import type { Pulls } from "./deck-drive";
 import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
 import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
@@ -70,7 +71,8 @@ export interface StageOptions {
 export interface StageHandle {
   ready: Promise<void>;
   setProgress(p: number): void;
-  /** A rail click, canvas click or swipe: queues (or restarts) a transition straight to `rank`. */
+  /** A rail click, canvas click or swipe: a transition straight to `rank`, queued if one is already
+   * running (it never restarts a running transition — the jump waits for it to settle). */
   jumpTo(rank: number): void;
   pointer(clientX: number | null, clientY: number | null): void;
   /** The phone's orientation tilt target in degrees; null releases it (spec §7). */
@@ -298,6 +300,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   // rank 0, or a deep-scrolled visitor watches the deck riffle through every rank first.
   let drive: DriveState = initialDrive(targetP, N, params);
   let pendingJump: number | null = null;
+  // The last frame's own pulls, so a transition that starts here can seed `fromWithin` from what
+  // was actually drawn instead of this frame's `p` (spec §7 amendment: a jump can land between
+  // Motion's scroll callback delivering the new `p` and this frame consuming it).
+  let lastPulls: Pulls | null = null;
   let firstFrameDone = false;
   const input = new StageInput(count, params);
   const landedAt: (number | null)[] = new Array(count).fill(null);
@@ -426,11 +432,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     if (freeze) {
       drive = freezeDrive(targetP, N, freeze, params);
     } else {
-      drive = stepDrive(drive, targetP, pendingJump, time, N, params);
+      drive = stepDrive(drive, targetP, pendingJump, time, N, params, lastPulls?.within);
       pendingJump = null;
       input.step(dt);
     }
     const pulls = pullsForDrive(drive, targetP, time, N, params);
+    lastPulls = pulls;
 
     const poseInput = {
       pulls,

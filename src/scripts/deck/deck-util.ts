@@ -18,7 +18,8 @@ export function smooth(current: number, target: number, dtMs: number, tauMs: num
 export interface Freeze {
   /** The fixed clock, ms since the epoch. */
   time: number;
-  /** `?deck-k=0..1`: a deterministic mid-transition frame, eased fraction; null for a settled one. */
+  /** `?deck-k=0..1`: a deterministic mid-transition frame, the linear time fraction (the eased pull
+   * is `easeInOutCubic(k)`); null for a settled one. */
   k: number | null;
 }
 

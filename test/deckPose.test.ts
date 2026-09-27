@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RankLabel } from "../src/data/career";
-import { initialDrive, pullsForDrive, type Pulls } from "../src/scripts/deck/deck-drive";
+import { initialDrive, pullsForDrive, stepDrive, type Pulls } from "../src/scripts/deck/deck-drive";
 import { columnFor, deckLayout } from "../src/scripts/deck/deck-layout";
 import { DECK_PARAMS } from "../src/scripts/deck/deck-params";
 import {
@@ -205,6 +205,19 @@ describe("energyFor", () => {
     const atSettle = energyFor(pullsForDrive(forward, pAtSPlus, D, N), LABELS);
     expect(atSettle.kind).toBe("S+");
     expect(Math.abs(atSettle.energy - oneFrameEarlier.energy)).toBeLessThan(0.02);
+  });
+
+  it("keeps S+'s energy off a jump's first frame continuous even when p already reads the target rank", () => {
+    // S+ settled at within 0.7 (energy 1.0); a jump to S lands on a frame where Motion already
+    // delivered p at rank 5's centre, so recomputing fromWithin from p would read 0 instead of 0.7.
+    const settledSPlus = pullsForDrive(initialDrive(at(6, 0.5), N), (6 + 0.7) / N, 0, N);
+    const settledEnergy = energyFor(settledSPlus, LABELS).energy;
+    expect(settledEnergy).toBeCloseTo(1, 6);
+
+    const settled = initialDrive(at(6, 0.5), N);
+    const jumped = stepDrive(settled, at(5, 0.5), 5, 500, N, DECK_PARAMS, 0.7);
+    const atJumpFrame = energyFor(pullsForDrive(jumped, at(5, 0.5), 500, N), LABELS); // k = 0
+    expect(atJumpFrame.energy).toBeCloseTo(settledEnergy, 6);
   });
 });
 
@@ -537,6 +550,41 @@ describe("deckPose on phones", () => {
       expect(late.cards[i]!.y).toBe(early.cards[i]!.y);
       expect(late.cards[i]!.opacity).toBe(early.cards[i]!.opacity);
     }
+  });
+
+  it("puts the cards between at next from the first frame on a backward multi-rank jump, and drops the old visible next at the settle (Important 1)", () => {
+    // Rank 5 presented; a jump lands on rank 1. min(from, to) = 1, so cards 2–4 are classified with
+    // `next` from k = 0 already — not left at `exit` until a settle that, for a backward jump,
+    // never has to move them (min(from, to) is already the settled `lo`).
+    const jump = {
+      current: 5,
+      wanted: 1,
+      transition: { from: 5, to: 1, startMs: 0, fromWithin: 1 },
+    };
+    const start = deckPose(input({ pulls: pullsForDrive(jump, 0, 0, N), layout: phoneLayout })); // k = 0
+    expect(start.cards[1]!.x).toBe(phoneLayout.exit!.x); // to: arrives from exit
+    for (const i of [2, 3, 4]) expect(start.cards[i]!.x).toBe(phoneLayout.next!.x);
+    expect(start.cards[2]!.opacity).toBe(1); // lo + 1
+    expect(start.cards[3]!.opacity).toBe(0);
+    expect(start.cards[4]!.opacity).toBe(0);
+    expect(start.cards[6]!.opacity).toBe(1); // hi + 1: the settled visible next it already was
+
+    // The leaving card retreats from presented toward `next`, fading out as it goes.
+    const mid = deckPose(input({ pulls: pullsForDrive(jump, 0, D / 2, N), layout: phoneLayout }));
+    expect(mid.cards[5]!.x).toBeCloseTo(
+      phoneLayout.next!.x + (phoneLayout.presented.x - phoneLayout.next!.x) * 0.5,
+      6,
+    );
+    expect(mid.cards[5]!.opacity).toBeCloseTo(0.5, 6);
+
+    // Once settled on rank 1, card 6 is no longer anyone's visible next.
+    const settled = deckPose(
+      input({
+        pulls: pullsForDrive({ current: 1, wanted: 1, transition: null }, 0, 0, N),
+        layout: phoneLayout,
+      }),
+    );
+    expect(settled.cards[6]!.opacity).toBe(0);
   });
 
   it("is continuous across the boundary for the waiting stack", () => {

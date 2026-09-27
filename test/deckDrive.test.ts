@@ -72,6 +72,15 @@ describe("stepDrive", () => {
     const s = initialDrive(centre(2), N);
     expect(stepDrive(s, centre(2), null, 99, N)).toEqual(s);
   });
+  it("uses drawnWithin for fromWithin when the caller gives it, not the jump frame's own p", () => {
+    // Settled at 6; a jump lands with the scroll already at 5's centre (Motion delivered the new p
+    // before this frame consumed the jump) — recomputing from p would read rank 6 as untouched.
+    const s = initialDrive(centre(6), N);
+    const withDrawn = stepDrive(s, centre(5), 5, 500, N, DECK_PARAMS, 0.7);
+    expect(withDrawn.transition?.fromWithin).toBe(0.7);
+    const withoutDrawn = stepDrive(s, centre(5), 5, 500, N);
+    expect(withoutDrawn.transition?.fromWithin).toBe(0);
+  });
 });
 
 describe("transitionK and pullsForDrive", () => {
