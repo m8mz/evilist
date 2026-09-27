@@ -484,10 +484,10 @@ All seven on the graphite field with true black cloth, no seam, imported with `n
 Not a render, and not colour-derived: the aura that hugs the character's silhouette (replacing the
 halo sprite) comes from Higgsfield's background remover run once per picked portrait (the project's
 own art pipeline), because no colour rule can find an edge where the character's black cloth meets
-the graphite field at the same tone — round 0 (a fixed graphite value) and round 1 (a measured field
-tone, a tighter tolerance, and a largest-component filter) both failed on the ranks that actually show
-the aura: S lost bands inside the coat, S+ lost most of its torso, A was reduced to the laptop and
-arms, D to the head.
+the graphite field at the same tone. Round 0 (a fixed graphite flood) and round 1 (a measured field
+tone, tighter tolerance, and largest-component filter) both failed on S and S+ (the ranks that show
+an aura): S grew bands inside the coat (dilations leaked through black cloth shading), S+ lost most
+of its torso.
 
 Jobs (background-remove, 2026-09-26, 7 jobs): E `00b30bb3-8a7d-4311-abcc-9f784b031ae3`, D
 `e0c22546-cc16-4552-b00d-d1713ec8f6f6`, C `40258119-120a-4024-8892-ae1674b362b2`, B

@@ -49,24 +49,24 @@ From the brainstorm:
 
 From the review round (all approved):
 
-| Topic           | Decision                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Entrance        | A one-time intro: the rack deals in, then E pulls itself out. Skipped on deep links and under reduced motion.     |
-| Feel            | Damped scroll progress, damped tilt, idle float on the presented card, a camera parallax on desktop.              |
-| Navigation      | Rail (keyboard and screen readers), racked cards clickable with a hover lift, horizontal swipe on phones.         |
-| Finale          | A landing flare at S+ (and a smaller one at S). Racked S and S+ backs carry a pulsing violet seam from the start. |
-| Material        | Laminated card: exact palette through an emissive recipe, clearcoat highlight, dark-studio environment map.       |
-| Layers          | Four parallax layers: body (with portrait), frame, text, chip, plus a glow-mask plane.                            |
-| Bloom           | Selective bloom on the high tier only, in its own lazy chunk. Phones use additive sprites instead.                |
-| Fog             | A noise-driven fog plane behind the deck under the smoke puffs, masked around the S and S+ card.                  |
-| Grounding       | A soft contact shadow under the presented card.                                                                   |
-| Card content    | A `$ status --rank n` header line and an `$ xp` bar join the status window.                                       |
-| Section         | The journey section's tone becomes `void`; the lede ends with "Scroll, or pick a rank."                           |
-| Column          | The deck column is `min(78%, 1200px)` wide on desktop.                                                            |
-| Accessible twin | The timeline is the twin: visually hidden while the stage runs, visible as the fallback. One list, one source.    |
-| Loading         | The deck chunk prefetches after the first scroll; portraits load only once the journey is on screen.              |
-| Determinism     | Tenure and XP use a build-time date; tests and visual baselines freeze time and the RNG.                          |
-| Tooling         | A dev-only tuning panel, a local perf script, state attributes for Playwright, a placeholder portrait.            |
+| Topic           | Decision                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entrance        | A one-time intro: the rack deals in, then E pulls itself out. Skipped on deep links and under reduced motion.                                                             |
+| Feel            | Damped scroll progress, damped tilt, idle float on the presented card, a camera parallax on desktop.                                                                      |
+| Navigation      | Scroll picks the rank; a change plays as one transition. Rail (keyboard and screen readers), clicks and swipes open the card directly, with a hover lift on racked cards. |
+| Finale          | A landing flare at S+ (and a smaller one at S). Racked S and S+ backs carry a pulsing violet seam from the start.                                                         |
+| Material        | Laminated card: exact palette through an emissive recipe, clearcoat highlight, dark-studio environment map.                                                               |
+| Layers          | Four parallax layers: body (with portrait), frame, text, chip, plus a glow-mask plane.                                                                                    |
+| Bloom           | Selective bloom on the high tier only, in its own lazy chunk. Phones use additive sprites instead.                                                                        |
+| Fog             | A noise-driven fog plane behind the deck under the smoke puffs, masked around the S and S+ card.                                                                          |
+| Grounding       | A soft contact shadow under the presented card.                                                                                                                           |
+| Card content    | A `$ status --rank n` header line and an `$ xp` bar join the status window.                                                                                               |
+| Section         | The journey section's tone becomes `void`; the lede ends with "Scroll, or pick a rank."                                                                                   |
+| Column          | The deck column is `min(78%, 1200px)` wide on desktop.                                                                                                                    |
+| Accessible twin | The timeline is the twin: visually hidden while the stage runs, visible as the fallback. One list, one source.                                                            |
+| Loading         | The deck chunk prefetches after the first scroll; portraits load only once the journey is on screen.                                                                      |
+| Determinism     | Tenure and XP use a build-time date; tests and visual baselines freeze time and the RNG.                                                                                  |
+| Tooling         | A dev-only tuning panel, a local perf script, state attributes for Playwright, a placeholder portrait.                                                                    |
 
 ## 3. Page and components
 
@@ -232,9 +232,8 @@ else `phone`). Reserved: `railH = 88` at the bottom, `pad = 24`.
   composition is centred in the column: `rackX0 = columnLeft + (columnW − composition) / 2`,
   `presentedX = rackX0 + rackW + gap`.
 - Vertical, both modes: the presented card is centred in the area above the rail, so its bottom
-  edge is `baseY = (stageH − railH) / 2 + cardH / 2`. Racked cards stand 30 px lower, on the floor
-  line at `baseY + 30`, which is drawn 8 px below their bottom edge. The presented card therefore
-  hovers 30 px above the floor, and its `z` lift (§7) carries it toward the camera on top of that.
+  edge is `baseY = (stageH − railH) / 2 + cardH / 2`. The racked cards stand 30 px below the
+  presented card's baseline; nothing is drawn under them.
 - Phone: presented card centred horizontally. The next card's near edge sits 24 px inside the
   stage's right edge at `rotY = −80°`, so a 0.17 × cardW sliver of its back shows. Played cards exit
   to centre `x = −0.6 × cardW` at `rotY = 70°`, opacity 0.5.
@@ -246,25 +245,29 @@ on-screen size changes by more than 10 %.
 
 ## 7. Motion
 
-**Progress.** Motion's `scroll()` over the track (`offset: ["start start", "end end"]`) supplies the
-target progress and `--progress` for the rail line. The stage keeps a smoothed progress:
-`p += (target − p) × (1 − e^(−dt/τ))`, `τ = 90 ms`, snapped when within 0.0005. Everything below
-reads the smoothed `p`. A rail jump therefore riffles the deck rather than teleporting it.
+**Drive** (`deck-drive.ts`, pure). The scroll's position selects a rank `0..6` with hysteresis 0.15 of
+a stretch, so resting on a boundary never flickers the deck. When the wanted rank differs from the
+current one, a `Transition` starts: `{from, to, startMs, fromWithin}`. One transition plays for
+`drive.durationMs` (900 ms by default) at `k = clamp01((now − startMs) / durationMs)`, eased as
+cubic in-out. The `Pulls` structure holds the ranks' pull values: `pull[from]` falls from 1 toward 0
+as `(1 − easeInOutCubic(k))`, `pull[to]` rises from 0 toward 1 as `easeInOutCubic(k)`, all others
+at 0. `active` (the lit chip and the live-region announcement) flips to `to` at `k = 0.5`. `within`
+is `to`'s scroll position, ramped in from 0 with `k`; `fromWithin` is `from`'s position at the
+transition's start, ramped out with `1 − k`, so the leaving rank's energy continues smoothly even if
+a jump lands between the frame Motion delivers the new scroll and the frame that consumes it. A jump
+(from rail, click or swipe) is one transition straight from the current rank to the target.
 
-**Pose model** (`deck-pose.ts`, pure). Inputs: `p`, `N = 7`, the layout, the tilt vector, the intro
-state, the clock. Output per card: position, rotation, scale, `pull ∈ [0, 1]`, `landed`, `hoverLift`;
-per stage: `active`, `within`, `energy`, `kind` (`S` | `S+` | null), `phase`.
+**Pose model** (`deck-pose.ts`, pure). Inputs: `pulls` (the drive's output), `N = 7`, the layout,
+the tilt vector, the intro state, the clock. Output per card: position, rotation, scale, `pull ∈ [0, 1]`,
+`landed`, `hoverLift`; per stage: `active`, `energy`, `kind` (`S` | `S+` | null), `phase`.
 
-- `f = p × N`, `active = min(N − 1, ⌊f⌋)`, `within = f − active`.
-- Handoff `k = clamp((within − 0.7) / 0.3)` when `active < N − 1`, else 0. The last rank never
-  returns to the rack, and E never returns at the top.
-- `pull(active) = 1 − ease(k)`, `pull(active + 1) = ease(k)`, all others 0. `ease` is cubic in-out.
 - Rack pose: slot position, `rotY = 103°`, `z = 0`. Presented pose: `presentedX/Y`, `z = 60 px`,
-  `rotY = 0`. Between: `x, y` on the cubic ease; `z = 60 × 1.6 × sin(π·pull) + 60·pull` (the lift
+  `rotY = 0`. Between: `x, y` pulled toward presented on cubic ease of the card's `pull`; `z = 60 × 1.6 × sin(π·pull) + 60·pull` (the lift
   toward the camera); `rotY = 103° × (1 − backEase(pull))` with overshoot 1.3, so the card swings
   a few degrees past flat and settles; `scale = 1 + 0.06 × sin(π·pull)`.
 - `landed = pull > 0.985`. `phase` per card: `racked`, `pulling`, `landing` (first 700 ms after
-  landing), `presented`, `leaving`.
+  landing), `presented`, `leaving`. A moving card draws above the rack, the arriving card above the
+  leaving one, regardless of 3D depth (painter's algorithm).
 - Idle float, presented card only, amplitude fading in over 1.5 s after landing:
   `y += 4 px × sin(2πt / 4.2 s)`, `rotZ += 0.6° × sin(2πt / 6.1 s)`, `rotY += 1.2° × sin(2πt / 5.3
 s)`, `rotX += 0.8° × sin(2πt / 4.7 s)`. The smoke origin and the contact shadow follow the floated
@@ -332,23 +335,20 @@ upper-left matching the key light, one dim violet bar right) run through `PMREMG
 assigned to the card materials, not to `scene.environment`.
 
 **Lights.** Ambient 0.35 white. Key: directional white 2.2 from upper-left (the same direction the
-portraits are lit from). Rim: directional `#9080ff` 0.8 from right-rear. Energy: a `#7040d2` point
-light 1.6 units in front of the energetic card, intensity `energy × 16` at S and `energy × 55` at
-S+, breathing ±15 % on a 3 s sine. The lights shape the slabs, edges and clearcoat only; the painted
-colours are emissive.
+portraits are lit from). Rim: directional `#9080ff` 0.8 from right-rear. The lights shape the slabs,
+edges and clearcoat only; the painted colours are emissive.
 
 **Energy value.** 0 for E–A. S: 0.3 while presented, `0.15 × pull` while pulling. S+: `0.25 +
 0.75 × min(1, within / 0.7)` while presented, `0.15 × pull` while pulling. During the S → S+
 handoff both cards are energetic; the stage-level `energy`, `kind` and the light's position follow
 the card with the larger `pull`.
 
-**Landing flare.** On `landing` of S+: the point light runs at 3× for 400 ms (ease-out back to
-base), 30 puffs burst at once, the fog strength gets +0.5 decaying over 600 ms, the glow sprite
-scales ×1.4 and settles. S gets a smaller flare: 1.6×, 12 puffs, no fog kick.
-
-**Glow.** The glow-mask plane (per card) and a soft additive violet sprite behind the energetic card
-(scale in world units `4.2 × k` at S and `(7 + 9 × energy) × k` at S+, where `k = cardW / 260 px`
-keeps the demo's proportions at any card size). Both sit on the bloom layer.
+**Aura.** S and S+ cards show a soft violet band that hugs the character's silhouette, derived from a
+committed background-remover cutout (`art/deck/<id>-silhouette.png`, 800 px). The aura is dilated by
+0.025 of the width (about 10 px), blurred by 3 px, and uploaded as a 400 px WebP mask. It is additive
+violet `#7040d2` on the bloom layer, fading to black between rows 0.72 and 0.90 of the portrait
+window (the `aura.fadeFrom` and `aura.fadeTo` parameters), so the title and name plate always stay
+readable. E–A cards load no aura.
 
 **Smoke (puffs).** A pool of 140 sprites (70 on the mid tier), each a procedurally painted 256 px
 puff (nine overlapping soft blobs, three texture variants), `#7040d2` with a quarter `#9d86d8`,
@@ -363,10 +363,6 @@ noise scrolled upward over time, masked by a radial falloff around the energetic
 radius `1.0` units at S and `1.2 + 2.4 × energy` at S+, colour `#7040d2`, alpha `strength × noise`
 with strength `0.10` at S and `0.35 × energy` at S+, additive. Uniforms: time, centre, radius,
 strength, aspect. About sixty lines of GLSL; no textures.
-
-**Contact shadow.** A radial black sprite squashed to `1.15 × cardW` by `0.35 × cardW`, opacity 0.55
-at the centre, on the floor line under the presented card and under a pulling card, following x; its
-opacity falls with the lift (`× (1 − 0.5 × z / z_max)`). Racked cards cast none.
 
 **Bloom.** High tier only, in `deck-bloom.ts` (a second lazy chunk): the scene renders to the
 canvas as on mid, then an `EffectComposer` renders only bloom-layer objects (glow masks, seams, glow
@@ -442,8 +438,11 @@ Files in `src/scripts/deck/` (a new directory, so it never collides with the old
   textures and portraits is rendered.
 - **Freeze.** With `?deck-freeze=<iso-date>` in the URL: the clock is fixed at that date, the RNG is
   seeded, the intro is skipped, smoothing is off, and the loop renders one frame after
-  `data-deck-ready` and stops. It works in every build, because e2e and the visual baselines run
-  against the production build; a visitor who adds it by hand only gets a still deck.
+  `data-deck-ready` and stops. With `?deck-k=<0..1>` the transition into the settled rank holds at
+  that eased fraction (the linear time is then `k × drive.durationMs` before the settle frame,
+  which allows a test or a mid-transition baseline for e2e). It works in every build, because e2e
+  and the visual baselines run against the production build; a visitor who adds it by hand only gets
+  a still deck.
 - **Fallbacks.** Tier `none`, `webglcontextlost` without a restore within 2 s, a `webglcontextcreationerror`,
   or any exception during mount set `data-deck-fallback` on the section: the track collapses, the
   canvas is removed, the timeline shows. Reduced motion never mounts the stage.
@@ -545,9 +544,11 @@ from `requestAnimationFrame` in the page, and prints p50, p95, the count of fram
 - **Unit**
   - `deckLayout`: card size clamps, the composition fits the column at 1024, 1440 and 2560, the
     phone anchors at 390 and 430, floor and presented positions.
-  - `deckPose`: pull curve endpoints, the 70 % handoff window, E never returns at the top and S+
-    never at the end, phone vs desktop poses, clamped progress, energy per rank, tilt limits, float
-    amplitudes, the intro's timeline and its fast-forward, phases.
+  - `deckDrive`: rank selection with hysteresis, the transition queue, pulls over time, settled
+    within, `active` flips at k 0.5.
+  - `deckPose`: pull curve endpoints, E never returns at the top and S+ never at the end, phone vs
+    desktop poses, energy per rank, tilt limits, float amplitudes, the intro's timeline and its
+    fast-forward, phases, draw policy.
   - `deckPaint`: every stage paints at every line count without throwing; the quote wraps within
     42 % width; eight tags then "+N"; the XP glyph count; the S+ chip is the top variant and the S
     chip's border is violet; the placeholder paints for every rank; nothing paints outside the
@@ -556,22 +557,23 @@ from `requestAnimationFrame` in the page, and prints p50, p95, the count of fram
     (S+ is 1), `setNumber`, `acquired`, all with a fixed `now`.
   - `deck` data: every rank has outfit, eyes, expression, posture, alt starting "Illustration:", and
     a coverage band.
-  - `importPortrait`: the violet key on a synthetic image yields the expected coverage; the band
-    check fails outside it.
+  - `auraMask`: the silhouette's erosion and dilation on a synthetic figure with noise, a detached
+    noise block stays unlit, an enclosed gap stays lit, the mask uploads with mean < 20/255.
   - `checkBundleSize`: the new rows, the portrait renditions found through the built page's data
     attributes, the chunk-not-initial assertion.
 - **Component**: `Journey` renders the canvas host, seven rail buttons with names and roving
   tabindex, the counter, the aria-live paragraph, `data-now`; `JourneyTimeline` renders seven entries
   with title, org, dates, tenure, summary, skills, XP, log and a portrait `Still` with "Illustration:"
   alt; `sr-only` only under `[data-deck-active]`.
-- **E2E** (`e2e/journey.spec.ts`, rewritten): no `three` chunk is requested before the first scroll
-  and it is after; the stage reaches `data-deck-ready` and `data-deck-state="scroll"`; with
-  `?deck-freeze` the rail jumps to S+ and `data-deck-rank`, the counter and aria-live update; ← →
-  move the rail's focus; clicking the stage where the B card sits jumps to B; a horizontal swipe on
-  a 390 viewport moves one rank; reduced motion shows the timeline and requests no chunk; a forced
-  context loss (`WEBGL_lose_context`) swaps to the timeline; `data-deck-vram` is under the ceiling;
-  `--progress` reaches 1 at the track end; the CSP header still holds on `/`; zero third-party
-  requests.
+- **E2E** (`e2e/journey.spec.ts`, rewritten): the drive plays transitions at their full duration;
+  no `three` chunk is requested before the first scroll and it is after; the stage reaches
+  `data-deck-ready` and `data-deck-state="scroll"`; with `?deck-freeze` and `?deck-k` the transition
+  holds at that eased fraction; a rail jump opens the target card directly, with `data-deck-rank`
+  and aria-live updating once; a click on a racked card opens it directly; a horizontal swipe on a
+  390 viewport moves one rank; ← → move the rail's focus; reduced motion shows the timeline and
+  requests no chunk; a forced context loss (`WEBGL_lose_context`) swaps to the timeline;
+  `data-deck-vram` is under the ceiling; `--progress` reaches 1 at the track end; the CSP header
+  still holds on `/`; zero third-party requests.
 - **Visual**: baselines at E, S and S+ on 1440 and 390 with `?deck-freeze=2026-09-25`.
 
 ## 13. Security and CSP

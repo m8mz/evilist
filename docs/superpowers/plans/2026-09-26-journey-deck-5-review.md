@@ -591,3 +591,43 @@ Protocol as in the previous Plan 5 draft: the controller runs the branch's dev s
 - **Type consistency.** `Pulls` (from, to, k, active, within, pull[]) shared by the drive, the pose and the energy; `PoseInput.pulls`; `Freeze.k`; `StageHandle.jumpTo`; `auraOpacity(kind, energy, flareGlow, params?)`; `paintMaskFaded(ctx, image, w, h, fadeFrom)`; `auraMask(input, opts?)`; `EffectsLayout` without `floorY`.
 - **Review Focus** → 1: Tasks 1, 6; 2: Tasks 1, 6; 3: Tasks 4, 7; 4: Task 4 and the browser check; 5: Task 5.
 - **Risk.** Task 1's pose refactor touches every pose test; the drive's `active` flips at `k = 0.5`, which moves the rank label mid-transition (intended: the rail lights the target early). Task 5 depends on reproducing on a real GPU; the harness runs headed on the dev Mac. Task 4's flood fill assumes the graphite field reaches every border; a portrait whose figure touches the bottom edge (the busts do) still keys, because the fill only needs the field's connected region.
+
+## Execution notes
+
+### Task 1–2 (The drive and the pose)
+
+Commits: 23fa1e7, 85a6f3f (implementer), 4835a0c, a869d2e (fix round 2). 480–490 tests; pose ≤ 375, drive ≤ 159, stage ≤ 640. `Pulls` includes `fromWithin`: the leaving rank's within at the transition's start, kept across frames when the scroll changes between motion callbacks, so the leaving card's energy continues from what was drawn rather than jumping if a jump lands in between. Fix round 2: backward multi-rank phone test added, `deck-k` equates `transitionK` result, `stepDrive` accepts optional `drawnWithin` parameter. Parked: `pull.handoffStart` has no runtime consumer (drop the param and its tune row); swipes step from `presented` (which flips mid-transition), so two swipes in the first half collapse into one (watch in Task 7).
+
+### Task 3 (Removing the floor, lights and shadows)
+
+Commit: 397f853 (implementer). 475 tests; stage 629, effects 418. `EffectsLayout` loses `floorY`, the intro draw-in sentence about the floor line, `paintRadial` (unused after removing the halo and shadows). Parked: `intro.floorMs` is unreferenced (remove in the final wave).
+
+### Task 4 (The aura and the glow fade)
+
+Commits: 0f8853f (implementer, attempt 1), a0e6d7e (fix round 1), 408d6d3 (fix round 2, implementer). 487–492 tests; effects 464, energy 167. The colour flood approach (round 0 and 1) failed on S and S+ because black cloth and graphite field sit at equal tones. Controller's ruling: Higgsfield background remover on all seven portraits (jobs run 2026-09-26); the alpha channel is the silhouette. `aura-mask.mjs` generates masks from the committed silhouettes (rim 0.025, blur 3, at 400 px); importPortrait no longer writes auras. `paintMaskFaded` darkens RGB to black from fadeFrom (0.72) to fadeTo (0.9) under source-over so the title and name plate stay readable. Aura planes only on kinds that show one (S, S+); E–A load no aura. Parked: the fadeTo tune row is inert until remount (a Plan 6 tuning decision: clamp or regen); the dilate disc is square not round (√2 × rim on diagonals, test and regenerate later); E–A aura fetches can be gated once Task 5 frees stage lines; imagery.md naming and the masking history.
+
+### Task 5 (The tear harness and the fix)
+
+Commits: b71c403 (implementer), 5b4fff5 (fix round 1), 609c647 (fix round 2, controller). 498 tests; harness 280 lines. The pre-Plan-5 recording showed slab-across-face tear during transitions (GPU hazard, not a texture seam). Harness built to verify: 64×64 blocks, per-block mean |Δ| > 12/255 vs both neighbours (which differ < 4/255). Tear did not reproduce on the drive build; Marcus's recording predates Plan 5. Fix: text slots on CPU-raster canvases (`willReadFrequently: true`, no mipmaps) in `deck-canvas.ts`. Draw policy (`drawPolicy(phase)` in `deck-pose.ts`, applied in `deck-cards.ts`): pulling/landing at order 3 no depth-test, leaving at order 2, presented at order 1 with depth-test, others at order 0. Parked: the detector's sensitivity to fast motion (residual flags in verify runs are motion, not tears); the FROZEN constant reuse in e2e.
+
+### Task 6 (E2E for the drive model)
+
+Commit: 7cd6d7f (implementer). 383 e2e tests. Model tests for hysteresis, transitions, queued jumps, parked scroll (settled by hysteresis), energy ramp. Data-deck-slots clarification: the seven rack anchors, not the live text slots (the plan text was wrong; the test is correct). Parked: reuse FROZEN constant in e2e specs; the frozen URL assignment at e2e/journey.spec.ts:687.
+
+### Task 7 (Tuning and baselines)
+
+Commit: 817a1d8 (controller). Five panel rows added (`drive.durationMs`, `drive.hysteresis`, `aura.s`, `aura.sPlusBase`, `aura.fadeFrom`), dead `pull.handoffStart` row dropped, six baselines regenerated (S, S+, and iphone-15 variants on desktop; visual passes twice). S reads with a thin violet rim, S+ readable with flames blooming above the name plate, floating cards present, phone matches.
+
+### Parked for Plan 6
+
+From the ledger:
+
+- `intro.floorMs` param (dead, unused).
+- `pull.handoffStart` param and its tune row (dead, no consumer).
+- Swipes from `presented` step (watch for collapse in first half of transition).
+- `aura.fadeTo` tune row inert until remount (tuning decision: clamp or re-bake).
+- Square dilate (diagonals get √2 × rim; test and regenerate masks if changed).
+- Aura fetches on E–A cards (gate once Task 5 frees stage lines).
+- Detector sensitivity to fast motion (watch in future sessions).
+- FROZEN constant reuse in e2e.
+- Imagery.md aura masking history (complete the record).

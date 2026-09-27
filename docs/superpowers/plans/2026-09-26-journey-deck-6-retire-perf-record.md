@@ -3,6 +3,8 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Re-scoped 2026-09-26.** Marcus's review of the deck became Plan 5 (`2026-09-26-journey-deck-5-review.md`: the drive, the aura, the floating cards, the tear); this plan runs after it. Of the tasks below, the halo plane, the smoke gate and the fog scaling (Task 4) and the tuning session (Task 6) moved into Plan 5 and are void here; the rest stand (retire, perf, lazy bodies and readiness, e2e, the record) and get their anchors re-checked against the tree Plan 5 leaves before this plan is dispatched.
+>
+> **Plan 5 parked:** `intro.floorMs` and `pull.handoffStart` params (dead, no consumer; drop and restate pose fixtures); swipes from `presented` step (watch for two-swipe collapse in the first half of transitions); `aura.fadeTo` tune row inert until remount (tuning decision: clamp or re-bake); square dilate on aura (test and regenerate if changed); E–A aura fetches (gate once Task 5 frees stage lines); detector sensitivity to fast motion; FROZEN constant reuse in e2e; imagery.md aura masking history completion.
 
 **Goal:** Finish the deck: delete the vector-journey pipeline the deck replaced, add `pnpm perf:deck`, close the memory and readiness items deferred from Plans 2–4, and bring ADR 0004, the spec, CLAUDE.md, the imagery record and the Build Log up to date.
 
