@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import JourneyTimeline from "../../src/components/journey/JourneyTimeline.astro";
 import { career } from "../../src/data/career";
 import { deckArtById } from "../../src/data/deck";
-import { deckPortrait } from "../../src/data/deckImages";
-import { stageArt } from "../../src/data/journeyArt";
 import { render } from "../render";
 
 describe("JourneyTimeline", () => {
@@ -31,7 +29,7 @@ describe("JourneyTimeline", () => {
     expect(figures).toHaveLength(career.length);
     for (const [i, figure] of figures.entries()) {
       const id = career[i]!.id;
-      const { subject } = deckPortrait(id) ? deckArtById[id]! : stageArt[id]!;
+      const subject = deckArtById[id]!.subject;
       expect(figure).toContain(`alt="Illustration: ${subject}"`);
       expect(figure).toMatch(/<img[^>]*loading="lazy"/);
     }
@@ -69,12 +67,10 @@ describe("JourneyTimeline as the deck's twin", () => {
     }
   });
 
-  it("uses the deck portrait and its subject once it exists, and the old still until then", async () => {
+  it("uses the deck portrait and its subject for every rank", async () => {
     const html = await render(JourneyTimeline, { props });
     for (const stage of career) {
-      const subject = deckPortrait(stage.id)
-        ? deckArtById[stage.id]!.subject
-        : stageArt[stage.id]!.subject;
+      const subject = deckArtById[stage.id]!.subject;
       expect(html).toContain(`alt="Illustration: ${subject}"`);
     }
   });

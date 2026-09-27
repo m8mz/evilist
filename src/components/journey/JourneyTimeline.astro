@@ -8,7 +8,6 @@ import Tag from "../ui/Tag.astro";
 import { acquired, career, formatRange, tenure, xp } from "../../data/career";
 import { deckArtById } from "../../data/deck";
 import { deckPortrait } from "../../data/deckImages";
-import { stageArt } from "../../data/journeyArt";
 import { nowFrom } from "../../scripts/deck/deck-util";
 
 interface Props {
@@ -23,8 +22,9 @@ const date = nowFrom(now);
 <ol class="timeline" role="list">
   {career.map((stage) => {
     const portrait = deckPortrait(stage.id);
-    const still = portrait ?? stageArt[stage.id]!.still;
-    const subject = portrait ? deckArtById[stage.id]!.subject : stageArt[stage.id]!.subject;
+    if (!portrait) throw new Error(`No deck portrait for ${stage.id}`);
+    const still = portrait;
+    const subject = deckArtById[stage.id]!.subject;
     return (
       <li class="timeline__stage" data-stage={stage.id}>
         <RankChip rank={stage.rankLabel} size="md" />

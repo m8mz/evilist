@@ -29,12 +29,6 @@ function fakeDist(files: Record<string, number> = { "fonts/a.woff2": 42_000 }): 
 
 const run = (cwd: string) => spawnSync("node", [SCRIPT], { cwd, encoding: "utf8" });
 
-/** Writes a small journey/scene.svg into a fake dist so the scene budget row stays green. */
-function withScene(dist: string, bytes = 10 * 1024): void {
-  mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
-  writeFileSync(join(dist, "dist/client/journey/scene.svg"), Buffer.alloc(bytes, 1));
-}
-
 /** Writes a small lazy deck-stage chunk (no page references it) so the deck rows stay green. */
 function withDeck(dist: string, bytes = 10 * 1024, name = "deck-stage.abc.js"): void {
   writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(bytes, 1));
@@ -68,7 +62,6 @@ afterEach(() => {
 describe("check-bundle-size", () => {
   it("passes with self-hosted fonts inside the budget", () => {
     const dist = fakeDist({ "fonts/a.woff2": 21_000, "fonts/b.woff2": 21_000 });
-    withScene(dist);
     withDeck(dist);
     withBloom(dist);
     withPortraits(dist);
@@ -85,7 +78,6 @@ describe("check-bundle-size", () => {
 
   it("passes a lazy deck-stage chunk under 170 KB gz and reports it", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    withScene(dist);
     withBloom(dist);
     withPortraits(dist);
     writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(150 * 1024));
@@ -96,7 +88,6 @@ describe("check-bundle-size", () => {
 
   it("fails when the deck-stage chunk is missing (inlined into a page)", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    withScene(dist);
     const res = run(dist);
     expect(res.stdout).toContain("FAIL deck-stage chunk missing");
     expect(res.status).toBe(1);
@@ -104,7 +95,6 @@ describe("check-bundle-size", () => {
 
   it("fails when a deck or Three.js chunk is in the home page's initial graph", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000, "three.def.js": 10 });
-    withScene(dist);
     withDeck(dist);
     writeFileSync(
       join(dist, "dist/client/index.html"),
@@ -117,7 +107,6 @@ describe("check-bundle-size", () => {
 
   it("fails lazy JS over 170 KB gz", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    withScene(dist);
     writeFileSync(join(dist, "dist/client/_astro/deck-stage.abc.js"), randomBytes(200 * 1024));
     const res = run(dist);
     expect(res.stdout).toMatch(/FAIL Deck lazy JS \(gz\)/);
@@ -126,7 +115,6 @@ describe("check-bundle-size", () => {
 
   it("does not count a page's own scripts as lazy", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000, "contact.ghi.js": 300 * 1024 });
-    withScene(dist);
     withDeck(dist);
     withBloom(dist);
     withPortraits(dist);
@@ -140,48 +128,18 @@ describe("check-bundle-size", () => {
     expect(res.status).toBe(0);
   });
 
-  it("fails a stray file in journey/ (only the scene belongs there)", () => {
+  it("fails when dist/client/journey exists at all", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    withScene(dist);
     withDeck(dist);
-    writeFileSync(join(dist, "dist/client/journey/sysadmin-640.mp4"), Buffer.alloc(10, 1));
-    const res = run(dist);
-    expect(res.stdout).toContain("FAIL stray journey file: sysadmin-640.mp4");
-    expect(res.stdout).not.toContain("FAIL Journey scene (gz): missing");
-    expect(res.status).toBe(1);
-  });
-
-  it("passes a journey scene within 300 KB gzipped, reporting its size", () => {
-    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    // 200 KB of incompressible bytes gzips to about 200 KB: inside the budget.
     mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
-    writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(200 * 1024));
-    withDeck(dist);
-    withBloom(dist);
-    withPortraits(dist);
+    writeFileSync(join(dist, "dist/client/journey/anything.svg"), Buffer.alloc(10, 1));
     const res = run(dist);
-    expect(res.stdout).toMatch(/ok {3}Journey scene \(gz\): 20\d\.\d KB \(budget 300 KB\)/);
-    expect(res.status).toBe(0);
-  });
-
-  it("fails a journey scene over 300 KB gzipped", () => {
-    const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    mkdirSync(join(dist, "dist/client/journey"), { recursive: true });
-    writeFileSync(join(dist, "dist/client/journey/scene.svg"), randomBytes(320 * 1024));
-    const res = run(dist);
-    expect(res.stdout).toMatch(/FAIL Journey scene \(gz\)/);
-    expect(res.status).toBe(1);
-  });
-
-  it("fails when the journey scene is missing from the build", () => {
-    const res = run(fakeDist({ "fonts/a.woff2": 42_000 }));
-    expect(res.stdout).toContain("FAIL Journey scene (gz): missing");
+    expect(res.stdout).toContain("FAIL journey directory should not exist: dist/client/journey");
     expect(res.status).toBe(1);
   });
 
   it("catches a three chunk pulled in only via a static import from the entry", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000, "three.def.js": 10 });
-    withScene(dist);
     withDeck(dist);
     writeFileSync(
       join(dist, "dist/client/_astro/entry.abc.js"),
@@ -198,7 +156,6 @@ describe("check-bundle-size", () => {
 
   it("counts a helper chunk statically imported by the entry toward the initial total", () => {
     const dist = fakeDist({ "fonts/a.woff2": 42_000 });
-    withScene(dist);
     withDeck(dist);
     withBloom(dist);
     const entryPath = join(dist, "dist/client/_astro/entry.abc.js");
@@ -221,7 +178,6 @@ describe("check-bundle-size", () => {
 
   it("budgets the bloom chunk on its own row and keeps it out of the deck row", () => {
     const dist = fakeDist();
-    withScene(dist);
     withDeck(dist);
     withPortraits(dist);
     // Without a bloom chunk the run fails on the missing row, but the deck row still prints.
@@ -239,7 +195,6 @@ describe("check-bundle-size", () => {
 
   it("fails when the bloom chunk is missing or over 40 KB", () => {
     const dist = fakeDist();
-    withScene(dist);
     withDeck(dist);
     expect(run(dist).stdout).toContain("FAIL deck-bloom chunk missing");
     writeFileSync(
@@ -253,7 +208,6 @@ describe("check-bundle-size", () => {
 
   it("measures the served portrait renditions named by the home page", () => {
     const dist = fakeDist();
-    withScene(dist);
     withDeck(dist);
     writeFileSync(join(dist, "dist/client/_astro/deck-bloom.abc.js"), "x".repeat(2_000));
     const html = readFileSync(join(dist, "dist/client/index.html"), "utf8").replace(
@@ -283,7 +237,6 @@ describe("check-bundle-size", () => {
 
   it("fails when the home page names no portrait renditions (the rail must name seven)", () => {
     const dist = fakeDist();
-    withScene(dist);
     withDeck(dist);
     withBloom(dist);
     const res = run(dist);

@@ -7,8 +7,7 @@
 //   directly), under their own budget, and never in the home page's initial graph (deck spec §11).
 // - The high-tier bloom composer (deck-bloom.<hash>.js) is its own lazy chunk with its own budget,
 //   excluded from the deck row above it.
-// - Journey scene: only scene.svg may live in dist/client/journey, gzipped within its budget
-//   (until Phase 6 retires it).
+// - dist/client/journey must not exist at all: the retired vector pipeline used to write there.
 // - Served portrait renditions: the largest 1x/2x rendition and the largest mask (glow or aura) the
 //   home page's rail buttons reference (data-portrait-1x/2x, data-glow, data-aura), raw bytes
 //   (already-compressed webp). A home page that references none fails.
@@ -20,7 +19,6 @@ const KB = 1024;
 const BUDGETS = {
   initialHome: 100 * KB,
   fonts: 120 * KB,
-  scene: 300 * KB,
   deck: 170 * KB,
   bloom: 40 * KB,
   portrait1x: 40 * KB,
@@ -115,14 +113,6 @@ if (bloomChunks.length) {
   failed = true;
 }
 
-const scenePath = "dist/client/journey/scene.svg";
-if (existsSync(scenePath)) {
-  rows.push(["Journey scene (gz)", gz(scenePath), BUDGETS.scene, 0]);
-} else {
-  console.log("FAIL Journey scene (gz): missing");
-  failed = true;
-}
-
 const PORTRAIT_CLASSES = [
   ["Portraits 1x (largest)", [/data-portrait-1x="([^"]+)"/g], BUDGETS.portrait1x],
   ["Portraits 2x (largest)", [/data-portrait-2x="([^"]+)"/g], BUDGETS.portrait2x],
@@ -173,9 +163,7 @@ if (leaked.length) {
 
 const journeyDir = "dist/client/journey";
 if (existsSync(journeyDir)) {
-  for (const name of readdirSync(journeyDir).filter((f) => f !== "scene.svg")) {
-    console.log(`FAIL stray journey file: ${name}`);
-    failed = true;
-  }
+  console.log("FAIL journey directory should not exist: dist/client/journey");
+  failed = true;
 }
 process.exit(failed ? 1 : 0);

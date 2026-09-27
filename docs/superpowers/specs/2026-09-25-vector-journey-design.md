@@ -1,6 +1,6 @@
 # The vector journey
 
-- **Status:** Implemented (2026-09-25)
+- **Status:** Superseded 2026-09-27 by the journey card deck (docs/superpowers/specs/2026-09-25-journey-card-deck-design.md); the pipeline was deleted in its Plan 6.
 - **Date:** 2026-09-25
 - **Decider:** Marcus Hancock-Gaillard
 - **Replaces:** `2026-09-24-hero-journey-redesign-design.md` §7.3–§7.5 (the Higgsfield clips and their

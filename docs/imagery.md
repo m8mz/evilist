@@ -73,6 +73,8 @@ alternatives: `c4315162`, `0012e60c`. Spend: 26 credits for 13 renders.
 
 ## Journey (hero and journey redesign, spec §7) — retired 2026-09-25, see "Card deck" below and the deck spec
 
+Its tools and sources were deleted on 2026-09-27; the last commit that holds them is `4670bbf`.
+
 Anime illustration, not photography: the monochrome suffixes above do not apply. Violet lives only
 inside this art (ADR 0003). The character is original: never a likeness of Marcus or of any
 existing character.
@@ -250,6 +252,8 @@ Spend: 360 credits (2,944 → 2,584): the pilot (45) and the seven locked-camera
 
 ## Vector journey (2026-09-25) — retired 2026-09-25, see "Card deck" below and the deck spec
 
+Its tools and sources were deleted on 2026-09-27; the last commit that holds them is `4670bbf`.
+
 The clips above are replaced by one traced-and-rigged SVG scene (spec
 `docs/superpowers/specs/2026-09-25-vector-journey-design.md`). Every render below is flat vector
 art on an off-white canvas, imported with `scripts/import-art.mjs` (outfits through
@@ -359,6 +363,11 @@ stills (Step 2 above) are no longer served; their prompts and job ids stay here 
 timeline's pictures are now rendered from `public/journey/scene.svg`.
 
 ## Card deck (Plan 0, 2026-09-25)
+
+The card back's devil mark (`src/images/devil-mark.svg`) is not a Higgsfield render: it is traced
+once from `src/images/logo-devil.webp`, the devil crop of `evil_logo.webp` (deck spec §5). The
+tracer (`scripts/trace-mark.mjs`) was deleted with the vector pipeline; the committed SVG is the
+artefact.
 
 Preflight: `nano_banana_pro` at 4K 3:2 costs 4 credits per job (balance 2508, ultra plan). The reference sheets run at 2K 16:9. Every job below was paid from credits; no `use_unlim`.
 

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { career } from "../src/data/career";
 import { deckArt, deckArtById } from "../src/data/deck";
+import { deckAura, deckGlow, deckPortrait } from "../src/data/deckImages";
 
 describe("deck art", () => {
   it("has one record per career stage, in rank order, with matching ranks", () => {
@@ -42,5 +43,13 @@ describe("deck art", () => {
     }
     expect(deckArtById["t1-support"]!.glowBand).toEqual([0, 0.05]);
     expect(deckArtById["systems-architect"]!.glowBand).toEqual([1, 8]);
+  });
+
+  it("has a portrait, a glow mask and an aura mask for every rank", () => {
+    for (const a of deckArt) {
+      expect(deckPortrait(a.id), a.id).toBeDefined();
+      expect(deckGlow(a.id), a.id).toBeDefined();
+      expect(deckAura(a.id), a.id).toBeDefined();
+    }
   });
 });
