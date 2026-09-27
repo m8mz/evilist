@@ -440,25 +440,30 @@ export function paintPuff(ctx: Ctx, size: number, rng: () => number): void {
   }
 }
 
-/** Draws a mask image over the whole canvas and fades it out from `fadeFrom` of the height to the
- *  bottom, so no glow sits on the name plate (spec §8 as amended by Plan 5). */
+/**
+ * Draws a mask image over the whole canvas, then darkens it to nothing between `fadeFrom` and
+ * `fadeTo` of the height, so no glow sits on the name plate (spec §8 as amended by Plan 5 fix round
+ * 1). This darkens every channel under `source-over`, not just alpha: `destination-in` on alpha
+ * alone never reaches Three's alphaMap, which samples the green channel regardless of alpha
+ * (`fadedMaskTexture` uploads with the default `premultiplyAlpha: false`). The canvas stays opaque
+ * throughout.
+ */
 export function paintMaskFaded(
   ctx: Ctx,
   image: CanvasImageSource,
   w: number,
   h: number,
   fadeFrom: number,
+  fadeTo: number,
 ): void {
   ctx.clearRect(0, 0, w, h);
   ctx.drawImage(image, 0, 0, w, h);
-  ctx.globalCompositeOperation = "destination-in";
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, "rgba(0,0,0,1)");
-  g.addColorStop(Math.max(0, Math.min(1, fadeFrom)), "rgba(0,0,0,1)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.globalCompositeOperation = "source-over";
+  const g = ctx.createLinearGradient(0, fadeFrom * h, 0, fadeTo * h);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, "rgba(0,0,0,1)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
-  ctx.globalCompositeOperation = "source-over";
 }
 
 /** The S and S+ backs' seam (spec §5): a 1.5 px violet rounded outline 6 px in, at the card's scale. */

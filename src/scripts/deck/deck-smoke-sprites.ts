@@ -14,7 +14,7 @@ import { mulberry32 } from "./deck-util";
 const MIPMAP = 1.33; // every texture here mipmaps; deck-textures.ts uses the same 4/3 chain factor
 const PUFF_VISIBLE_MIN = 0.002; // a puff fainter than this reads as noise, not smoke
 
-export function canvasTexture(
+function canvasTexture(
   size: number,
   paint: (ctx: CanvasRenderingContext2D) => void,
   srgb: boolean,

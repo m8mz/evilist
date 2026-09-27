@@ -483,14 +483,29 @@ All seven on the graphite field with true black cloth, no seam, imported with `n
 
 Not a render: the aura that hugs the character's silhouette (replacing the halo sprite) is derived
 from the already-imported portrait, not from a new Higgsfield job. `auraMask` in
-`scripts/import-portrait.mjs` flood-fills the graphite field from the image's borders (reusing
-`KEY.fill`, tolerance 14); whatever the flood fill never reaches — the figure, and any
-field-coloured pixel it encloses (an eye, a badge) — counts as figure. The mask is that figure
-dilated by 3.5% of the 400 px width, minus the figure itself, blurred: a soft band that traces the
-outline rather than filling it. `importPortrait` writes `<id>-aura.webp` alongside the source and
-the glow mask; `scripts/aura-mask.mjs <stage-id>|--all` regenerates just the aura file from an
-already-imported portrait, for re-tuning without a new render. Generated for all seven ranks
-2026-09-26: 2.5–6.9 KB each, all under the 10 KB budget. Three (`linux-engineer`, `web-concierge`,
-`professional-services`) show visible background speckle from webp compression grain in the
-graphite field pushing isolated pixels past the tolerance — a tuning-phase concern, not a build
-break; `t1-support`, `t3-support`, `sysadmin` and `systems-architect` trace cleanly.
+`scripts/aura-mask.mjs` estimates the field's tone as the median of the image's one-pixel border
+ring (not an assumed fixed value), flood-fills from the borders over grey pixels within `tolerance`
+of that tone, and reduces whatever the flood never reaches to its largest 4-connected component (so
+grain specks and detached blocks the tone can't rule out on their own drop out, while an enclosed
+gap inside the figure — an eye, a badge — stays, since it shares a component with the body around
+it). The mask is that figure dilated by 3.5% of the 400 px width, minus the figure itself, blurred: a
+soft band that traces the outline rather than filling it. `writeAuraMask` is the one place both
+`importPortrait` (on the lossless prepared render) and `scripts/aura-mask.mjs <stage-id>|--all` (on
+an already-served portrait, for re-tuning without a new render) encode the mask, so the two paths
+can't drift apart.
+
+**2026-09-26, fix round 1** (`task-4-review.md` Important #1): the first pass (tolerance 14 around a
+hard-coded graphite value, no component filter) was defective — whole background blocks lit on
+`linux-engineer` and `professional-services`, solid interior blobs on `sysadmin`, `t3-support` and
+`web-concierge`, means of 87–200/255 where a rim should be under 20. The tone estimate, the tighter
+tolerance (10) and the component filter above fixed the block-lighting and blob-filling faults and
+substantially reduced every mask (now 16.6–67.0/255 mean; sizes 1.4–4.3 KB, all under the 10 KB
+budget). Two renders — `linux-engineer` and `professional-services` — still exceed the target of
+mean < 20/255: their coat's rendered colour sits within a few RGB units of the graphite field itself
+(sampled directly: `linux-engineer`'s shoulder reads RGB(33,32,37)/(37,34,37) against a field of
+RGB(38,35,38)), so the flood still reaches into the coat and the mask falls back to tracing the line
+art there rather than a filled silhouette. No single global colour-tolerance flood — grey or RGB —
+can separate two regions that close in raw colour; `test/auraMask.test.ts`'s committed-mask test
+holds an interim ceiling (mean < 70, bright share < 30%) with the full diagnosis in a comment,
+pending a decision: re-render those two with more contrast between coat and field, or a different
+masking approach.

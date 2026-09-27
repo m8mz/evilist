@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
+import { writeAuraMask } from "./aura-mask.mjs";
 
 export const GLOW = {
   hueMin: 250,
@@ -161,97 +162,6 @@ export async function glowMask(input, glow = GLOW) {
   return { mask, width, height, coverage: (hits / (width * height)) * 100 };
 }
 
-export const AURA = { width: 400, rim: 0.035, tolerance: 14, blur: 3 };
-
-/**
- * The figure's outline as a soft band (deck spec §8 as amended by Plan 5): everything that is not
- * the graphite field, reached by a flood fill from the borders, is the figure; the band is the
- * figure dilated by `rim` of the width, minus the figure, blurred. Single channel, `width` px.
- */
-export async function auraMask(input, opts = AURA) {
-  const { data, info } = await sharp(input)
-    .resize({ width: opts.width, withoutEnlargement: true })
-    .flatten({ background: "#000" })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
-  const isField = (i) =>
-    Math.abs(data[i] - KEY.fill[0]) <= opts.tolerance &&
-    Math.abs(data[i + 1] - KEY.fill[1]) <= opts.tolerance &&
-    Math.abs(data[i + 2] - KEY.fill[2]) <= opts.tolerance;
-  // Flood fill the field from the borders, so field-coloured pixels inside the figure stay figure.
-  const field = new Uint8Array(width * height);
-  const stack = [];
-  const push = (x, y) => {
-    const n = y * width + x;
-    if (field[n] || !isField(n * 3)) return;
-    field[n] = 1;
-    stack.push(n);
-  };
-  for (let x = 0; x < width; x++) {
-    push(x, 0);
-    push(x, height - 1);
-  }
-  for (let y = 0; y < height; y++) {
-    push(0, y);
-    push(width - 1, y);
-  }
-  while (stack.length) {
-    const n = stack.pop();
-    const x = n % width;
-    const y = (n - x) / width;
-    if (x > 0) push(x - 1, y);
-    if (x < width - 1) push(x + 1, y);
-    if (y > 0) push(x, y - 1);
-    if (y < height - 1) push(x, y + 1);
-  }
-  const figure = new Uint8Array(width * height);
-  let figurePx = 0;
-  for (let n = 0; n < figure.length; n++)
-    if (!field[n]) {
-      figure[n] = 255;
-      figurePx++;
-    }
-  // Dilate by a disc of radius `rim × width` (separable approximation: a square, then the blur rounds it).
-  const r = Math.max(1, Math.round(opts.rim * width));
-  const dilated = dilate(figure, width, height, r);
-  const band = Buffer.alloc(width * height);
-  for (let n = 0; n < band.length; n++) band[n] = dilated[n] && !figure[n] ? 255 : 0;
-  // Without forcing the colourspace back to grayscale, this sharp version promotes a blurred
-  // single-channel raw buffer to three channels on its way back out (`.raw()` alone isn't enough).
-  const mask = await sharp(band, { raw: { width, height, channels: 1 } })
-    .blur(opts.blur)
-    .toColourspace("b-w")
-    .raw()
-    .toBuffer();
-  return { mask, width, height, figureShare: (100 * figurePx) / (width * height) };
-}
-
-function dilate(src, width, height, r) {
-  const rows = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) {
-      let hit = 0;
-      for (let dx = -r; dx <= r && !hit; dx++) {
-        const xx = x + dx;
-        if (xx >= 0 && xx < width && src[y * width + xx]) hit = 255;
-      }
-      rows[y * width + x] = hit;
-    }
-  const out = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++)
-    for (let x = 0; x < width; x++) {
-      let hit = 0;
-      for (let dy = -r; dy <= r && !hit; dy++) {
-        const yy = y + dy;
-        if (yy >= 0 && yy < height && rows[yy * width + x]) hit = 255;
-      }
-      out[y * width + x] = hit;
-    }
-  return out;
-}
-
 /**
  * @param {string | Buffer} input
  * @param {string} id
@@ -277,11 +187,7 @@ export async function importPortrait(
     .blur(glow.blur)
     .webp({ quality: 90 })
     .toFile(glowFile);
-  const { mask: auraBuf, width: auraW, height: auraH } = await auraMask(png);
-  await sharp(auraBuf, { raw: { width: auraW, height: auraH, channels: 1 } })
-    .toColourspace("b-w")
-    .webp({ quality: 90 })
-    .toFile(auraFile);
+  await writeAuraMask(png, auraFile);
   if (!inBand) {
     console.error(`rejected render kept at ${source}`);
     throw new Error(

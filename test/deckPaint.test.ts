@@ -345,16 +345,24 @@ describe("paintText", () => {
 });
 
 describe("paintMaskFaded", () => {
-  it("draws the mask once, fades it under destination-in, and restores source-over after", () => {
+  it("draws the mask once, then darkens every channel to black from fadeFrom to fadeTo under source-over", () => {
     const ctx = fakeContext();
     const img = fakeImage(400, 267);
-    paintMaskFaded(ctx, img, 400, 267, 0.72);
+    paintMaskFaded(ctx, img, 400, 267, 0.72, 0.9);
     expect(ctx.ops[0]?.op).toBe("clearRect");
     const draws = ctx.ops.filter((o) => o.op === "drawImage");
     expect(draws).toHaveLength(1);
     expect(draws[0]!.args).toEqual([img, 0, 0, 400, 267]);
     const fade = ctx.ops.find((o) => o.op === "fillRect" && o.fillStyle === "gradient")!;
-    expect(fade.globalCompositeOperation).toBe("destination-in");
+    // destination-in (fading alpha alone) never reaches Three's alphaMap, which samples green
+    // regardless of alpha: the fade has to darken the mask's own colour under source-over instead.
+    expect(fade.globalCompositeOperation).toBe("source-over");
+    expect(fade.args).toEqual([0, 0, 400, 267]); // covers the whole canvas
+    expect(fade.gradient?.args).toEqual([0, 0.72 * 267, 0, 0.9 * 267]);
+    expect(fade.gradient?.stops).toEqual([
+      [0, "rgba(0,0,0,0)"],
+      [1, "rgba(0,0,0,1)"],
+    ]);
     expect(ctx.globalCompositeOperation).toBe("source-over");
   });
 });

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { afterEach, describe, expect, it } from "vitest";
-import { auraMask, glowMask, importPortrait, isViolet } from "../scripts/import-portrait.mjs";
+import { glowMask, importPortrait, isViolet } from "../scripts/import-portrait.mjs";
 
 let dir: string | undefined;
 const tmp = () => (dir = mkdtempSync(join(tmpdir(), "portrait-")));
@@ -68,33 +68,6 @@ describe("glowMask", () => {
   });
 });
 
-describe("auraMask", () => {
-  it("bands the figure's silhouette, leaving the figure and the far field clear", async () => {
-    const d = tmp();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#191919"/><rect x="300" y="150" width="300" height="450" fill="#2b2724"/></svg>`;
-    await sharp(Buffer.from(svg)).png().toFile(join(d, "figure.png"));
-    const { mask, width, figureShare } = await auraMask(join(d, "figure.png"));
-    expect(width).toBe(400);
-    const expected = ((300 * 450) / (900 * 600)) * 100;
-    expect(figureShare).toBeGreaterThan(expected - 1);
-    expect(figureShare).toBeLessThan(expected + 1);
-    const at = (x: number, y: number) => mask[y * width + x]!;
-    expect(at(200, 250)).toBe(0); // the figure's own centre
-    expect(at(20, 20)).toBe(0); // far into the field, well outside the rim
-    expect(at(128, 250)).toBeGreaterThan(40); // 6 px outside the figure's left edge: inside the rim
-  });
-
-  it("keeps a field-coloured hole inside the figure as figure, since the flood fill never reaches it", async () => {
-    const d = tmp();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#191919"/><rect x="300" y="150" width="300" height="450" fill="#2b2724"/><rect x="400" y="300" width="60" height="60" fill="#191919"/></svg>`;
-    await sharp(Buffer.from(svg)).png().toFile(join(d, "hole.png"));
-    const { mask, width, height } = await auraMask(join(d, "hole.png"));
-    const hx = Math.round(430 * (width / 900));
-    const hy = Math.round(330 * (height / 600));
-    expect(mask[hy * width + hx]).toBe(0);
-  });
-});
-
 describe("importPortrait", () => {
   it("writes the 1600 px source, the blurred glow mask and the aura mask, never enlarging", async () => {
     const d = tmp();
@@ -121,6 +94,11 @@ describe("importPortrait", () => {
     const aura = await sharp(join(d, "linux-engineer-aura.webp")).metadata();
     expect(aura.width).toBe(400);
     expect(aura.height).toBe(267);
+    // A band around the violet block, not a blank mask: mostly black, with a real bright rim
+    // somewhere (the bug this guards against left the whole mask at zero — see auraMask.test.ts).
+    const auraStats = await sharp(join(d, "linux-engineer-aura.webp")).stats();
+    expect(auraStats.channels[0]!.mean).toBeLessThan(20);
+    expect(auraStats.channels[0]!.max).toBeGreaterThan(150);
   });
 
   it("keys a white field to the graphite fill and keeps whites enclosed by the subject", async () => {

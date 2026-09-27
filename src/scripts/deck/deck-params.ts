@@ -137,9 +137,9 @@ export interface DeckParams {
     kickMs: number;
   };
   /** The aura's opacity recipe (deck spec §8 as amended by Plan 5): S's opacity at S's own energy,
-   * S+'s base and ramp, and the fraction of the portrait window where the glow and aura fade to
-   * nothing (so neither ever sits on the name plate). */
-  aura: { s: number; sPlusBase: number; sPlusRamp: number; fadeFrom: number };
+   * S+'s base and ramp, and the window fraction where the glow and aura darken to black, from
+   * `fadeFrom` to `fadeTo` (so neither ever sits on the name plate). */
+  aura: { s: number; sPlusBase: number; sPlusRamp: number; fadeFrom: number; fadeTo: number };
   glow: { gain: number; flareScale: number };
   seam: { sMin: number; sMax: number; sPlusMin: number; sPlusMax: number; periodMs: number };
   bloom: { strength: number; radius: number; threshold: number };
@@ -242,10 +242,10 @@ export function defaultDeckParams(): DeckParams {
       kick: 0.5,
       kickMs: 600,
     },
-    aura: { s: 0.45, sPlusBase: 0.55, sPlusRamp: 0.45, fadeFrom: 0.72 },
+    aura: { s: 0.45, sPlusBase: 0.55, sPlusRamp: 0.45, fadeFrom: 0.72, fadeTo: 0.9 },
     glow: { gain: 1.2, flareScale: 1.4 },
     seam: { sMin: 0.1, sMax: 0.25, sPlusMin: 0.2, sPlusMax: 0.5, periodMs: 3200 },
-    // Threshold 0.5 keeps the soft violet sprite and seams out of the blur (their luminance stays
+    // Threshold 0.5 keeps the soft violet aura and seams out of the blur (their luminance stays
     // under 0.2); only the pale eyes and S+ flames bloom. UnrealBloomPass returns a large smooth
     // source at about three times its strength, so 0.45 reads as a halo, not a wash.
     bloom: { strength: 0.45, radius: 0.5, threshold: 0.5 },

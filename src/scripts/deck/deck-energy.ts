@@ -1,5 +1,5 @@
 // The energy phase's pure per-frame arithmetic (deck spec §5 "States", §8): what the glow planes,
-// the seams, the glow sprite, the fog and the smoke should be at a given moment. No DOM, no Three;
+// the seams, the aura, the fog and the smoke should be at a given moment. No DOM, no Three;
 // deck-effects.ts copies these numbers onto objects.
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 import type { CardPhase } from "./deck-pose";
@@ -15,7 +15,7 @@ export interface Flare {
   glow: number;
 }
 
-/** The landing flare as multipliers (the fog kick, the glow scale) easing back to their rest value
+/** The landing flare as multipliers (the fog kick, the aura's flare) easing back to their rest value
  * after landing. S gives neither: only S+ flares. */
 export function flare(
   kind: EnergyKind | null,
@@ -98,8 +98,9 @@ export function fogFor(
 /**
  * The aura's opacity (deck spec §8 as amended by Plan 5): a thin violet rim that follows the
  * energetic card's silhouette. S holds at `aura.s` once it reaches its own full energy; S+ ramps
- * from `aura.sPlusBase` by `aura.sPlusRamp` × energy. The landing flare multiplies both, and the
- * result is clamped to 1 so the caller's own gain (`params.glow.gain`) can still push it further.
+ * from `aura.sPlusBase` by `aura.sPlusRamp` × energy. The landing flare multiplies both. Clamped to
+ * 1 so this stays a self-contained 0–1 value like `glowOpacity`/`seamOpacity`; the caller applies
+ * its own gain (`params.glow.gain`) and clamp on top.
  */
 export function auraOpacity(
   kind: EnergyKind | null,

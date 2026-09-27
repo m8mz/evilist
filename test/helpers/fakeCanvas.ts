@@ -11,10 +11,15 @@ export interface Op {
   textAlign: string;
   globalAlpha: number;
   globalCompositeOperation: string;
+  /** A snapshot of the fillStyle's gradient at record time (its creation args and stops so far),
+   * or null when fillStyle is a plain colour. Lets a test see where a gradient starts and ends and
+   * what it fades through, not just that "some gradient" was used. */
+  gradient: { args: number[]; stops: [number, string][] } | null;
 }
 
 class FakeGradient {
   stops: [number, string][] = [];
+  constructor(public args: number[] = []) {}
   addColorStop(offset: number, color: string): void {
     this.stops.push([offset, color]);
   }
@@ -35,6 +40,7 @@ export class FakeContext {
   imageSmoothingEnabled = true;
 
   private record(op: string, ...args: unknown[]): void {
+    const grad = this.fillStyle instanceof FakeGradient ? this.fillStyle : null;
     this.ops.push({
       op,
       args,
@@ -44,6 +50,7 @@ export class FakeContext {
       textAlign: this.textAlign,
       globalAlpha: this.globalAlpha,
       globalCompositeOperation: this.globalCompositeOperation,
+      gradient: grad ? { args: grad.args, stops: [...grad.stops] } : null,
     });
   }
 
@@ -111,11 +118,11 @@ export class FakeContext {
   drawImage(image: unknown, ...a: number[]): void {
     this.record("drawImage", image, ...a);
   }
-  createLinearGradient(): FakeGradient {
-    return new FakeGradient();
+  createLinearGradient(...a: number[]): FakeGradient {
+    return new FakeGradient(a);
   }
-  createRadialGradient(): FakeGradient {
-    return new FakeGradient();
+  createRadialGradient(...a: number[]): FakeGradient {
+    return new FakeGradient(a);
   }
 
   /** Every drawn string, in order. */

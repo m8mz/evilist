@@ -42,6 +42,7 @@ const ROWS: Row[] = [
   ["fog radius S+ ramp", "fog.radiusSPlusRamp", 0, 6, 0.1],
   ["glow gain", "glow.gain", 0, 3, 0.05],
   ["aura S+ ramp", "aura.sPlusRamp", 0, 1, 0.01],
+  ["aura fade to", "aura.fadeTo", 0.5, 1, 0.01],
   ["seam S+ max", "seam.sPlusMax", 0, 1, 0.01],
   ["bloom strength", "bloom.strength", 0, 3, 0.05],
   ["bloom radius", "bloom.radius", 0, 1.5, 0.01],

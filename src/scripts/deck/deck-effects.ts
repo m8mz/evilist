@@ -83,7 +83,6 @@ export interface EffectsLayout {
 export class DeckEffects {
   private readonly scene: Scene;
   private readonly params: DeckParams;
-  private readonly boost: number;
   private readonly highTier: boolean;
   private readonly seamDensity: number;
   private readonly anisotropy: number;
@@ -92,7 +91,9 @@ export class DeckEffects {
   private readonly glowMats: MeshBasicMaterial[];
   private readonly glows: (Mesh | null)[];
   private readonly glowImages: (HTMLImageElement | null)[];
-  private readonly auraMats: MeshBasicMaterial[]; // the aura's own plane, one per card: violet, additive, lit only for the energetic card
+  // The aura's own plane: violet, additive, only for the ranks that ever show one (as the seam
+  // does), and even then lit only for the currently energetic card.
+  private readonly auraMats: (MeshBasicMaterial | null)[];
   private readonly auras: (Mesh | null)[];
   private readonly auraImages: (HTMLImageElement | null)[];
   private readonly seams: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[];
@@ -111,7 +112,6 @@ export class DeckEffects {
     this.scene = opts.scene;
     this.params = opts.params;
     this.kinds = opts.kinds;
-    this.boost = opts.params.glow.gain;
     this.highTier = opts.tier === "high";
     this.seamDensity = Math.min(opts.pixelRatio, SEAM_DENSITY_MAX);
     this.anisotropy = opts.anisotropy;
@@ -132,16 +132,17 @@ export class DeckEffects {
     this.glows = new Array<Mesh | null>(n).fill(null);
     this.glowImages = new Array<HTMLImageElement | null>(n).fill(null);
 
-    // Aura planes: one per card, violet and additive; only the energetic card's ever shows.
-    this.auraMats = new Array(n).fill(null).map(
-      () =>
-        new MeshBasicMaterial({
-          color: new Color(COLORS.violet),
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-          blending: AdditiveBlending,
-        }),
+    // Aura planes: only the ranks with a kind (S, S+) ever get one, same gate as the seam below.
+    this.auraMats = Array.from({ length: n }, (_, i) =>
+      this.kinds[i]
+        ? new MeshBasicMaterial({
+            color: new Color(COLORS.violet),
+            transparent: true,
+            opacity: 0,
+            depthWrite: false,
+            blending: AdditiveBlending,
+          })
+        : null,
     );
     this.auras = new Array<Mesh | null>(n).fill(null);
     this.auraImages = new Array<HTMLImageElement | null>(n).fill(null);
@@ -229,8 +230,8 @@ export class DeckEffects {
     if (this.layout) this.placeCard(index);
   }
 
-  /** A canvas the size of `image`, its mask faded out above the name plate (params.aura.fadeFrom
-   * of the height), as a texture — the glow and aura planes both use this same treatment. */
+  /** A canvas the size of `image`, darkened to nothing between params.aura.fadeFrom and fadeTo of
+   * the height, as a texture — the glow and aura planes both use this same treatment. */
   private fadedMaskTexture(image: HTMLImageElement): CanvasTexture {
     const iw = image.naturalWidth || image.width;
     const ih = image.naturalHeight || image.height;
@@ -238,7 +239,8 @@ export class DeckEffects {
     canvas.width = iw;
     canvas.height = ih;
     const ctx = canvas.getContext("2d");
-    if (ctx) paintMaskFaded(ctx, image, iw, ih, this.params.aura.fadeFrom);
+    const A = this.params.aura;
+    if (ctx) paintMaskFaded(ctx, image, iw, ih, A.fadeFrom, A.fadeTo);
     return new CanvasTexture(canvas);
   }
 
@@ -284,7 +286,7 @@ export class DeckEffects {
 
   /** Cover-fits a mask's alphaMap into w × winH, mirroring paintBody's own fit (deck-energy's coverFit). */
   private fitMask(
-    mat: MeshBasicMaterial | undefined,
+    mat: MeshBasicMaterial | null | undefined,
     image: HTMLImageElement | null,
     w: number,
     winH: number,
@@ -359,7 +361,7 @@ export class DeckEffects {
       const glow = this.glows[i];
       const mat = this.glowMats[i];
       if (c && glow && mat) {
-        const o = glowOpacity(c.phase, c.sinceLandMs, c.sinceLeaveMs, P) * this.boost;
+        const o = glowOpacity(c.phase, c.sinceLandMs, c.sinceLeaveMs, P) * P.glow.gain;
         mat.opacity = Math.min(1, o);
         glow.visible = o > VISIBLE_MIN && mat.alphaMap !== null;
       }
@@ -369,7 +371,7 @@ export class DeckEffects {
       const auraMat = this.auraMats[i];
       if (aura && auraMat) {
         const active = kind !== null && i === energyIndex;
-        const o = active ? Math.min(1, auraOpacity(kind, energy, fl.glow, P) * this.boost) : 0;
+        const o = active ? Math.min(1, auraOpacity(kind, energy, fl.glow, P) * P.glow.gain) : 0;
         auraMat.opacity = o;
         aura.visible = o > VISIBLE_MIN && auraMat.alphaMap !== null;
       }
@@ -377,7 +379,7 @@ export class DeckEffects {
       const k = this.kinds[i];
       if (c && seam && k) {
         const m = seam.material;
-        m.opacity = Math.min(1, seamOpacity(k, frame.time, P) * this.boost);
+        m.opacity = Math.min(1, seamOpacity(k, frame.time, P) * P.glow.gain);
       }
     }
 
@@ -416,7 +418,7 @@ export class DeckEffects {
       bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4 * MIPMAP;
     }
     for (const mat of this.auraMats) {
-      const img = mat.alphaMap?.image as { width?: number; height?: number } | undefined;
+      const img = mat?.alphaMap?.image as { width?: number; height?: number } | undefined;
       bytes += (img?.width ?? 0) * (img?.height ?? 0) * 4 * MIPMAP;
     }
     return bytes;
@@ -440,6 +442,7 @@ export class DeckEffects {
       m.dispose();
     }
     for (const m of this.auraMats) {
+      if (!m) continue;
       m.alphaMap?.dispose();
       m.alphaMap = null;
       m.dispose();
