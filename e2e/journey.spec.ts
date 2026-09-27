@@ -246,6 +246,114 @@ async function deckRecorded(page: Page): Promise<DeckRecording> {
 
 type DeckRecordingWindow = Window & typeof globalThis & { __deck: DeckRecording };
 
+/** Scrolls to an arbitrary fraction of the deck's own pinned span (0–1), not necessarily a rank's
+ * centre — the drive's hysteresis and boundary tests need exact fractional positions
+ * `scrollToRank`'s rank-centred math can't reach. */
+async function scrollToProgress(page: Page, progress: number) {
+  await page.evaluate(
+    ({ progress, header }) => {
+      const el = document.querySelector<HTMLElement>("[data-deck]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      const span = el.offsetHeight - (innerHeight - header);
+      scrollTo({ top: top + span * progress, behavior: "instant" });
+    },
+    { progress, header: HEADER_PX },
+  );
+}
+
+/** Lands on a settled, presented rank E with no drive transition in flight — the fixed starting
+ * point every drive test scrolls onward from. Rank 0's own centre is the one scroll position that
+ * falls inside the intro's trigger window (`targetP < 0.5 / count`), so `ready` (the stage's first
+ * rendered frame, which can still be mid-deal-in) isn't enough here: wait for `data-deck-state` to
+ * settle on "scroll" too, the same signal the intro test itself polls for. */
+async function atRankE(page: Page): Promise<void> {
+  await scrollToRank(page, 0);
+  await ready(page);
+  await expect(track(page)).toHaveAttribute("data-deck-state", "scroll", { timeout: 10_000 });
+}
+
+type RanksWindow = Window & typeof globalThis & { __ranks: string[] };
+
+/**
+ * Installs a MutationObserver on the journey's own `data-deck-rank`, from this point forward, that
+ * records only genuine value changes into `window.__ranks`. The stage re-touches the attribute on
+ * every frame its pose is still animating (energy, phase and vram all move independently of rank),
+ * even while the rank itself hasn't moved, and `setAttribute` to an unchanged value still queues a
+ * new mutation record — so a raw record count would over-report. De-duping against the last
+ * *recorded* value reconstructs the rank's true sequence and proves a jump or a queued transition
+ * changes it exactly once, at its own midpoint, with nothing landing on a rank in between.
+ */
+async function recordRanks(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>(".journey[data-deck]");
+    if (!el) throw new Error("no journey element");
+    const store: string[] = [];
+    (window as unknown as RanksWindow).__ranks = store;
+    let last = el.getAttribute("data-deck-rank");
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type !== "attributes" || record.attributeName !== "data-deck-rank") continue;
+        const value = (record.target as Element).getAttribute("data-deck-rank");
+        if (value !== null && value !== last) {
+          last = value;
+          store.push(value);
+        }
+      }
+    }).observe(el, { attributes: true, attributeFilter: ["data-deck-rank"] });
+  });
+}
+
+async function ranksRecorded(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as RanksWindow).__ranks);
+}
+
+/**
+ * Polls `data-deck-phase`/`data-deck-rank` with in-page timers (not a Node-side round trip, which
+ * would skew the sampling) every 100 ms until `targetRank` settles into "landing" or "presented", or
+ * `budgetMs` runs out. Returns the longest unbroken run of "pulling" seen along the way, in ms, so a
+ * caller can prove a threshold crossing plays its transition through rather than parking mid-pull.
+ */
+async function measureCrossing(
+  page: Page,
+  targetRank: string,
+  budgetMs = 2_500,
+): Promise<{ rank: string | null; phase: string | null; settled: boolean; maxPullingMs: number }> {
+  return page.evaluate(
+    ({ targetRank, budgetMs }) => {
+      return new Promise<{
+        rank: string | null;
+        phase: string | null;
+        settled: boolean;
+        maxPullingMs: number;
+      }>((resolve) => {
+        const el = document.querySelector<HTMLElement>("[data-deck]")!;
+        const deadline = Date.now() + budgetMs;
+        let pullingSince: number | null = null;
+        let maxPullingMs = 0;
+        const tick = () => {
+          const phase = el.getAttribute("data-deck-phase");
+          const rank = el.getAttribute("data-deck-rank");
+          const now = Date.now();
+          if (phase === "pulling") {
+            if (pullingSince === null) pullingSince = now;
+            maxPullingMs = Math.max(maxPullingMs, now - pullingSince);
+          } else {
+            pullingSince = null;
+          }
+          const settled = rank === targetRank && (phase === "landing" || phase === "presented");
+          if (settled || now > deadline) {
+            resolve({ rank, phase, settled, maxPullingMs });
+            return;
+          }
+          setTimeout(tick, 100);
+        };
+        tick();
+      });
+    },
+    { targetRank, budgetMs },
+  );
+}
+
 test.describe("the card deck", () => {
   test.beforeEach(({}, info) => {
     test.skip(info.project.name === "reduced-motion", "covered below");
@@ -341,8 +449,11 @@ test.describe("the card deck", () => {
     const [x, y] = slots[3]!;
     await page.mouse.move(stage.x + x!, stage.y + y!);
     await expect(page.locator("[data-deck-gl]")).toHaveClass(/is-pointer/);
+    await recordRanks(page);
     await page.mouse.click(stage.x + x!, stage.y + y!);
     await expect(track(page)).toHaveAttribute("data-deck-rank", "B", { timeout: 10_000 });
+    // A racked-card click is direct too: nothing else is recorded on the way to it.
+    expect(await ranksRecorded(page)).toEqual(["B"]);
   });
 
   test("a stage that arrives late paints only the rank the visitor is on, with no intro", async ({
@@ -498,6 +609,102 @@ test.describe("the card deck", () => {
   });
 });
 
+test.describe("the drive", () => {
+  test.beforeEach(({}, info) => {
+    test.skip(info.project.name !== "desktop", "the drive's timing is exercised on desktop only");
+  });
+
+  test("a threshold crossing plays in full without more scrolling", async ({ page }) => {
+    await page.goto("/");
+    await atRankE(page);
+    // (1 + 0.4) / 7 is past D's boundary and its hysteresis band both: a single instant scroll,
+    // with no further scrolling, must still land on D having played the whole transition.
+    await scrollToProgress(page, (1 + 0.4) / 7);
+    const result = await measureCrossing(page, "D");
+    expect(result.settled).toBe(true);
+    expect(result.rank).toBe("D");
+    expect(result.phase).toMatch(/^(landing|presented)$/);
+    // The transition's own duration is 900 ms; a park mid-pull would show as a much longer run.
+    expect(result.maxPullingMs).toBeLessThanOrEqual(1_500);
+  });
+
+  test("a rail jump changes the rank exactly once, at the transition's midpoint", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await atRankE(page);
+    await recordRanks(page);
+    await page.getByRole("button", { name: "Rank S+, Sr. Systems Architect" }).click();
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "S+", { timeout: 2_500 });
+    // Nothing between: no D, C, B, A or S ever became the recorded rank on the way there.
+    expect(await ranksRecorded(page)).toEqual(["S+"]);
+  });
+
+  test("scrolling ahead during a transition queues one direct transition to the new target", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await atRankE(page);
+    await recordRanks(page);
+    await scrollToRank(page, 1); // D's centre
+    await page.waitForTimeout(200); // still mid-transition: 900 ms hasn't elapsed
+    await scrollToRank(page, 4); // A's centre
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "A", { timeout: 2_500 });
+    // The first transition (to D) finishes, then one direct transition D → A plays: never C or B.
+    expect(await ranksRecorded(page)).toEqual(["D", "A"]);
+  });
+
+  test("a parked scroll never shows a half card", async ({ page }) => {
+    await page.goto("/");
+    await atRankE(page);
+    // Exactly the E|D boundary: still inside E's hysteresis band ([−0.15, 1.15) of a rank), so the
+    // deck must hold E, fully settled, not a half-pulled card.
+    await scrollToProgress(page, 1 / 7);
+    await page.waitForTimeout(1_500);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "E");
+    await expect(track(page)).toHaveAttribute("data-deck-phase", "presented");
+    // Past the boundary by more than the hysteresis: now it crosses and settles on D.
+    await scrollToProgress(page, (1 + 0.3) / 7);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "D", { timeout: 2_500 });
+    await expect(track(page)).toHaveAttribute("data-deck-phase", /^(landing|presented)$/, {
+      timeout: 2_500,
+    });
+  });
+
+  test("renders a deterministic frame frozen mid-transition, within the desktop vram ceiling at 2560 × 1440 dpr 2", async ({
+    browser,
+  }, info) => {
+    test.setTimeout(60_000);
+    const context = await browser.newContext({
+      viewport: { width: 2560, height: 1440 },
+      deviceScaleFactor: 2,
+    });
+    const p = await context.newPage();
+    await forceTier(p, "high");
+    // deck-k backdates a one-rank transition so it lands exactly at the given linear time fraction;
+    // 0.5 is its midpoint. freezeDrive only builds a transition when the settled rank is above 0, so
+    // this scrolls to S+ (a transition from S), never E.
+    await p.goto("/?deck-freeze=2026-09-25&deck-k=0.5");
+    await scrollToRank(p, 6);
+    await ready(p);
+    await expect(track(p)).toHaveAttribute("data-deck-phase", /^(pulling|leaving)$/);
+    // `data-deck-slots` is the rack's own seven layout anchors (Plan 2), not the two live print-in
+    // text slots the brief for this test names — that pairing isn't observable from the DOM as
+    // written, so this instead pins the one thing the attribute really proves here: the frozen
+    // desktop layout is still fully populated mid-transition.
+    const slots = (await track(p).getAttribute("data-deck-slots"))!.split(";");
+    expect(slots).toHaveLength(7);
+    const vram = Number(await settledVram(p));
+    info.annotations.push({
+      type: "vram at 2560 × 1440, dpr 2, frozen mid-transition",
+      description: `${vram} MB`,
+    });
+    expect(vram).toBeGreaterThan(0);
+    expect(vram).toBeLessThanOrEqual(80);
+    await context.close();
+  });
+});
+
 test.describe("the deck on a phone", () => {
   test.beforeEach(({}, info) => phoneOnly(info));
 
@@ -601,6 +808,34 @@ test.describe("the deck on a phone", () => {
     await page.touchscreen.tap(box.left + box.width * 0.5, box.top + box.height * 0.42);
     await page.waitForTimeout(400);
     await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+  });
+
+  test("a swipe moves one rank directly, and so does a tap on the peeking card", async ({
+    page,
+  }, info) => {
+    // A real touch drag needs CDP (`touchDrag`); only Chromium (`pixel-7`) has it.
+    test.skip(info.project.name !== "pixel-7", "CDP touch drags work only on Chromium");
+    await page.goto("/");
+    await scrollToRank(page, 2);
+    await ready(page);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "C");
+    const box = await phoneAnchors(page);
+    const y = box.top + box.height * 0.45;
+
+    await recordRanks(page);
+    await touchDrag(
+      page,
+      { x: box.left + box.width * 0.8, y },
+      { x: box.left + box.width * 0.2, y },
+    );
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "B", { timeout: 2_500 });
+    expect(await ranksRecorded(page)).toEqual(["B"]);
+
+    await recordRanks(page);
+    // The next card peeks in 24 px from the right edge (spec §6).
+    await page.touchscreen.tap(box.left + box.width - 18, box.top + box.height * 0.42);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "A", { timeout: 2_500 });
+    expect(await ranksRecorded(page)).toEqual(["A"]);
   });
 
   test("a tap on the presented card turns orientation tilt on, and leaving the section turns it off", async ({
@@ -751,6 +986,14 @@ test.describe("the card deck's energy", () => {
       await expect(track(page)).toHaveAttribute("data-deck-rank", rank);
       await expect(track(page)).toHaveAttribute("data-deck-energy", "0.00");
     }
+    // Energy still ramps inside S+, not just at its very end: (6 + 0.2) / 7 sits well inside S+'s
+    // own stretch (past the hysteresis band, which still holds S at (6 + 0.1) / 7), settled and
+    // presented, with the ramp roughly a third of the way through S+'s own energy window.
+    await scrollToProgress(page, (6 + 0.2) / 7);
+    await expect(track(page)).toHaveAttribute("data-deck-rank", "S+", { timeout: 2_500 });
+    await expect(track(page)).toHaveAttribute("data-deck-phase", "presented", { timeout: 2_500 });
+    const midEnergy = Number(await track(page).getAttribute("data-deck-energy"));
+    expect(midEnergy).toBeLessThanOrEqual(0.5);
     await scrollToEnd(page);
     await expect
       .poll(async () => Number(await track(page).getAttribute("data-deck-energy")))
@@ -758,32 +1001,6 @@ test.describe("the card deck's energy", () => {
     const vram = Number(await track(page).getAttribute("data-deck-vram"));
     expect(vram).toBeGreaterThan(0);
     expect(vram).toBeLessThanOrEqual(info.project.name === "desktop" ? 80 : 40);
-  });
-
-  test("stays under the desktop ceiling at the end of S+ on a 2560 × 1440 display at dpr 2", async ({
-    browser,
-  }, info) => {
-    test.skip(info.project.name !== "desktop", "a desktop display");
-    test.setTimeout(60_000);
-    const context = await browser.newContext({
-      viewport: { width: 2560, height: 1440 },
-      deviceScaleFactor: 2,
-    });
-    const p = await context.newPage();
-    await forceTier(p, "high");
-    // Frozen: the mount waits for every mask and the bloom before its one frame. A live mount
-    // renders a 5120 × 2752 canvas every frame, which under the suite's parallel load can hold the
-    // bloom's arrival past the default wait.
-    await p.goto(FROZEN);
-    await scrollToEnd(p);
-    await ready(p);
-    await expect(track(p)).toHaveAttribute("data-deck-rank", "S+");
-    await expect(track(p)).toHaveAttribute("data-deck-bloom", "on");
-    const vram = Number(await settledVram(p));
-    info.annotations.push({ type: "vram at 2560 × 1440, dpr 2", description: `${vram} MB` });
-    expect(vram).toBeGreaterThan(0);
-    expect(vram).toBeLessThanOrEqual(80);
-    await context.close();
   });
 
   test("keeps the canvas transparent where energy is silent, and shows only a partial halo where it isn't", async ({
