@@ -10,6 +10,7 @@ export interface Op {
   strokeStyle: string;
   textAlign: string;
   globalAlpha: number;
+  globalCompositeOperation: string;
 }
 
 class FakeGradient {
@@ -28,6 +29,7 @@ export class FakeContext {
   textAlign = "left";
   textBaseline = "alphabetic";
   globalAlpha = 1;
+  globalCompositeOperation = "source-over";
   shadowColor = "transparent";
   shadowBlur = 0;
   imageSmoothingEnabled = true;
@@ -41,6 +43,7 @@ export class FakeContext {
       strokeStyle: typeof this.strokeStyle === "string" ? this.strokeStyle : "gradient",
       textAlign: this.textAlign,
       globalAlpha: this.globalAlpha,
+      globalCompositeOperation: this.globalCompositeOperation,
     });
   }
 

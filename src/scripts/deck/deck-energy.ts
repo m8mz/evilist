@@ -66,40 +66,61 @@ export function seamOpacity(
 /** k keeps the demo's proportions at any card size (spec §8, "Glow"). */
 export const proportion = (cardWPx: number): number => cardWPx / 260;
 
-export function glowSpriteScale(
-  kind: EnergyKind,
-  energy: number,
-  cardWPx: number,
-  params: DeckParams = DECK_PARAMS,
-): number {
-  const G = params.glow;
-  const k = proportion(cardWPx);
-  return (kind === "S" ? G.scaleS : G.scaleSPlusBase + G.scaleSPlusRamp * energy) * k;
-}
-
 export interface FogLevel {
   radius: number;
   strength: number;
 }
 
+/** The far fog's radius and strength; `cardWPx` keeps the demo's proportions at any card size,
+ * the same way `proportion` scales the rest of the energy (deck spec §8, "Fog"). */
 export function fogFor(
   kind: EnergyKind | null,
   energy: number,
   kick: number,
+  cardWPx: number,
   params: DeckParams = DECK_PARAMS,
 ): FogLevel {
   if (!kind) return { radius: 0, strength: 0 };
   const F = params.fog;
+  const k = proportion(cardWPx);
   if (kind === "S") {
     // S's fixed strength grows with the pull (its energy reaches energy.s once landed), not a pop.
     const s = params.energy.s;
     const ramp = s > 0 ? Math.min(1, Math.max(0, energy / s)) : 1;
-    return { radius: F.radiusS, strength: F.strengthS * ramp + kick };
+    return { radius: F.radiusS * k, strength: F.strengthS * ramp + kick };
   }
   return {
-    radius: F.radiusSPlusBase + F.radiusSPlusRamp * energy,
+    radius: (F.radiusSPlusBase + F.radiusSPlusRamp * energy) * k,
     strength: F.strengthSPlus * energy + kick,
   };
+}
+
+/**
+ * The aura's opacity (deck spec §8 as amended by Plan 5): a thin violet rim that follows the
+ * energetic card's silhouette. S holds at `aura.s` once it reaches its own full energy; S+ ramps
+ * from `aura.sPlusBase` by `aura.sPlusRamp` × energy. The landing flare multiplies both, and the
+ * result is clamped to 1 so the caller's own gain (`params.glow.gain`) can still push it further.
+ */
+export function auraOpacity(
+  kind: EnergyKind | null,
+  energy: number,
+  flareGlow: number,
+  params: DeckParams = DECK_PARAMS,
+): number {
+  const A = params.aura;
+  const raw =
+    kind === "S"
+      ? ((A.s * energy) / params.energy.s) * flareGlow
+      : kind === "S+"
+        ? (A.sPlusBase + A.sPlusRamp * energy) * flareGlow
+        : 0;
+  return Math.min(1, raw);
+}
+
+/** Continuous smoke only emits while a card is landing or presented; a leaving (or pulled-back)
+ * card's landing burst still plays out, but no more puffs spawn behind it. */
+export function smokeActive(phase: CardPhase): boolean {
+  return phase === "landing" || phase === "presented";
 }
 
 export function smokeRate(

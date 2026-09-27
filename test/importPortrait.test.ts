@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import sharp from "sharp";
 import { afterEach, describe, expect, it } from "vitest";
-import { glowMask, importPortrait, isViolet } from "../scripts/import-portrait.mjs";
+import { auraMask, glowMask, importPortrait, isViolet } from "../scripts/import-portrait.mjs";
 
 let dir: string | undefined;
 const tmp = () => (dir = mkdtempSync(join(tmpdir(), "portrait-")));
@@ -68,8 +68,35 @@ describe("glowMask", () => {
   });
 });
 
+describe("auraMask", () => {
+  it("bands the figure's silhouette, leaving the figure and the far field clear", async () => {
+    const d = tmp();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#191919"/><rect x="300" y="150" width="300" height="450" fill="#2b2724"/></svg>`;
+    await sharp(Buffer.from(svg)).png().toFile(join(d, "figure.png"));
+    const { mask, width, figureShare } = await auraMask(join(d, "figure.png"));
+    expect(width).toBe(400);
+    const expected = ((300 * 450) / (900 * 600)) * 100;
+    expect(figureShare).toBeGreaterThan(expected - 1);
+    expect(figureShare).toBeLessThan(expected + 1);
+    const at = (x: number, y: number) => mask[y * width + x]!;
+    expect(at(200, 250)).toBe(0); // the figure's own centre
+    expect(at(20, 20)).toBe(0); // far into the field, well outside the rim
+    expect(at(128, 250)).toBeGreaterThan(40); // 6 px outside the figure's left edge: inside the rim
+  });
+
+  it("keeps a field-coloured hole inside the figure as figure, since the flood fill never reaches it", async () => {
+    const d = tmp();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600"><rect width="900" height="600" fill="#191919"/><rect x="300" y="150" width="300" height="450" fill="#2b2724"/><rect x="400" y="300" width="60" height="60" fill="#191919"/></svg>`;
+    await sharp(Buffer.from(svg)).png().toFile(join(d, "hole.png"));
+    const { mask, width, height } = await auraMask(join(d, "hole.png"));
+    const hx = Math.round(430 * (width / 900));
+    const hy = Math.round(330 * (height / 600));
+    expect(mask[hy * width + hx]).toBe(0);
+  });
+});
+
 describe("importPortrait", () => {
-  it("writes the 1600 px source and the blurred mask, never enlarging", async () => {
+  it("writes the 1600 px source, the blurred glow mask and the aura mask, never enlarging", async () => {
     const d = tmp();
     await render(join(d, "in.png"), 1.5);
     const result = await importPortrait(join(d, "in.png"), "linux-engineer", {
@@ -79,6 +106,7 @@ describe("importPortrait", () => {
     expect(result.files).toEqual([
       join(d, "linux-engineer.webp"),
       join(d, "linux-engineer-glow.webp"),
+      join(d, "linux-engineer-aura.webp"),
     ]);
     const source = await sharp(join(d, "linux-engineer.webp")).metadata();
     expect(source.format).toBe("webp");
@@ -90,6 +118,9 @@ describe("importPortrait", () => {
     // Mostly black with a soft bright patch: the mean is low, the max is white.
     expect(channels[0]!.mean).toBeLessThan(20);
     expect(channels[0]!.max).toBe(255);
+    const aura = await sharp(join(d, "linux-engineer-aura.webp")).metadata();
+    expect(aura.width).toBe(400);
+    expect(aura.height).toBe(267);
   });
 
   it("keys a white field to the graphite fill and keeps whites enclosed by the subject", async () => {
@@ -146,8 +177,10 @@ describe("importPortrait", () => {
     // The rejected render is kept aside to look at, never under the live name.
     expect(existsSync(join(d, "linux-engineer.rejected.webp"))).toBe(true);
     expect(existsSync(join(d, "linux-engineer-glow.rejected.webp"))).toBe(true);
+    expect(existsSync(join(d, "linux-engineer-aura.rejected.webp"))).toBe(true);
     expect(existsSync(join(d, "linux-engineer.webp"))).toBe(false);
     expect(existsSync(join(d, "linux-engineer-glow.webp"))).toBe(false);
+    expect(existsSync(join(d, "linux-engineer-aura.webp"))).toBe(false);
   });
 
   it("runs as a CLI and reads the band from deck-glow-bands.json", async () => {

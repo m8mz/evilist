@@ -478,3 +478,19 @@ Batch 19 results: 957b05f7 on graphite, glow 0.04% — PASS (E candidate); 3ceb2
 | S+   | systems-architect     | 5c67c2fc-879e-4e83-a79a-bf69b90bd49f | 6.90% |
 
 All seven on the graphite field with true black cloth, no seam, imported with `node scripts/import-portrait.mjs <render> <stage-id>` into `src/images/deck/` (sources 29–44 KB, masks under 3 KB). Spend for Plan 0: 8 sheets at 2K and 63 portraits at 4K, about 320 credits. Element `deck-character` de47c220-a3b1-4d39-8ada-ce7d9b9853bd stays for later re-rolls.
+
+### Step 7 — the aura mask (Plan 5, 2026-09-26)
+
+Not a render: the aura that hugs the character's silhouette (replacing the halo sprite) is derived
+from the already-imported portrait, not from a new Higgsfield job. `auraMask` in
+`scripts/import-portrait.mjs` flood-fills the graphite field from the image's borders (reusing
+`KEY.fill`, tolerance 14); whatever the flood fill never reaches — the figure, and any
+field-coloured pixel it encloses (an eye, a badge) — counts as figure. The mask is that figure
+dilated by 3.5% of the 400 px width, minus the figure itself, blurred: a soft band that traces the
+outline rather than filling it. `importPortrait` writes `<id>-aura.webp` alongside the source and
+the glow mask; `scripts/aura-mask.mjs <stage-id>|--all` regenerates just the aura file from an
+already-imported portrait, for re-tuning without a new render. Generated for all seven ranks
+2026-09-26: 2.5–6.9 KB each, all under the 10 KB budget. Three (`linux-engineer`, `web-concierge`,
+`professional-services`) show visible background speckle from webp compression grain in the
+graphite field pushing isolated pixels past the tolerance — a tuning-phase concern, not a build
+break; `t1-support`, `t3-support`, `sysadmin` and `systems-architect` trace cleanly.

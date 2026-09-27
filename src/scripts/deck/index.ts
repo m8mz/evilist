@@ -107,6 +107,7 @@ export function initDeck(): void {
       x1: b.dataset["portrait-1x"] ?? null,
       x2: b.dataset["portrait-2x"] ?? null,
       glow: b.dataset.glow ?? null,
+      aura: b.dataset.aura ?? null,
     }));
 
     const onState = (state: StageState) => {

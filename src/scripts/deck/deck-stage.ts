@@ -38,6 +38,7 @@ export interface StagePortrait {
   x1: string | null;
   x2: string | null;
   glow: string | null;
+  aura: string | null;
 }
 
 export interface StageState {
@@ -272,7 +273,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   const portraitLoads = opts.portraits.map((p, i) =>
     loadImage(pickRendition(dpr, p.x1, p.x2)).then((img) => {
       if (img) textures.setPortrait(i, img);
-      return loadImage(p.glow).then((g) => effects.setGlow(i, g)); // glow-mask planes
+      return Promise.all([
+        loadImage(p.glow).then((g) => effects.setGlow(i, g)), // the eye-tinted glow mask
+        loadImage(p.aura).then((a) => effects.setAura(i, a)), // the silhouette's violet rim
+      ]);
     }),
   );
   const markLoad = loadImage(opts.markUrl).then((img) => textures.setMark(img));

@@ -11,14 +11,13 @@ import {
   paintBody,
   paintChip,
   paintFrame,
+  paintMaskFaded,
   paintPlaceholder,
   paintPuff,
-  paintRadial,
   paintSeam,
   paintText,
   PRINT_STEPS,
   PUFF_SIZE,
-  RADIAL_SIZE,
   cardModel,
   setDeckFontFamily,
   wrapText,
@@ -345,7 +344,22 @@ describe("paintText", () => {
   });
 });
 
-describe("paintPuff, paintRadial, paintSeam", () => {
+describe("paintMaskFaded", () => {
+  it("draws the mask once, fades it under destination-in, and restores source-over after", () => {
+    const ctx = fakeContext();
+    const img = fakeImage(400, 267);
+    paintMaskFaded(ctx, img, 400, 267, 0.72);
+    expect(ctx.ops[0]?.op).toBe("clearRect");
+    const draws = ctx.ops.filter((o) => o.op === "drawImage");
+    expect(draws).toHaveLength(1);
+    expect(draws[0]!.args).toEqual([img, 0, 0, 400, 267]);
+    const fade = ctx.ops.find((o) => o.op === "fillRect" && o.fillStyle === "gradient")!;
+    expect(fade.globalCompositeOperation).toBe("destination-in");
+    expect(ctx.globalCompositeOperation).toBe("source-over");
+  });
+});
+
+describe("paintPuff, paintSeam", () => {
   it("paints a puff as nine soft white blobs on a cleared square", () => {
     const ctx = fakeContext();
     paintPuff(ctx, PUFF_SIZE, mulberry32(1));
@@ -369,12 +383,6 @@ describe("paintPuff, paintRadial, paintSeam", () => {
     paintPuff(c, PUFF_SIZE, mulberry32(1));
     expect(JSON.stringify(a.ops)).not.toBe(JSON.stringify(b.ops));
     expect(JSON.stringify(a.ops)).toBe(JSON.stringify(c.ops));
-  });
-  it("paints a radial disc from the colour to transparent, filling the whole square", () => {
-    const ctx = fakeContext();
-    paintRadial(ctx, RADIAL_SIZE, COLORS.violet, 1);
-    const fills = ctx.rects("fillRect");
-    expect(fills).toEqual([{ x: 0, y: 0, w: RADIAL_SIZE, h: RADIAL_SIZE, color: "gradient" }]);
   });
   it("paints the seam as one violet rounded outline 6 px in at the card's scale", () => {
     const ctx = fakeContext();

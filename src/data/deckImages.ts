@@ -13,3 +13,6 @@ export const deckPortrait = (id: string): ImageMetadata | undefined =>
 
 export const deckGlow = (id: string): ImageMetadata | undefined =>
   files[`../images/deck/${id}-glow.webp`];
+
+export const deckAura = (id: string): ImageMetadata | undefined =>
+  files[`../images/deck/${id}-aura.webp`];

@@ -20,6 +20,12 @@ describe("deck params", () => {
     expect(DECK_PARAMS.camera.fov).toBe(26);
     expect(DECK_PARAMS.energy.sPlusRamp).toBe(0.75);
     expect(DECK_PARAMS.smoke.pool).toBe(140);
+    expect(DECK_PARAMS.aura.s).toBe(0.45);
+    expect(DECK_PARAMS.aura.sPlusBase).toBe(0.55);
+    expect(DECK_PARAMS.aura.sPlusRamp).toBe(0.45);
+    expect(DECK_PARAMS.aura.fadeFrom).toBe(0.72);
+    expect(DECK_PARAMS.glow.gain).toBe(1.2);
+    expect(DECK_PARAMS.glow.flareScale).toBe(1.4);
     expect(DECK_PARAMS.bloom.strength).toBe(0.45);
     expect(DECK_PARAMS.gestures.swipeMinPx).toBe(40);
     expect(DECK_PARAMS.gestures.tapSlopPx).toBe(8);

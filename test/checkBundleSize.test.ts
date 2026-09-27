@@ -49,13 +49,13 @@ function withBloom(dist: string, bytes = 5 * 1024, name = "deck-bloom.abc.js"): 
 function withPortraits(dist: string): void {
   const index = join(dist, "dist/client/index.html");
   const button =
-    '<button data-deck-rank data-portrait-1x="/_astro/r.1x.webp" data-portrait-2x="/_astro/r.2x.webp" data-glow="/_astro/r.g.webp"></button>';
+    '<button data-deck-rank data-portrait-1x="/_astro/r.1x.webp" data-portrait-2x="/_astro/r.2x.webp" data-glow="/_astro/r.g.webp" data-aura="/_astro/r.a.webp"></button>';
   const html = readFileSync(index, "utf8");
   writeFileSync(
     index,
     html.includes("</body>") ? html.replace("</body>", `${button}</body>`) : html + button,
   );
-  for (const name of ["r.1x.webp", "r.2x.webp", "r.g.webp"]) {
+  for (const name of ["r.1x.webp", "r.2x.webp", "r.g.webp", "r.a.webp"]) {
     writeFileSync(join(dist, "dist/client/_astro", name), Buffer.alloc(1_000));
   }
 }
@@ -258,17 +258,23 @@ describe("check-bundle-size", () => {
     writeFileSync(join(dist, "dist/client/_astro/deck-bloom.abc.js"), "x".repeat(2_000));
     const html = readFileSync(join(dist, "dist/client/index.html"), "utf8").replace(
       "</body>",
-      `<button data-deck-rank data-portrait-1x="/_astro/e.1x.webp" data-portrait-2x="/_astro/e.2x.webp" data-glow="/_astro/e.g.webp"></button></body>`,
+      `<button data-deck-rank data-portrait-1x="/_astro/e.1x.webp" data-portrait-2x="/_astro/e.2x.webp" data-glow="/_astro/e.g.webp" data-aura="/_astro/e.a.webp"></button></body>`,
     );
     writeFileSync(join(dist, "dist/client/index.html"), html);
     writeFileSync(join(dist, "dist/client/_astro/e.1x.webp"), Buffer.alloc(30_000));
     writeFileSync(join(dist, "dist/client/_astro/e.2x.webp"), Buffer.alloc(100_000));
     writeFileSync(join(dist, "dist/client/_astro/e.g.webp"), Buffer.alloc(5_000));
+    writeFileSync(join(dist, "dist/client/_astro/e.a.webp"), Buffer.alloc(4_000));
     let out = run(dist);
     expect(out.status).toBe(0);
     expect(out.stdout).toMatch(/ok {3}Portraits 1x \(largest\): 29\.3 KB \(budget 40 KB\)/);
     expect(out.stdout).toMatch(/ok {3}Portraits 2x \(largest\): 97\.7 KB \(budget 120 KB\)/);
-    expect(out.stdout).toMatch(/ok {3}Glow masks \(largest\): 4\.9 KB \(budget 10 KB\)/);
+    // The row takes the larger of the glow and aura masks (5 KB here, not the aura's 4 KB).
+    expect(out.stdout).toMatch(/ok {3}Portrait masks \(max\): 4\.9 KB \(budget 10 KB\)/);
+    // Now the aura is the larger of the two: the row tracks it instead.
+    writeFileSync(join(dist, "dist/client/_astro/e.a.webp"), Buffer.alloc(9_000));
+    out = run(dist);
+    expect(out.stdout).toMatch(/ok {3}Portrait masks \(max\): 8\.8 KB \(budget 10 KB\)/);
     writeFileSync(join(dist, "dist/client/_astro/e.2x.webp"), Buffer.alloc(130_000));
     out = run(dist);
     expect(out.status).toBe(1);

@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  auraOpacity,
   burstCount,
   coverFit,
   flare,
   fogFor,
   GLOW_LEAVE_MS,
   glowOpacity,
-  glowSpriteScale,
   seamOpacity,
+  smokeActive,
   smokeRate,
   smokeSideSpeed,
 } from "../src/scripts/deck/deck-energy";
@@ -75,25 +76,51 @@ describe("seamOpacity", () => {
   });
 });
 
-describe("glowSpriteScale", () => {
-  it("scales with the card, 4.2k at S and 7k to 16k at S+", () => {
-    expect(glowSpriteScale("S", 1, 260, P)).toBeCloseTo(P.glow.scaleS, 6);
-    expect(glowSpriteScale("S+", 0, 520, P)).toBeCloseTo(P.glow.scaleSPlusBase * 2, 6);
-    expect(glowSpriteScale("S+", 1, 260, P)).toBeCloseTo(
-      P.glow.scaleSPlusBase + P.glow.scaleSPlusRamp,
-      6,
-    );
+describe("fogFor", () => {
+  it("has no fog without a kind, a fixed fog at S that ramps in with its energy and a growing one at S+", () => {
+    expect(fogFor(null, 1, 0, 260, P)).toEqual({ radius: 0, strength: 0 });
+    expect(fogFor("S", 0.3, 0, 260, P)).toEqual({
+      radius: P.fog.radiusS,
+      strength: P.fog.strengthS,
+    });
+    expect(fogFor("S", P.energy.s / 2, 0, 260, P).strength).toBeCloseTo(P.fog.strengthS / 2, 9);
+    const full = fogFor("S+", 1, 0.2, 260, P);
+    expect(full.radius).toBeCloseTo(P.fog.radiusSPlusBase + P.fog.radiusSPlusRamp, 6);
+    expect(full.strength).toBeCloseTo(P.fog.strengthSPlus + 0.2, 6);
+  });
+
+  it("keeps the spec's numbers at the demo's 260 px card and doubles the radius at 520", () => {
+    const at260 = fogFor("S+", 1, 0, 260, P);
+    const at520 = fogFor("S+", 1, 0, 520, P);
+    expect(at520.radius).toBeCloseTo(at260.radius * 2, 6);
+    expect(at520.strength).toBeCloseTo(at260.strength, 6); // strength doesn't scale with the card
   });
 });
 
-describe("fogFor", () => {
-  it("has no fog without a kind, a fixed fog at S that ramps in with its energy and a growing one at S+", () => {
-    expect(fogFor(null, 1, 0, P)).toEqual({ radius: 0, strength: 0 });
-    expect(fogFor("S", 0.3, 0, P)).toEqual({ radius: P.fog.radiusS, strength: P.fog.strengthS });
-    expect(fogFor("S", P.energy.s / 2, 0, P).strength).toBeCloseTo(P.fog.strengthS / 2, 9);
-    const full = fogFor("S+", 1, 0.2, P);
-    expect(full.radius).toBeCloseTo(P.fog.radiusSPlusBase + P.fog.radiusSPlusRamp, 6);
-    expect(full.strength).toBeCloseTo(P.fog.strengthSPlus + 0.2, 6);
+describe("auraOpacity", () => {
+  it("is 0 without a kind", () => {
+    expect(auraOpacity(null, 1, 1, P)).toBe(0);
+  });
+  it("gives S its aura.s at S's own full energy", () => {
+    expect(auraOpacity("S", P.energy.s, 1, P)).toBeCloseTo(P.aura.s, 6);
+  });
+  it("ramps S+ from its base with energy", () => {
+    expect(auraOpacity("S+", 0, 1, P)).toBeCloseTo(P.aura.sPlusBase, 6);
+    expect(auraOpacity("S+", 1, 1, P)).toBeCloseTo(P.aura.sPlusBase + P.aura.sPlusRamp, 6);
+  });
+  it("is multiplied by the landing flare and clamped to 1", () => {
+    expect(auraOpacity("S+", 0, 1.4, P)).toBeCloseTo(P.aura.sPlusBase * 1.4, 6);
+    expect(auraOpacity("S+", 1, 10, P)).toBe(1);
+  });
+});
+
+describe("smokeActive", () => {
+  it("is active only while landing or presented", () => {
+    expect(smokeActive("landing")).toBe(true);
+    expect(smokeActive("presented")).toBe(true);
+    expect(smokeActive("racked")).toBe(false);
+    expect(smokeActive("pulling")).toBe(false);
+    expect(smokeActive("leaving")).toBe(false);
   });
 });
 

@@ -414,7 +414,6 @@ export function paintText(
 }
 
 export const PUFF_SIZE = 256;
-export const RADIAL_SIZE = 128;
 
 /**
  * A smoke puff (spec §8): nine overlapping soft blobs, white on transparent so the sprite's colour
@@ -441,17 +440,25 @@ export function paintPuff(ctx: Ctx, size: number, rng: () => number): void {
   }
 }
 
-/** A soft disc: `color` at `innerAlpha` in the centre to transparent at the edge (glow, shadow). */
-export function paintRadial(ctx: Ctx, size: number, color: string, innerAlpha: number): void {
-  ctx.clearRect(0, 0, size, size);
-  const c = size / 2;
-  const g = ctx.createRadialGradient(c, c, 0, c, c, c);
-  const rgb = hexToRgb(color);
-  g.addColorStop(0, `rgba(${rgb},${innerAlpha})`);
-  g.addColorStop(0.5, `rgba(${rgb},${innerAlpha * 0.35})`);
-  g.addColorStop(1, `rgba(${rgb},0)`);
+/** Draws a mask image over the whole canvas and fades it out from `fadeFrom` of the height to the
+ *  bottom, so no glow sits on the name plate (spec §8 as amended by Plan 5). */
+export function paintMaskFaded(
+  ctx: Ctx,
+  image: CanvasImageSource,
+  w: number,
+  h: number,
+  fadeFrom: number,
+): void {
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(image, 0, 0, w, h);
+  ctx.globalCompositeOperation = "destination-in";
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, "rgba(0,0,0,1)");
+  g.addColorStop(Math.max(0, Math.min(1, fadeFrom)), "rgba(0,0,0,1)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, size, size);
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = "source-over";
 }
 
 /** The S and S+ backs' seam (spec §5): a 1.5 px violet rounded outline 6 px in, at the card's scale. */
@@ -478,9 +485,4 @@ export function paintSeam(ctx: Ctx, w: number, h: number): void {
   ctx.arc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5);
   ctx.closePath();
   ctx.stroke();
-}
-
-function hexToRgb(hex: string): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
 }

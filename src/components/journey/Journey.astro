@@ -15,7 +15,7 @@ import markUrl from "../../images/devil-mark.svg?url&no-inline";
 import JourneyTimeline from "./JourneyTimeline.astro";
 import RankChip from "../ui/RankChip.astro";
 import { career } from "../../data/career";
-import { deckGlow, deckPortrait } from "../../data/deckImages";
+import { deckAura, deckGlow, deckPortrait } from "../../data/deckImages";
 
 /** The build date: every tenure and XP figure is computed against it, in the twin and the stage. */
 const now = new Date().toISOString().slice(0, 10);
@@ -25,12 +25,14 @@ const renditions = await Promise.all(
     const source = deckPortrait(stage.id);
     if (!source) return null;
     const glow = deckGlow(stage.id);
-    const [x1, x2, mask] = await Promise.all([
+    const aura = deckAura(stage.id);
+    const [x1, x2, mask, auraMask] = await Promise.all([
       getImage({ src: source, width: 400, format: "webp" }),
       getImage({ src: source, width: 800, format: "webp" }),
       glow ? getImage({ src: glow, width: 400, format: "webp" }) : Promise.resolve(null),
+      aura ? getImage({ src: aura, width: 400, format: "webp" }) : Promise.resolve(null),
     ]);
-    return { x1: x1.src, x2: x2.src, glow: mask?.src ?? null };
+    return { x1: x1.src, x2: x2.src, glow: mask?.src ?? null, aura: auraMask?.src ?? null };
   }),
 );
 ---
@@ -65,6 +67,7 @@ const renditions = await Promise.all(
             data-portrait-1x={renditions[i]?.x1}
             data-portrait-2x={renditions[i]?.x2}
             data-glow={renditions[i]?.glow ?? undefined}
+            data-aura={renditions[i]?.aura ?? undefined}
             aria-pressed={i === 0 ? "true" : "false"}
             aria-label={`Rank ${stage.rankLabel}, ${stage.shortTitle ?? stage.title}`}
             tabindex={i === 0 ? 0 : -1}

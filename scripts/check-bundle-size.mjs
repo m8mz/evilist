@@ -9,9 +9,9 @@
 //   excluded from the deck row above it.
 // - Journey scene: only scene.svg may live in dist/client/journey, gzipped within its budget
 //   (until Phase 6 retires it).
-// - Served portrait renditions: the largest 1x/2x rendition and glow mask the home page's rail
-//   buttons reference (data-portrait-1x/2x/glow), raw bytes (already-compressed webp). A home page
-//   that references none fails.
+// - Served portrait renditions: the largest 1x/2x rendition and the largest mask (glow or aura) the
+//   home page's rail buttons reference (data-portrait-1x/2x, data-glow, data-aura), raw bytes
+//   (already-compressed webp). A home page that references none fails.
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -124,13 +124,15 @@ if (existsSync(scenePath)) {
 }
 
 const PORTRAIT_CLASSES = [
-  ["Portraits 1x (largest)", /data-portrait-1x="([^"]+)"/g, BUDGETS.portrait1x],
-  ["Portraits 2x (largest)", /data-portrait-2x="([^"]+)"/g, BUDGETS.portrait2x],
-  ["Glow masks (largest)", /data-glow="([^"]+)"/g, BUDGETS.glow],
+  ["Portraits 1x (largest)", [/data-portrait-1x="([^"]+)"/g], BUDGETS.portrait1x],
+  ["Portraits 2x (largest)", [/data-portrait-2x="([^"]+)"/g], BUDGETS.portrait2x],
+  // Both masks (the eye-tinted glow and the silhouette's aura) share one row and one budget: each
+  // rendition is a 400 px single-channel webp, so the same 10 KB ceiling applies to either.
+  ["Portrait masks (max)", [/data-glow="([^"]+)"/g, /data-aura="([^"]+)"/g], BUDGETS.glow],
 ];
 let anyPortraits = false;
-for (const [name, re, budget] of PORTRAIT_CLASSES) {
-  const paths = [...home.matchAll(re)].map((m) => m[1]);
+for (const [name, regexes, budget] of PORTRAIT_CLASSES) {
+  const paths = regexes.flatMap((re) => [...home.matchAll(re)].map((m) => m[1]));
   if (!paths.length) continue;
   anyPortraits = true;
   let largest = 0;

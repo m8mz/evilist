@@ -4,7 +4,7 @@
 // seeded simulation and two latches, sharing only params and the frame with the rest of the energy.
 import { CanvasTexture, Color, Sprite, SpriteMaterial, SRGBColorSpace } from "three";
 import type { Scene, Texture } from "three";
-import { burstCount, smokeRate, smokeSideSpeed } from "./deck-energy";
+import { burstCount, smokeActive, smokeRate, smokeSideSpeed } from "./deck-energy";
 import type { EffectCard, EffectsFrame } from "./deck-effects";
 import { COLORS, paintPuff, PUFF_SIZE } from "./deck-paint";
 import type { DeckParams } from "./deck-params";
@@ -125,7 +125,9 @@ export class SmokeSprites {
       this.pool.spawn(this.emitter, burstCount(kind, P), smokeSideSpeed(kind, energy, P), P.smoke);
     }
 
-    if (kind && energetic && frame.frames > 0) {
+    // Continuous emission gates on the energetic card's own phase: it stops the moment a card
+    // starts leaving (or is pulled back out), while the landing burst above still plays out.
+    if (kind && energetic && frame.frames > 0 && smokeActive(energetic.phase)) {
       this.pointEmitter(energetic);
       this.pool.emit(
         this.emitter,
