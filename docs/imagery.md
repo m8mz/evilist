@@ -481,31 +481,22 @@ All seven on the graphite field with true black cloth, no seam, imported with `n
 
 ### Step 7 — the aura mask (Plan 5, 2026-09-26)
 
-Not a render: the aura that hugs the character's silhouette (replacing the halo sprite) is derived
-from the already-imported portrait, not from a new Higgsfield job. `auraMask` in
-`scripts/aura-mask.mjs` estimates the field's tone as the median of the image's one-pixel border
-ring (not an assumed fixed value), flood-fills from the borders over grey pixels within `tolerance`
-of that tone, and reduces whatever the flood never reaches to its largest 4-connected component (so
-grain specks and detached blocks the tone can't rule out on their own drop out, while an enclosed
-gap inside the figure — an eye, a badge — stays, since it shares a component with the body around
-it). The mask is that figure dilated by 3.5% of the 400 px width, minus the figure itself, blurred: a
-soft band that traces the outline rather than filling it. `writeAuraMask` is the one place both
-`importPortrait` (on the lossless prepared render) and `scripts/aura-mask.mjs <stage-id>|--all` (on
-an already-served portrait, for re-tuning without a new render) encode the mask, so the two paths
-can't drift apart.
+Not a render, and not colour-derived: the aura that hugs the character's silhouette (replacing the
+halo sprite) comes from Higgsfield's background remover run once per picked portrait (the project's
+own art pipeline), because no colour rule can find an edge where the character's black cloth meets
+the graphite field at the same tone — round 0 (a fixed graphite value) and round 1 (a measured field
+tone, a tighter tolerance, and a largest-component filter) both failed on the ranks that actually show
+the aura: S lost bands inside the coat, S+ lost most of its torso, A was reduced to the laptop and
+arms, D to the head.
 
-**2026-09-26, fix round 1** (`task-4-review.md` Important #1): the first pass (tolerance 14 around a
-hard-coded graphite value, no component filter) was defective — whole background blocks lit on
-`linux-engineer` and `professional-services`, solid interior blobs on `sysadmin`, `t3-support` and
-`web-concierge`, means of 87–200/255 where a rim should be under 20. The tone estimate, the tighter
-tolerance (10) and the component filter above fixed the block-lighting and blob-filling faults and
-substantially reduced every mask (now 16.6–67.0/255 mean; sizes 1.4–4.3 KB, all under the 10 KB
-budget). Two renders — `linux-engineer` and `professional-services` — still exceed the target of
-mean < 20/255: their coat's rendered colour sits within a few RGB units of the graphite field itself
-(sampled directly: `linux-engineer`'s shoulder reads RGB(33,32,37)/(37,34,37) against a field of
-RGB(38,35,38)), so the flood still reaches into the coat and the mask falls back to tracing the line
-art there rather than a filled silhouette. No single global colour-tolerance flood — grey or RGB —
-can separate two regions that close in raw colour; `test/auraMask.test.ts`'s committed-mask test
-holds an interim ceiling (mean < 70, bright share < 30%) with the full diagnosis in a comment,
-pending a decision: re-render those two with more contrast between coat and field, or a different
-masking approach.
+Jobs (background-remove, 2026-09-26, 7 jobs): E `00b30bb3-8a7d-4311-abcc-9f784b031ae3`, D
+`e0c22546-cc16-4552-b00d-d1713ec8f6f6`, C `40258119-120a-4024-8892-ae1674b362b2`, B
+`e8971301-221f-4357-bb6c-f0530da226c2`, A `10108adc-42bb-45da-9419-49315189ee9c`, S
+`0c4f4f0b-4b20-4e21-b80b-792ab524c1d6`, S+ `3e668034-8559-4af5-bb5b-93761ee13509`. E, D and B ran on
+the served 1600 px portraits uploaded as media, because the remover refused those three generation
+IDs. Each cutout's alpha channel is the silhouette: `scripts/aura-mask.mjs --cutout <cutout.png>
+<id>` commits it at 800 px as `art/deck/<id>-silhouette.png` (`silhouetteFromCutout`) and derives the
+aura from it (`auraMask`, `writeAuraMask`): threshold the silhouette at 128, dilate the figure by
+`rim` (0.025) of the 400 px width, subtract the figure, blur. `node scripts/aura-mask.mjs
+<id>|--all` re-derives the aura from the committed silhouette alone, for re-tuning `rim` without a
+new cutout.

@@ -8,7 +8,6 @@ import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import sharp from "sharp";
-import { writeAuraMask } from "./aura-mask.mjs";
 
 export const GLOW = {
   hueMin: 250,
@@ -181,13 +180,11 @@ export async function importPortrait(
   const suffix = inBand ? "" : ".rejected";
   const source = join(outDir, `${id}${suffix}.webp`);
   const glowFile = join(outDir, `${id}-glow${suffix}.webp`);
-  const auraFile = join(outDir, `${id}-aura${suffix}.webp`);
   const meta = await sharp(png).webp({ quality: glow.quality }).toFile(source);
   await sharp(mask, { raw: { width: maskW, height: maskH, channels: 1 } })
     .blur(glow.blur)
     .webp({ quality: 90 })
     .toFile(glowFile);
-  await writeAuraMask(png, auraFile);
   if (!inBand) {
     console.error(`rejected render kept at ${source}`);
     throw new Error(
@@ -199,7 +196,7 @@ export async function importPortrait(
     height: meta.height,
     coverage,
     keyed,
-    files: [source, glowFile, auraFile],
+    files: [source, glowFile],
   };
 }
 
@@ -228,6 +225,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
     const { width, height, coverage, keyed } = await importPortrait(input, id, { outDir, band });
     console.log(
       `${id}: ${width}×${height}, glow ${coverage.toFixed(2)}% (band ${band[0]}–${band[1]}%)${keyed ? " (white field keyed)" : ""}`,
+    );
+    console.log(
+      `aura: run node scripts/aura-mask.mjs --cutout <cutout.png> ${id} once you have the cutout`,
     );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));

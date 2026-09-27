@@ -69,17 +69,18 @@ describe("glowMask", () => {
 });
 
 describe("importPortrait", () => {
-  it("writes the 1600 px source, the blurred glow mask and the aura mask, never enlarging", async () => {
+  it("writes the 1600 px source and the blurred glow mask, never enlarging", async () => {
     const d = tmp();
     await render(join(d, "in.png"), 1.5);
     const result = await importPortrait(join(d, "in.png"), "linux-engineer", {
       outDir: d,
       band: [0.3, 2],
     });
+    // No aura file: that comes from a background-remover cutout via scripts/aura-mask.mjs --cutout,
+    // not from this render (deck spec §8 fix round 2 — see auraMask.test.ts).
     expect(result.files).toEqual([
       join(d, "linux-engineer.webp"),
       join(d, "linux-engineer-glow.webp"),
-      join(d, "linux-engineer-aura.webp"),
     ]);
     const source = await sharp(join(d, "linux-engineer.webp")).metadata();
     expect(source.format).toBe("webp");
@@ -91,14 +92,6 @@ describe("importPortrait", () => {
     // Mostly black with a soft bright patch: the mean is low, the max is white.
     expect(channels[0]!.mean).toBeLessThan(20);
     expect(channels[0]!.max).toBe(255);
-    const aura = await sharp(join(d, "linux-engineer-aura.webp")).metadata();
-    expect(aura.width).toBe(400);
-    expect(aura.height).toBe(267);
-    // A band around the violet block, not a blank mask: mostly black, with a real bright rim
-    // somewhere (the bug this guards against left the whole mask at zero — see auraMask.test.ts).
-    const auraStats = await sharp(join(d, "linux-engineer-aura.webp")).stats();
-    expect(auraStats.channels[0]!.mean).toBeLessThan(20);
-    expect(auraStats.channels[0]!.max).toBeGreaterThan(150);
   });
 
   it("keys a white field to the graphite fill and keeps whites enclosed by the subject", async () => {
@@ -155,10 +148,8 @@ describe("importPortrait", () => {
     // The rejected render is kept aside to look at, never under the live name.
     expect(existsSync(join(d, "linux-engineer.rejected.webp"))).toBe(true);
     expect(existsSync(join(d, "linux-engineer-glow.rejected.webp"))).toBe(true);
-    expect(existsSync(join(d, "linux-engineer-aura.rejected.webp"))).toBe(true);
     expect(existsSync(join(d, "linux-engineer.webp"))).toBe(false);
     expect(existsSync(join(d, "linux-engineer-glow.webp"))).toBe(false);
-    expect(existsSync(join(d, "linux-engineer-aura.webp"))).toBe(false);
   });
 
   it("runs as a CLI and reads the band from deck-glow-bands.json", async () => {
