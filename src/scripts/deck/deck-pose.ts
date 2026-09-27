@@ -30,26 +30,26 @@ function landedFactor(pull: number, threshold: number): number {
 export type CardPhase = "racked" | "pulling" | "landing" | "presented" | "leaving";
 
 export interface DrawPolicy {
-  order: number;
-  depthTest: boolean;
+  /** The card's render band: every mesh it owns draws at `order + layer` (deck-cards.ts). */
+  readonly order: number;
+  readonly depthTest: boolean;
 }
 
-/** A painter's-algorithm draw policy by phase (ADR 0004 amendment): a moving card draws above the
- * rack, the arriving card above the leaving one, whatever their actual 3D depth says — fixes a
- * racked or leaving card's edge-on slab crossing another card's face mid-transition. */
-export function drawPolicy(phase: CardPhase): DrawPolicy {
-  switch (phase) {
-    case "pulling":
-    case "landing":
-      return { order: 3, depthTest: false };
-    case "leaving":
-      return { order: 2, depthTest: false };
-    case "presented":
-      return { order: 1, depthTest: true };
-    default:
-      return { order: 0, depthTest: true };
-  }
-}
+/** Bands from here up move: the whole card joins the transparent list, with no depth test. */
+export const MOVING_BAND = 20;
+
+/** A painter's-algorithm band per phase (ADR 0004 amendment): the arriving card above the leaving
+ * one, both above the presented card and the rack, whatever their 3D depth says — so no edge,
+ * chip, frame or seam of another card crosses a moving card's face. Frozen: read every frame. */
+const POLICY: Readonly<Record<CardPhase, DrawPolicy>> = Object.freeze({
+  racked: Object.freeze({ order: 0, depthTest: true }),
+  presented: Object.freeze({ order: 10, depthTest: true }),
+  leaving: Object.freeze({ order: MOVING_BAND, depthTest: false }),
+  pulling: Object.freeze({ order: 30, depthTest: false }),
+  landing: Object.freeze({ order: 30, depthTest: false }),
+});
+
+export const drawPolicy = (phase: CardPhase): DrawPolicy => POLICY[phase];
 
 export interface Energy {
   energy: number;

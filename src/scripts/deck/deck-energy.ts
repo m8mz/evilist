@@ -98,9 +98,10 @@ export function fogFor(
 /**
  * The aura's opacity (deck spec §8 as amended by Plan 5): a thin violet rim that follows the
  * energetic card's silhouette. S holds at `aura.s` once it reaches its own full energy; S+ ramps
- * from `aura.sPlusBase` by `aura.sPlusRamp` × energy. The landing flare multiplies both. Clamped to
- * 1 so this stays a self-contained 0–1 value like `glowOpacity`/`seamOpacity`; the caller applies
- * its own gain (`params.glow.gain`) and clamp on top.
+ * from `aura.sPlusBase` by `aura.sPlusRamp` × energy, scaled in by `energy / energy.sPlusBase` so it
+ * rises from 0 with the pull (the S → S+ handoff and a jump into S+ start near 0, not at the base).
+ * The landing flare multiplies both. Clamped to 1 so this stays a self-contained 0–1 value like
+ * `glowOpacity`/`seamOpacity`; the caller applies its own gain (`params.glow.gain`) and clamp.
  */
 export function auraOpacity(
   kind: EnergyKind | null,
@@ -109,13 +110,11 @@ export function auraOpacity(
   params: DeckParams = DECK_PARAMS,
 ): number {
   const A = params.aura;
-  const raw =
-    kind === "S"
-      ? ((A.s * energy) / params.energy.s) * flareGlow
-      : kind === "S+"
-        ? (A.sPlusBase + A.sPlusRamp * energy) * flareGlow
-        : 0;
-  return Math.min(1, raw);
+  const E = params.energy;
+  if (kind === "S") return E.s > 0 ? Math.min(1, ((A.s * energy) / E.s) * flareGlow) : 0;
+  if (kind !== "S+") return 0;
+  const rise = E.sPlusBase > 0 ? Math.min(1, energy / E.sPlusBase) : 1;
+  return Math.min(1, (A.sPlusBase + A.sPlusRamp * energy) * rise * flareGlow);
 }
 
 /** Continuous smoke only emits while a card is landing or presented; a leaving (or pulled-back)

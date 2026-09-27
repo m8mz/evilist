@@ -11,6 +11,20 @@ const forceTier = (page: Page, tier: "mid" | "high") =>
     Object.defineProperty(navigator, "deviceMemory", { get: () => 8 });
   }, tier);
 
+/** Scrolls the journey to rank `i`'s centre (of seven), instantly. */
+const scrollToRank = (page: Page, i: number) =>
+  page.evaluate(
+    ({ i, header }) => {
+      const el = document.querySelector<HTMLElement>("[data-deck]")!;
+      const top = el.getBoundingClientRect().top + scrollY - header;
+      scrollTo({
+        top: top + (el.offsetHeight - innerHeight + header) * ((i + 0.5) / 7),
+        behavior: "instant",
+      });
+    },
+    { i, header: HEADER_PX },
+  );
+
 // Visual regression baselines. Tagged @visual: run locally with `pnpm test:visual`
 // (baselines are macOS renders; CI on Linux renders fonts differently, so CI skips these).
 // After an intentional design change: `pnpm test:visual --update-snapshots`, review, commit.
@@ -98,17 +112,7 @@ test.describe("visual regression @visual", () => {
     test(`journey rank ${rank.toUpperCase()}`, async ({ page }) => {
       await forceTier(page, "high");
       await page.goto("/?deck-freeze=2026-09-25");
-      await page.evaluate(
-        ({ i, header }) => {
-          const el = document.querySelector<HTMLElement>("[data-deck]")!;
-          const top = el.getBoundingClientRect().top + scrollY - header;
-          scrollTo({
-            top: top + (el.offsetHeight - innerHeight + header) * ((i + 0.5) / 7),
-            behavior: "instant",
-          });
-        },
-        { i: index, header: HEADER_PX },
-      );
+      await scrollToRank(page, index);
       await expect(page.locator("[data-deck]")).toHaveAttribute("data-deck-ready", "", {
         timeout: 20_000,
       });
@@ -123,4 +127,20 @@ test.describe("visual regression @visual", () => {
       });
     });
   }
+
+  // The frozen S → S+ midpoint: the arriving S+ card draws over the leaving S card, and no chip,
+  // frame or seam of another card crosses its face (the render bands, deck-cards.ts).
+  test("journey mid-transition S to S+", async ({ page }) => {
+    await forceTier(page, "high");
+    await page.goto("/?deck-freeze=2026-09-25&deck-k=0.5");
+    await scrollToRank(page, 6);
+    const deck = page.locator("[data-deck]");
+    await expect(deck).toHaveAttribute("data-deck-ready", "", { timeout: 20_000 });
+    await expect(deck).toHaveAttribute("data-deck-phase", /^(pulling|leaving)$/);
+    await expect(page).toHaveScreenshot("journey-mid-transition.png", {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.02,
+    });
+  });
 });

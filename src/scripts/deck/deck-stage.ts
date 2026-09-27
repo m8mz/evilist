@@ -206,7 +206,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     pixelRatio: renderer.getPixelRatio(),
     anisotropy: maxAniso,
   });
-  meshes.forEach((m, i) => effects.attach(i, m.group));
+  meshes.forEach((m, i) => m.draw.push(...effects.attach(i, m.group))); // the planes join its band
   for (const m of meshes) scene.add(m.group);
   const slabs = meshes.map((m) => m.slab); // precomputed once; hitAt filters by group visibility
 
@@ -478,22 +478,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
         ec.sinceLeaveMs = leftAt === null ? null : time - leftAt;
       }
       applyText(i, c.phase, time);
-      applyDrawPolicy(m, drawPolicy(c.phase));
+      applyDrawPolicy(m.draw, drawPolicy(c.phase), c.opacity); // band, depth test, opacity
       m.group.position.set(toX(c.x), toY(c.y), c.z * PX);
       m.group.rotation.set(c.rotX * DEG, c.rotY * DEG, c.rotZ * DEG);
       m.group.scale.setScalar(c.scale);
-      const translucent = c.opacity < 0.999;
-      for (const mat of m.layerMats) {
-        if (mat.transparent !== translucent || mat.opacity !== c.opacity) {
-          const fixed =
-            mat === m.frame.material || mat === m.text.material || mat === m.chip.material;
-          if (!fixed && mat.transparent !== translucent) {
-            mat.transparent = translucent;
-            mat.needsUpdate = true;
-          }
-          mat.opacity = c.opacity;
-        }
-      }
       m.group.visible = c.opacity > 0.001;
     }
 

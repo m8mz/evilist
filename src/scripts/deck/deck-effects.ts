@@ -14,6 +14,7 @@ import {
   SRGBColorSpace,
 } from "three";
 import type { Group, Scene, Texture } from "three";
+import { LAYER, type DrawEntry } from "./deck-cards";
 import {
   auraOpacity,
   coverFit,
@@ -179,16 +180,18 @@ export class DeckEffects {
     this.scene.add(this.fog);
   }
 
-  /** Adds the card's glow and aura planes (blank until setGlow/setAura) and, on S and S+, its back seam. */
-  attach(index: number, group: Group): void {
-    if (this.glows[index]) return; // a second attach for one index would otherwise leak the first
+  /** Adds the card's glow and aura planes (blank until setGlow/setAura) and, on S and S+, its back
+   * seam; returns them for the card's draw list, so they join its render band (deck-cards.ts). */
+  attach(index: number, group: Group): DrawEntry[] {
+    if (this.glows[index]) return []; // a second attach for one index would otherwise leak the first
     const mat = this.glowMats[index];
-    if (!mat) return;
+    if (!mat) return [];
     const glow = new Mesh(this.unit, mat);
     glow.layers.enable(BLOOM_LAYER);
     glow.visible = false;
     group.add(glow);
     this.glows[index] = glow;
+    const draw: DrawEntry[] = [{ mesh: glow, mat, layer: LAYER.glow, role: "effect" }];
     const auraMat = this.auraMats[index];
     if (auraMat) {
       const aura = new Mesh(this.unit, auraMat);
@@ -196,6 +199,7 @@ export class DeckEffects {
       aura.visible = false;
       group.add(aura);
       this.auras[index] = aura;
+      draw.push({ mesh: aura, mat: auraMat, layer: LAYER.aura, role: "effect" });
     }
     if (this.kinds[index]) {
       const canvas = document.createElement("canvas");
@@ -220,6 +224,7 @@ export class DeckEffects {
       group.add(seam);
       this.seams[index] = seam;
       this.seamCanvases[index] = canvas;
+      draw.push({ mesh: seam, mat: seam.material, layer: LAYER.seam, role: "effect" });
     }
     if (this.highTier) {
       const proxy = new Mesh(this.unit, this.occluderMat);
@@ -228,6 +233,7 @@ export class DeckEffects {
       this.occluders[index] = proxy;
     }
     if (this.layout) this.placeCard(index);
+    return draw;
   }
 
   /** A canvas the size of `image`, darkened to nothing between params.aura.fadeFrom and fadeTo of

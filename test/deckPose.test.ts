@@ -11,6 +11,7 @@ import {
   easeInOutCubic,
   energyFor,
   introDurationMs,
+  MOVING_BAND,
   type CardPhase,
   type PoseInput,
 } from "../src/scripts/deck/deck-pose";
@@ -713,14 +714,20 @@ describe("the intro", () => {
 describe("drawPolicy", () => {
   it.each([
     ["racked", { order: 0, depthTest: true }],
-    ["pulling", { order: 3, depthTest: false }],
-    ["landing", { order: 3, depthTest: false }],
-    ["presented", { order: 1, depthTest: true }],
-    ["leaving", { order: 2, depthTest: false }],
+    ["pulling", { order: 30, depthTest: false }],
+    ["landing", { order: 30, depthTest: false }],
+    ["presented", { order: 10, depthTest: true }],
+    ["leaving", { order: 20, depthTest: false }],
   ] as const satisfies readonly (readonly [CardPhase, { order: number; depthTest: boolean }])[])(
     "%s -> %o",
     (phase, expected) => {
       expect(drawPolicy(phase)).toEqual(expected);
     },
   );
+  it("moves from MOVING_BAND up, and hands out one frozen object per phase", () => {
+    expect(drawPolicy("leaving").order).toBe(MOVING_BAND);
+    expect(drawPolicy("presented").order).toBeLessThan(MOVING_BAND);
+    expect(drawPolicy("pulling")).toBe(drawPolicy("pulling"));
+    expect(Object.isFrozen(drawPolicy("racked"))).toBe(true);
+  });
 });

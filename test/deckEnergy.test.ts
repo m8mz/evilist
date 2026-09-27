@@ -12,10 +12,14 @@ import {
   smokeRate,
   smokeSideSpeed,
 } from "../src/scripts/deck/deck-energy";
+import type { RankLabel } from "../src/data/career";
+import { initialDrive, pullsForDrive, stepDrive, type Pulls } from "../src/scripts/deck/deck-drive";
 import { CARD_H, CARD_W, WINDOW } from "../src/scripts/deck/deck-paint";
 import { defaultDeckParams } from "../src/scripts/deck/deck-params";
+import { energyFor } from "../src/scripts/deck/deck-pose";
 
 const P = defaultDeckParams();
+const LABELS: RankLabel[] = ["E", "D", "C", "B", "A", "S", "S+"];
 
 describe("flare", () => {
   it("is nothing for no kind or before landing", () => {
@@ -101,16 +105,67 @@ describe("auraOpacity", () => {
   it("is 0 without a kind", () => {
     expect(auraOpacity(null, 1, 1, P)).toBe(0);
   });
-  it("gives S its aura.s at S's own full energy", () => {
+  it("gives S its aura.s at S's own full energy, and 0 rather than NaN when energy.s is 0", () => {
     expect(auraOpacity("S", P.energy.s, 1, P)).toBeCloseTo(P.aura.s, 6);
+    const flat = defaultDeckParams();
+    flat.energy.s = 0;
+    expect(auraOpacity("S", 0, 1, flat)).toBe(0);
+    expect(auraOpacity("S", 0.2, 1, flat)).toBe(0);
   });
-  it("ramps S+ from its base with energy", () => {
-    expect(auraOpacity("S+", 0, 1, P)).toBeCloseTo(P.aura.sPlusBase, 6);
-    expect(auraOpacity("S+", 1, 1, P)).toBeCloseTo(P.aura.sPlusBase + P.aura.sPlusRamp, 6);
+  it("rises S+ from 0 with its energy, to its base and ramp once at energy.sPlusBase", () => {
+    const base = P.energy.sPlusBase;
+    const full = (e: number) => P.aura.sPlusBase + P.aura.sPlusRamp * e;
+    expect(auraOpacity("S+", 0, 1, P)).toBe(0);
+    expect(auraOpacity("S+", base / 2, 1, P)).toBeCloseTo(full(base / 2) * 0.5, 6);
+    expect(auraOpacity("S+", base, 1, P)).toBeCloseTo(full(base), 6);
+    expect(auraOpacity("S+", 1, 1, P)).toBeCloseTo(full(1), 6);
   });
   it("is multiplied by the landing flare and clamped to 1", () => {
-    expect(auraOpacity("S+", 0, 1.4, P)).toBeCloseTo(P.aura.sPlusBase * 1.4, 6);
+    const base = P.energy.sPlusBase;
+    const full = P.aura.sPlusBase + P.aura.sPlusRamp * base;
+    expect(auraOpacity("S+", 0, 1.4, P)).toBe(0);
+    expect(auraOpacity("S+", base, 1.4, P)).toBeCloseTo(full * 1.4, 6);
     expect(auraOpacity("S+", 1, 10, P)).toBe(1);
+  });
+});
+
+/** The aura × gain the stage would draw each 60 Hz frame, stepping the real drive, pulls, energy
+ * and aura from `from`'s centre to `to`'s: by the scroll, or (`jump`) by a jump there. */
+function auraTrace(from: number, to: number, jump: boolean) {
+  const centre = (i: number) => (i + 0.5) / LABELS.length;
+  const p = centre(to);
+  let drive = initialDrive(centre(from), LABELS.length, P);
+  let last: Pulls | null = null;
+  const out: { aura: number; kind: string | null }[] = [];
+  for (let f = 0; f < 90; f++) {
+    const t = 1000 + (f * 1000) / 60;
+    const pending = jump && f === 0 ? to : null;
+    drive = stepDrive(drive, p, pending, t, LABELS.length, P, last?.within);
+    last = pullsForDrive(drive, p, t, LABELS.length, P);
+    const e = energyFor(last, LABELS, P.pull.settleStart, P);
+    out.push({
+      aura: Math.min(1, auraOpacity(e.kind, e.energy, 1, P) * P.glow.gain),
+      kind: e.kind,
+    });
+  }
+  return out;
+}
+
+describe("the aura across the S ↔ S+ handoff at 60 Hz", () => {
+  it.each([
+    [5, 6],
+    [6, 5],
+  ])("steps by under 0.1 on the frame the energy hands from %i to %i (it was 0.57)", (a, b) => {
+    const trace = auraTrace(a, b, false);
+    const hand = trace.findIndex((s, i) => i > 0 && s.kind !== trace[i - 1]!.kind);
+    expect(hand).toBeGreaterThan(0);
+    expect(Math.abs(trace[hand]!.aura - trace[hand - 1]!.aura)).toBeLessThan(0.1);
+  });
+  it("starts a jump A → S+ with the S+ aura below 0.1 on its first frame (it was 0.66)", () => {
+    const trace = auraTrace(4, 6, true);
+    const first = trace.findIndex((s) => s.kind === "S+");
+    expect(first).toBeGreaterThan(0);
+    expect(trace[first]!.aura).toBeLessThan(0.1);
   });
 });
 

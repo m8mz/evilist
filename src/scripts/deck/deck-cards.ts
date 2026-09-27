@@ -15,10 +15,42 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import type { DeckLayout } from "./deck-layout";
 import { CARD_W, CHIP_H, CHIP_W, COLORS, type CardModel } from "./deck-paint";
 import type { DeckParams } from "./deck-params";
-import type { DrawPolicy } from "./deck-pose";
+import { MOVING_BAND, type DrawPolicy } from "./deck-pose";
 import type { DeckTextures } from "./deck-textures";
 
 const PX = 1 / 100;
+
+/** A mesh's layer inside its card's render band (`drawPolicy`'s order + layer): the body under its
+ * overlays, the overlays in their painted order. The glow, aura and seam are deck-effects.ts's. */
+export const LAYER = Object.freeze({
+  slab: 0,
+  back: 1,
+  body: 2,
+  glow: 3,
+  aura: 4,
+  seam: 5,
+  frame: 6,
+  text: 7,
+  chip: 8,
+});
+
+/** The material fields `applyDrawPolicy` owns, narrowed so a test can pass plain objects. */
+export interface DrawMaterial {
+  transparent: boolean;
+  depthTest: boolean;
+  opacity: number;
+  needsUpdate: boolean;
+}
+
+/** One mesh a card owns. `solid` (slab, back, body) is opaque at rest and follows the card's
+ * opacity; `face` (frame, text, chip) is always transparent and follows it too; `effect` (glow,
+ * aura, seam) is always transparent, its opacity deck-effects.ts's own. */
+export interface DrawEntry {
+  mesh: { renderOrder: number };
+  mat: DrawMaterial;
+  layer: number;
+  role: "solid" | "face" | "effect";
+}
 
 export interface CardMeshes {
   group: Group;
@@ -32,6 +64,8 @@ export interface CardMeshes {
   back: Mesh;
   backMat: MeshPhysicalMaterial;
   layerMats: Material[];
+  /** Every mesh the card owns, built once: its six here, then the effects' planes (the stage). */
+  draw: DrawEntry[];
 }
 
 export function loadImage(url: string | null): Promise<HTMLImageElement | null> {
@@ -108,6 +142,12 @@ export function buildCards(
     const back = new Mesh(unit, backMat);
     back.rotation.y = Math.PI;
     group.add(slab, body, frame, text, chip, back);
+    const entry = (mesh: Mesh, layer: number, role: DrawEntry["role"]): DrawEntry => ({
+      mesh,
+      mat: mesh.material as Material,
+      layer,
+      role,
+    });
     return {
       group,
       slab,
@@ -126,6 +166,14 @@ export function buildCards(
         text.material as Material,
         chip.material as Material,
         backMat,
+      ],
+      draw: [
+        entry(slab, LAYER.slab, "solid"),
+        entry(back, LAYER.back, "solid"),
+        entry(body, LAYER.body, "solid"),
+        entry(frame, LAYER.frame, "face"),
+        entry(text, LAYER.text, "face"),
+        entry(chip, LAYER.chip, "face"),
       ],
     };
   });
@@ -161,17 +209,28 @@ export function layoutCards(meshes: CardMeshes[], layout: DeckLayout, params: De
 }
 
 /**
- * Applies `drawPolicy`'s (deck-pose.ts) painter's-algorithm draw order and depth test: every mesh
- * gets `renderOrder`; the face and its overlays (frame, text, chip) — never the slab or the back —
- * get `depthTest`. `depthWrite` is untouched. Assigned only when a value actually changed: a
- * `depthTest` flip is a GL state change, not a shader recompile, but still not free every frame.
+ * Applies `drawPolicy`'s (deck-pose.ts) band and the card's `opacity` to every mesh it owns, the
+ * one owner of these fields. Each mesh draws at `order + layer`. A moving band puts the solid
+ * meshes in the transparent list too, so the whole card sorts by its band there; at rest they are
+ * transparent only while translucent (the phone's played cards). `depthWrite` is untouched. Each
+ * field is written only when it changed: `transparent` swaps the program, `depthTest` GL state.
  */
-export function applyDrawPolicy(card: CardMeshes, policy: DrawPolicy): void {
-  for (const mesh of [card.slab, card.body, card.frame, card.text, card.chip, card.back]) {
-    if (mesh.renderOrder !== policy.order) mesh.renderOrder = policy.order;
-  }
-  for (const mat of [card.bodyMat, card.frame.material, card.text.material, card.chip.material]) {
-    const m = mat as Material;
+export function applyDrawPolicy(
+  draw: readonly DrawEntry[],
+  policy: DrawPolicy,
+  opacity: number,
+): void {
+  const transparent = policy.order >= MOVING_BAND || opacity < 0.999;
+  for (const d of draw) {
+    const order = policy.order + d.layer;
+    if (d.mesh.renderOrder !== order) d.mesh.renderOrder = order;
+    const m = d.mat;
     if (m.depthTest !== policy.depthTest) m.depthTest = policy.depthTest;
+    if (d.role === "effect") continue;
+    if (m.opacity !== opacity) m.opacity = opacity;
+    if (d.role === "solid" && m.transparent !== transparent) {
+      m.transparent = transparent;
+      m.needsUpdate = true;
+    }
   }
 }
