@@ -7,9 +7,11 @@ import {
   backOut,
   clamp01,
   deckPose,
+  drawPolicy,
   easeInOutCubic,
   energyFor,
   introDurationMs,
+  type CardPhase,
   type PoseInput,
 } from "../src/scripts/deck/deck-pose";
 
@@ -706,4 +708,19 @@ describe("the intro", () => {
     expect(done.cards[0]!.x).toBeCloseTo(scroll.cards[0]!.x, 6);
     expect(done.cards[1]!.x).toBeCloseTo(scroll.cards[1]!.x, 6);
   });
+});
+
+describe("drawPolicy", () => {
+  it.each([
+    ["racked", { order: 0, depthTest: true }],
+    ["pulling", { order: 3, depthTest: false }],
+    ["landing", { order: 3, depthTest: false }],
+    ["presented", { order: 1, depthTest: true }],
+    ["leaving", { order: 2, depthTest: false }],
+  ] as const satisfies readonly (readonly [CardPhase, { order: number; depthTest: boolean }])[])(
+    "%s -> %o",
+    (phase, expected) => {
+      expect(drawPolicy(phase)).toEqual(expected);
+    },
+  );
 });

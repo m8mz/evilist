@@ -15,6 +15,7 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import type { DeckLayout } from "./deck-layout";
 import { CARD_W, CHIP_H, CHIP_W, COLORS, type CardModel } from "./deck-paint";
 import type { DeckParams } from "./deck-params";
+import type { DrawPolicy } from "./deck-pose";
 import type { DeckTextures } from "./deck-textures";
 
 const PX = 1 / 100;
@@ -157,4 +158,20 @@ export function layoutCards(meshes: CardMeshes[], layout: DeckLayout, params: De
     m.back.position.z = -front;
   }
   return front;
+}
+
+/**
+ * Applies `drawPolicy`'s (deck-pose.ts) painter's-algorithm draw order and depth test: every mesh
+ * gets `renderOrder`; the face and its overlays (frame, text, chip) — never the slab or the back —
+ * get `depthTest`. `depthWrite` is untouched. Assigned only when a value actually changed: a
+ * `depthTest` flip is a GL state change, not a shader recompile, but still not free every frame.
+ */
+export function applyDrawPolicy(card: CardMeshes, policy: DrawPolicy): void {
+  for (const mesh of [card.slab, card.body, card.frame, card.text, card.chip, card.back]) {
+    if (mesh.renderOrder !== policy.order) mesh.renderOrder = policy.order;
+  }
+  for (const mat of [card.bodyMat, card.frame.material, card.text.material, card.chip.material]) {
+    const m = mat as Material;
+    if (m.depthTest !== policy.depthTest) m.depthTest = policy.depthTest;
+  }
 }

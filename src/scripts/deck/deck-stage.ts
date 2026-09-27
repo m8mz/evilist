@@ -19,7 +19,7 @@ import {
 } from "three";
 import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
-import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
+import { applyDrawPolicy, buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
 import { glFactory } from "./deck-canvas";
 import { freezeDrive, initialDrive, pullsForDrive, stepDrive, type DriveState } from "./deck-drive";
 import type { Pulls } from "./deck-drive";
@@ -30,7 +30,7 @@ import { StageInput } from "./deck-input";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
 import { PRINT_STEPS, type CardModel } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
-import { deckPose, type CardPhase, type IntroState, type StagePose } from "./deck-pose";
+import { deckPose, drawPolicy, type CardPhase, type IntroState, type StagePose } from "./deck-pose";
 import { DeckTextures } from "./deck-textures";
 import { pixelRatioCap } from "./deck-tier";
 import { mulberry32, pickRendition, type Freeze } from "./deck-util";
@@ -478,6 +478,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
         ec.sinceLeaveMs = leftAt === null ? null : time - leftAt;
       }
       applyText(i, c.phase, time);
+      applyDrawPolicy(m, drawPolicy(c.phase));
       m.group.position.set(toX(c.x), toY(c.y), c.z * PX);
       m.group.rotation.set(c.rotX * DEG, c.rotY * DEG, c.rotZ * DEG);
       m.group.scale.setScalar(c.scale);

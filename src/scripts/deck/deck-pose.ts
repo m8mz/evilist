@@ -29,6 +29,28 @@ function landedFactor(pull: number, threshold: number): number {
 
 export type CardPhase = "racked" | "pulling" | "landing" | "presented" | "leaving";
 
+export interface DrawPolicy {
+  order: number;
+  depthTest: boolean;
+}
+
+/** A painter's-algorithm draw policy by phase (ADR 0004 amendment): a moving card draws above the
+ * rack, the arriving card above the leaving one, whatever their actual 3D depth says — fixes a
+ * racked or leaving card's edge-on slab crossing another card's face mid-transition. */
+export function drawPolicy(phase: CardPhase): DrawPolicy {
+  switch (phase) {
+    case "pulling":
+    case "landing":
+      return { order: 3, depthTest: false };
+    case "leaving":
+      return { order: 2, depthTest: false };
+    case "presented":
+      return { order: 1, depthTest: true };
+    default:
+      return { order: 0, depthTest: true };
+  }
+}
+
 export interface Energy {
   energy: number;
   kind: "S" | "S+" | null;
