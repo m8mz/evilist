@@ -1,6 +1,6 @@
-// The energy phase's pure per-frame arithmetic (deck spec §5 "States", §8): what the point light,
-// the glow planes, the seams, the glow sprite, the fog, the contact shadow and the smoke should be
-// at a given moment. No DOM, no Three; deck-effects.ts copies these numbers onto objects.
+// The energy phase's pure per-frame arithmetic (deck spec §5 "States", §8): what the glow planes,
+// the seams, the glow sprite, the fog and the smoke should be at a given moment. No DOM, no Three;
+// deck-effects.ts copies these numbers onto objects.
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 import type { CardPhase } from "./deck-pose";
 
@@ -10,32 +10,24 @@ const TAU = Math.PI * 2;
 
 export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 
-/** The point light's breathing: ±breath on a breathMs sine, exactly 1 at time 0. */
-export function breath(time: number, params: DeckParams = DECK_PARAMS): number {
-  return 1 + params.light.breath * Math.sin((TAU * time) / params.light.breathMs);
-}
-
 export interface Flare {
-  light: number;
   fog: number;
   glow: number;
 }
 
-/** The landing flare as multipliers easing back to 1 (the fog kick back to 0) after landing. */
+/** The landing flare as multipliers (the fog kick, the glow scale) easing back to their rest value
+ * after landing. S gives neither: only S+ flares. */
 export function flare(
   kind: EnergyKind | null,
   sinceLandMs: number | null,
   params: DeckParams = DECK_PARAMS,
 ): Flare {
-  const none: Flare = { light: 1, fog: 0, glow: 1 };
-  if (!kind || sinceLandMs === null || sinceLandMs < 0) return none;
-  const L = params.light;
-  const settle = 1 - easeOutCubic(sinceLandMs / L.flareMs);
-  const light = 1 + ((kind === "S+" ? L.flareSPlus : L.flareS) - 1) * settle;
-  if (kind === "S") return { light, fog: 0, glow: 1 };
+  const none: Flare = { fog: 0, glow: 1 };
+  if (!kind || sinceLandMs === null || sinceLandMs < 0 || kind === "S") return none;
+  const settle = 1 - easeOutCubic(sinceLandMs / params.light.flareMs);
   const fog = params.fog.kick * Math.max(0, 1 - sinceLandMs / params.fog.kickMs);
   const glow = 1 + (params.glow.flareScale - 1) * settle;
-  return { light, fog, glow };
+  return { fog, glow };
 }
 
 export const GLOW_LEAVE_MS = 200;
@@ -85,22 +77,6 @@ export function glowSpriteScale(
   return (kind === "S" ? G.scaleS : G.scaleSPlusBase + G.scaleSPlusRamp * energy) * k;
 }
 
-export function pointLightIntensity(
-  kind: EnergyKind | null,
-  energy: number,
-  breathValue: number,
-  flareLight: number,
-  params: DeckParams = DECK_PARAMS,
-): number {
-  if (!kind) return 0;
-  return (
-    energy *
-    (kind === "S" ? params.light.pointS : params.light.pointSPlus) *
-    breathValue *
-    flareLight
-  );
-}
-
 export interface FogLevel {
   radius: number;
   strength: number;
@@ -123,30 +99,6 @@ export function fogFor(
   return {
     radius: F.radiusSPlusBase + F.radiusSPlusRamp * energy,
     strength: F.strengthSPlus * energy + kick,
-  };
-}
-
-export interface Shadow {
-  w: number;
-  h: number;
-  opacity: number;
-}
-
-/** The contact shadow under a card with pull > 0, in world units; it fades as the card lifts. */
-export function shadowFor(
-  pull: number,
-  zPx: number,
-  cardWPx: number,
-  params: DeckParams = DECK_PARAMS,
-): Shadow {
-  const S = params.shadow;
-  const zMax = params.pull.liftZ * (1 + params.pull.liftPeak);
-  const lift = zMax > 0 ? Math.min(1, Math.max(0, zPx / zMax)) : 0;
-  const cardW = cardWPx / 100;
-  return {
-    w: S.widthFactor * cardW,
-    h: S.heightFactor * cardW,
-    opacity: S.opacity * Math.min(1, Math.max(0, pull)) * (1 - S.liftFade * lift),
   };
 }
 

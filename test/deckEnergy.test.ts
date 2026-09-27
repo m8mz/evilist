@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  breath,
   burstCount,
   coverFit,
   flare,
@@ -8,9 +7,7 @@ import {
   GLOW_LEAVE_MS,
   glowOpacity,
   glowSpriteScale,
-  pointLightIntensity,
   seamOpacity,
-  shadowFor,
   smokeRate,
   smokeSideSpeed,
 } from "../src/scripts/deck/deck-energy";
@@ -19,34 +16,24 @@ import { defaultDeckParams } from "../src/scripts/deck/deck-params";
 
 const P = defaultDeckParams();
 
-describe("breath", () => {
-  it("is 1 at time 0 and ±breath at the quarter periods", () => {
-    expect(breath(0, P)).toBeCloseTo(1, 6);
-    expect(breath(P.light.breathMs / 4, P)).toBeCloseTo(1 + P.light.breath, 6);
-    expect(breath((3 * P.light.breathMs) / 4, P)).toBeCloseTo(1 - P.light.breath, 6);
-  });
-});
-
 describe("flare", () => {
   it("is nothing for no kind or before landing", () => {
-    expect(flare(null, 100, P)).toEqual({ light: 1, fog: 0, glow: 1 });
-    expect(flare("S+", null, P)).toEqual({ light: 1, fog: 0, glow: 1 });
+    expect(flare(null, 100, P)).toEqual({ fog: 0, glow: 1 });
+    expect(flare("S+", null, P)).toEqual({ fog: 0, glow: 1 });
   });
-  it("starts S+ at 3× light, +0.5 fog and ×1.4 glow, and settles by flareMs", () => {
+  it("starts S+ at +0.5 fog and ×1.4 glow, and settles by flareMs", () => {
     const start = flare("S+", 0, P);
-    expect(start.light).toBeCloseTo(P.light.flareSPlus, 6);
     expect(start.fog).toBeCloseTo(P.fog.kick, 6);
     expect(start.glow).toBeCloseTo(P.glow.flareScale, 6);
     const half = flare("S+", P.light.flareMs / 2, P);
-    expect(half.light).toBeGreaterThan(1);
-    expect(half.light).toBeLessThan(start.light);
+    expect(half.glow).toBeGreaterThan(1);
+    expect(half.glow).toBeLessThan(start.glow);
     const done = flare("S+", P.light.flareMs, P);
-    expect(done.light).toBeCloseTo(1, 6);
     expect(done.glow).toBeCloseTo(1, 6);
     expect(flare("S+", P.fog.kickMs, P).fog).toBeCloseTo(0, 6);
   });
-  it("gives S the smaller light flare and no fog kick or glow scale", () => {
-    expect(flare("S", 0, P)).toEqual({ light: P.light.flareS, fog: 0, glow: 1 });
+  it("gives S no fog kick or glow scale", () => {
+    expect(flare("S", 0, P)).toEqual({ fog: 0, glow: 1 });
   });
 });
 
@@ -88,7 +75,7 @@ describe("seamOpacity", () => {
   });
 });
 
-describe("glowSpriteScale and the light", () => {
+describe("glowSpriteScale", () => {
   it("scales with the card, 4.2k at S and 7k to 16k at S+", () => {
     expect(glowSpriteScale("S", 1, 260, P)).toBeCloseTo(P.glow.scaleS, 6);
     expect(glowSpriteScale("S+", 0, 520, P)).toBeCloseTo(P.glow.scaleSPlusBase * 2, 6);
@@ -97,14 +84,9 @@ describe("glowSpriteScale and the light", () => {
       6,
     );
   });
-  it("lights S at energy × 16 and S+ at energy × 55, times breath and flare, and E–A at 0", () => {
-    expect(pointLightIntensity(null, 1, 1.15, 3, P)).toBe(0);
-    expect(pointLightIntensity("S", 0.3, 1, 1, P)).toBeCloseTo(0.3 * P.light.pointS, 6);
-    expect(pointLightIntensity("S+", 1, 1.15, 3, P)).toBeCloseTo(P.light.pointSPlus * 1.15 * 3, 6);
-  });
 });
 
-describe("fogFor and shadowFor", () => {
+describe("fogFor", () => {
   it("has no fog without a kind, a fixed fog at S that ramps in with its energy and a growing one at S+", () => {
     expect(fogFor(null, 1, 0, P)).toEqual({ radius: 0, strength: 0 });
     expect(fogFor("S", 0.3, 0, P)).toEqual({ radius: P.fog.radiusS, strength: P.fog.strengthS });
@@ -112,18 +94,6 @@ describe("fogFor and shadowFor", () => {
     const full = fogFor("S+", 1, 0.2, P);
     expect(full.radius).toBeCloseTo(P.fog.radiusSPlusBase + P.fog.radiusSPlusRamp, 6);
     expect(full.strength).toBeCloseTo(P.fog.strengthSPlus + 0.2, 6);
-  });
-  it("shadows the presented card at 0.55 on the floor and half that at the top of the lift", () => {
-    const zMax = P.pull.liftZ * (1 + P.pull.liftPeak);
-    const grounded = shadowFor(1, 0, 260, P);
-    expect(grounded.w).toBeCloseTo(P.shadow.widthFactor * 2.6, 6);
-    expect(grounded.h).toBeCloseTo(P.shadow.heightFactor * 2.6, 6);
-    expect(grounded.opacity).toBeCloseTo(P.shadow.opacity, 6);
-    expect(shadowFor(1, zMax, 260, P).opacity).toBeCloseTo(
-      P.shadow.opacity * (1 - P.shadow.liftFade),
-      6,
-    );
-    expect(shadowFor(0, 0, 260, P).opacity).toBe(0);
   });
 });
 

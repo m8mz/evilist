@@ -30,9 +30,8 @@ export interface DeckLayout {
   /** Phone: where the next card waits, and where played cards go. */
   next: Point | null;
   exit: Point | null;
-  /** The presented card's bottom edge and the floor line under the rack. */
+  /** The presented card's bottom edge. */
   baseY: number;
-  floorY: number;
 }
 
 export const CARD_ASPECT = 5 / 7;
@@ -68,7 +67,6 @@ export function deckLayout(
 
   const baseY = (stageH - p.railH) / 2 + cardH / 2;
   const rackBottom = baseY + p.presentedLift;
-  const floorY = rackBottom + p.floorOffset;
   const rackY = rackBottom - cardH / 2;
   const presentedY = baseY - cardH / 2;
 
@@ -91,7 +89,6 @@ export function deckLayout(
       next: null,
       exit: null,
       baseY,
-      floorY,
     };
   }
 
@@ -108,6 +105,5 @@ export function deckLayout(
     next: { x: stageW - p.phoneNextInset - projected / 2, y: rackY },
     exit: { x: p.phoneExitX * cardW, y: rackY },
     baseY,
-    floorY,
   };
 }

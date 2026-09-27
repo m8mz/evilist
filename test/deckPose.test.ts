@@ -472,7 +472,7 @@ describe("the intro", () => {
 
   it("starts with every card 2.2 widths off to the left, nothing drawn", () => {
     const s = deckPose(input({ intro: { elapsed: 0 }, time: 0 }));
-    expect(s.intro).toEqual({ done: false, floor: 0, rail: 0 });
+    expect(s.intro).toEqual({ done: false, rail: 0 });
     for (const [i, c] of s.cards.entries()) {
       expect(c.x).toBeCloseTo(desktopLayout.slots[i]!.x - 2.2 * desktopLayout.cardW, 6);
       expect(c.rotY).toBe(103);
@@ -494,7 +494,6 @@ describe("the intro", () => {
       6,
     );
     expect(s.cards[6]!.x).toBeCloseTo(desktopLayout.slots[6]!.x - 2.2 * desktopLayout.cardW, 6);
-    expect(s.intro!.floor).toBeCloseTo(210 / 500, 6);
     expect(s.intro!.rail).toBeCloseTo(210 / dealEnd, 6);
   });
 
@@ -502,7 +501,6 @@ describe("the intro", () => {
     const held = deckPose(input({ intro: { elapsed: dealEnd + 100 }, time: dealEnd + 100 }));
     for (const [i, c] of held.cards.entries())
       expect(c.x).toBeCloseTo(desktopLayout.slots[i]!.x, 6);
-    expect(held.intro!.floor).toBe(1);
     const half = deckPose(input({ intro: { elapsed: pullStart + 350 }, time: pullStart + 350 }));
     const pull = easeInOutCubic(0.5);
     expect(half.cards[0]!.pull).toBeCloseTo(pull, 6);

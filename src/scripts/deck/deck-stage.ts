@@ -7,7 +7,6 @@ import {
   DirectionalLight,
   EquirectangularReflectionMapping,
   LinearMipmapLinearFilter,
-  Mesh,
   MeshBasicMaterial,
   NoToneMapping,
   PerspectiveCamera,
@@ -18,7 +17,6 @@ import {
   SRGBColorSpace,
   Vector2,
   WebGLRenderer,
-  type Material,
 } from "three";
 import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
@@ -29,7 +27,7 @@ import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
 import { StageInput } from "./deck-input";
 import { columnFor, deckLayout, type DeckLayout, type DeckMode } from "./deck-layout";
-import { COLORS, PRINT_STEPS, type CardModel } from "./deck-paint";
+import { PRINT_STEPS, type CardModel } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 import { deckPose, type CardPhase, type IntroState, type StagePose } from "./deck-pose";
 import { DeckTextures } from "./deck-textures";
@@ -134,9 +132,9 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   key.position.set(-6, 8, 10);
   const rim = new DirectionalLight(0x9080ff, params.light.rim);
   rim.position.set(8, 3, -4);
-  // Every light (and the effects' point light) also sits on BLOOM_LAYER: a bloom pass that saw no
-  // lights changed the light hash twice a frame, and Three re-resolved all 21 lit programs each time.
-  // The glow materials are unlit, so the bloom itself is unchanged.
+  // Every light also sits on BLOOM_LAYER: a bloom pass that saw no lights changed the light hash
+  // twice a frame, and Three re-resolved all 21 lit programs each time. The glow materials are
+  // unlit, so the bloom itself is unchanged.
   for (const light of [ambient, key, rim]) light.layers.enable(BLOOM_LAYER);
   scene.add(ambient, key, rim);
 
@@ -166,7 +164,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   let stageW = 1;
   let stageH = 1;
   // The stage size the layout was computed for: the layout's px convert with it, so in the 150 ms
-  // between a resize and its relayout the cards stay with the floor, shadows and fog.
+  // between a resize and its relayout the cards stay with the fog.
   let layoutW = 1;
   let layoutH = 1;
   const toX = (px: number) => (px - layoutW / 2) * PX;
@@ -221,8 +219,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   });
   meshes.forEach((m, i) => effects.attach(i, m.group));
   for (const m of meshes) scene.add(m.group);
-  const floor = new Mesh(unit, new MeshBasicMaterial({ color: COLORS.iron }));
-  scene.add(floor);
   const slabs = meshes.map((m) => m.slab); // precomputed once; hitAt filters by group visibility
 
   let front = 0;
@@ -232,8 +228,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   function applyLayout(): void {
     if (!layout) return;
     front = layoutCards(meshes, layout, params);
-    floor.scale.set(stageW * PX, 0.01, 1);
-    floor.position.set(0, toY(layout.floorY), -0.001);
     effects.setLayout({
       cardWPx: layout.cardW,
       w: layout.cardW * PX,
@@ -241,7 +235,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       front,
       stageW: stageW * PX,
       stageH: stageH * PX,
-      floorY: toY(layout.floorY),
     });
     bloom?.setSize(stageW, stageH);
   }
@@ -506,9 +499,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       m.group.visible = c.opacity > 0.001;
     }
 
-    const floorScale = pose.intro ? pose.intro.floor : 1;
-    floor.scale.x = stageW * PX * floorScale;
-    floor.position.x = -stageW * PX * 0.5 + floor.scale.x / 2;
     camera.position.x = input.cam.x;
     camera.position.y = input.cam.y;
     camera.lookAt(0, 0, 0);
@@ -628,7 +618,6 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
         for (const mat of m.layerMats) mat.dispose();
       }
       unit.dispose();
-      (floor.material as Material).dispose();
       textures.dispose();
       envTarget.dispose();
       effects.dispose();

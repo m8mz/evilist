@@ -16,10 +16,8 @@ export interface LayoutParams {
   backProjection: number;
   /** Gap between the rack and the presented card, a fraction of the card's width. */
   gap: number;
-  /** How far above the floor the presented card's bottom edge sits. */
+  /** How far above the rack the presented card's bottom edge sits. */
   presentedLift: number;
-  /** The floor line's distance below the racked cards' bottom edge. */
-  floorOffset: number;
   /** Phone: the next card's near edge sits this far inside the stage's right edge. */
   phoneNextInset: number;
   phoneNextRotY: number;
@@ -99,12 +97,6 @@ export interface DeckParams {
     ambient: number;
     key: number;
     rim: number;
-    pointS: number;
-    pointSPlus: number;
-    breath: number;
-    breathMs: number;
-    flareSPlus: number;
-    flareS: number;
     flareMs: number;
   };
   material: {
@@ -146,7 +138,6 @@ export interface DeckParams {
   };
   glow: { scaleS: number; scaleSPlusBase: number; scaleSPlusRamp: number; flareScale: number };
   seam: { sMin: number; sMax: number; sPlusMin: number; sPlusMax: number; periodMs: number };
-  shadow: { widthFactor: number; heightFactor: number; opacity: number; liftFade: number };
   bloom: { strength: number; radius: number; threshold: number };
   tiers: { dprHigh: number; dprMid: number; disposeAfterMs: number };
 }
@@ -164,7 +155,6 @@ export function defaultDeckParams(): DeckParams {
       backProjection: 0.22,
       gap: 0.3,
       presentedLift: 30,
-      floorOffset: 8,
       phoneNextInset: 24,
       phoneNextRotY: -80,
       phoneExitX: -0.6,
@@ -210,12 +200,6 @@ export function defaultDeckParams(): DeckParams {
       ambient: 0.35,
       key: 2.2,
       rim: 0.8,
-      pointS: 16,
-      pointSPlus: 55,
-      breath: 0.15,
-      breathMs: 3000,
-      flareSPlus: 3,
-      flareS: 1.6,
       flareMs: 400,
     },
     material: {
@@ -256,7 +240,6 @@ export function defaultDeckParams(): DeckParams {
     },
     glow: { scaleS: 4.2, scaleSPlusBase: 7, scaleSPlusRamp: 9, flareScale: 1.4 },
     seam: { sMin: 0.1, sMax: 0.25, sPlusMin: 0.2, sPlusMax: 0.5, periodMs: 3200 },
-    shadow: { widthFactor: 1.15, heightFactor: 0.35, opacity: 0.55, liftFade: 0.5 },
     // Threshold 0.5 keeps the soft violet sprite and seams out of the blur (their luminance stays
     // under 0.2); only the pale eyes and S+ flames bloom. UnrealBloomPass returns a large smooth
     // source at about three times its strength, so 0.45 reads as a halo, not a wash.

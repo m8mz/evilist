@@ -59,14 +59,12 @@ describe("deckLayout on desktop", () => {
     expect(l.presented.x - l.cardW / 2 - rackRight).toBeCloseTo(0.3 * l.cardW, 5);
   });
 
-  it("puts the presented card above the rail and the rack 30 px lower on the floor", () => {
+  it("puts the presented card above the rail and the rack 30 px lower", () => {
     const l = desktop(1440, 900);
     const stageH = 836;
     expect(l.baseY).toBeCloseTo((stageH - 88) / 2 + l.cardH / 2, 5);
     expect(l.presented.y).toBeCloseTo(l.baseY - l.cardH / 2, 5);
     expect(l.slots[0]!.y).toBeCloseTo(l.baseY + 30 - l.cardH / 2, 5);
-    expect(l.floorY).toBeCloseTo(l.baseY + 30 + 8, 5);
-    expect(l.floorY).toBeLessThan(stageH - 88);
   });
 
   it("shrinks the card so the composition fits a narrow column", () => {
@@ -138,6 +136,5 @@ describe("deckLayout on phones", () => {
     const l = phone(320, 568);
     expect(l.cardH).toBe(320);
     expect(l.cardW).toBeLessThanOrEqual(320 - 48);
-    expect(Number.isFinite(l.floorY)).toBe(true);
   });
 });

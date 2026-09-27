@@ -1,5 +1,5 @@
-// The energy's objects (deck spec §5 "glow mask", "seam"; §8 lights, glow, smoke, fog, shadow): built
-// once per mount, driven every frame from deck-energy.ts's numbers and deck-smoke-sprites.ts's pool.
+// The energy's objects (deck spec §5 "glow mask", "seam"; §8 glow, smoke, fog): built once per
+// mount, driven every frame from deck-energy.ts's numbers and deck-smoke-sprites.ts's pool.
 // Everything that glows sits on BLOOM_LAYER for deck-bloom.ts and renders at GLOW_GAIN on both tiers;
 // the high tier's bloom adds only the blur of the brightest parts on top.
 import {
@@ -10,7 +10,6 @@ import {
   Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
-  PointLight,
   ShaderMaterial,
   Sprite,
   SpriteMaterial,
@@ -18,16 +17,13 @@ import {
 } from "three";
 import type { Group, Scene, Texture } from "three";
 import {
-  breath,
   coverFit,
   flare,
   fogFor,
   glowOpacity,
   glowSpriteScale,
-  pointLightIntensity,
   proportion,
   seamOpacity,
-  shadowFor,
   type EnergyKind,
 } from "./deck-energy";
 import { FOG_FRAGMENT, FOG_VERTEX, fogUniforms, type FogUniforms } from "./deck-fog";
@@ -41,17 +37,14 @@ const PX = 1 / 100;
 // Opacity gain on the glow set. The spec gave it to the mid tier to stand in for the bloom, but the
 // bloom's threshold leaves the violet glow alone, so the gain is the base look on both tiers.
 const GLOW_GAIN = 1.6;
-const LIGHT_AHEAD = 1.6; // world units in front of the energetic card
 const FOG_Z = -0.5;
 const FOG_MARGIN = 1.1; // the plane at FOG_Z would else crop at the view's edge; the falloff hides the margin
 const SPRITE_CLEARANCE = 0.05; // world units the glow sprite keeps behind the presented card's corner at its largest tilt and float
-const SHADOW_Z = 0.02; // world units above the floor plane, clear of z-fighting with it
 const SEAM_GAP = 0.001; // world units behind the card's back face, clear of z-fighting with it
 const SEAM_DENSITY_MAX = 1.5; // seam canvas px per CSS px: the pixel ratio up to 1.5, which keeps the thin line crisp at about half the bytes of 2×
 const SEAM_HYSTERESIS = 0.1; // deck-textures.ts's rule: repaint only past a 10 % width change (attach's 2 × 2 canvas always paints), so a window drag doesn't re-upload per resize callback
 const OCCLUDER_INSET = 0.0005; // just inside the front face: the glow plane at front + 0.002 stays ahead of it, everything behind the card falls behind it
 const VISIBLE_MIN = 0.001; // below this opacity or fog strength, hide the object outright
-const SHADOW_VISIBLE_MIN = 0.01; // a contact shadow fainter than this reads as a rendering artefact
 const MIPMAP = 1.33; // every texture here mipmaps; deck-textures.ts uses the same 4/3 chain factor
 
 export interface EffectsOptions {
@@ -91,7 +84,6 @@ export interface EffectsLayout {
   front: number;
   stageW: number;
   stageH: number;
-  floorY: number;
 }
 
 export class DeckEffects {
@@ -110,7 +102,6 @@ export class DeckEffects {
   private readonly seamCanvases: (HTMLCanvasElement | null)[];
   private readonly occluders: (Mesh<PlaneGeometry, MeshBasicMaterial> | null)[]; // high tier only: depth-only proxies so the bloom pass, which draws no cards, still occludes
   private readonly occluderMat = new MeshBasicMaterial({ colorWrite: false, side: DoubleSide }); // both faces: every racked card shows the camera its back, where a front-only proxy is culled and occludes nothing
-  private readonly light: PointLight;
   private readonly sprite: Sprite;
   private readonly spriteMat: SpriteMaterial;
   private readonly smoke: SmokeSprites;
@@ -118,7 +109,6 @@ export class DeckEffects {
   private readonly fogMat: ShaderMaterial;
   private readonly fogUniforms: FogUniforms;
   private fogT0: number | null = null;
-  private readonly shadows: Sprite[];
   private readonly textures: Texture[] = [];
   private layout: EffectsLayout | null = null;
   private spriteBehind = SPRITE_CLEARANCE; // world units the glow sprite sits behind the energetic card, set per layout
@@ -150,10 +140,6 @@ export class DeckEffects {
     this.seams = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
     this.seamCanvases = new Array<HTMLCanvasElement | null>(n).fill(null);
     this.occluders = new Array<Mesh<PlaneGeometry, MeshBasicMaterial> | null>(n).fill(null);
-
-    this.light = new PointLight(new Color(COLORS.violet), 0, 8, 2);
-    this.light.layers.enable(BLOOM_LAYER); // the bloom pass sees the stage's lights: see deck-stage.ts
-    this.scene.add(this.light);
 
     const glowTexture = canvasTexture(
       RADIAL_SIZE,
@@ -188,7 +174,7 @@ export class DeckEffects {
       // (SRC_ALPHA, ONE) and squares the shader's own premultiplied alpha.
       premultipliedAlpha: true,
       // Not transparent: that list draws after (and over) the presented card. renderOrder -1 heads
-      // the opaque list instead, so cards and the floor draw over the far-field fog, as spec'd.
+      // the opaque list instead, so the cards draw over the far-field fog, as spec'd.
       transparent: false,
       blending: AdditiveBlending,
       depthWrite: false,
@@ -200,27 +186,6 @@ export class DeckEffects {
     this.fog.renderOrder = -1;
     this.fog.visible = false;
     this.scene.add(this.fog);
-
-    // Contact shadows: two sprites, for the presented card and a card pulling in.
-    const shadowTexture = canvasTexture(
-      RADIAL_SIZE,
-      (ctx) => paintRadial(ctx, RADIAL_SIZE, COLORS.void, 1),
-      true,
-    );
-    this.textures.push(shadowTexture);
-    this.shadows = [0, 1].map(() => {
-      const s = new Sprite(
-        new SpriteMaterial({
-          map: shadowTexture,
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-        }),
-      );
-      s.visible = false;
-      this.scene.add(s);
-      return s;
-    });
   }
 
   /** Adds the card's glow plane (blank until setGlow) and, on S and S+, its back seam. */
@@ -346,21 +311,6 @@ export class DeckEffects {
     this.smoke.prewarm(frame, frames);
   }
 
-  /** Positions and shows shadow slot `n`, or hides it when there is no card at that rank of pull. */
-  private placeShadow(n: number, card: EffectCard | null, cardWPx: number, floorY: number): void {
-    const s = this.shadows[n];
-    if (!s) return;
-    if (!card) {
-      s.visible = false;
-      return;
-    }
-    const sh = shadowFor(card.pull, card.zPx, cardWPx, this.params);
-    s.scale.set(sh.w, sh.h, 1);
-    s.position.set(card.group.position.x, floorY, SHADOW_Z);
-    s.material.opacity = sh.opacity;
-    s.visible = sh.opacity > SHADOW_VISIBLE_MIN;
-  }
-
   update(frame: EffectsFrame): void {
     const L = this.layout;
     if (!L) return;
@@ -368,7 +318,6 @@ export class DeckEffects {
     const { kind, energy, energyIndex } = frame;
     const energetic = energyIndex === null ? null : (frame.cards[energyIndex] ?? null);
     const fl = flare(kind, energetic?.sinceLandMs ?? null, P);
-    const br = breath(frame.time, P);
 
     // Glow planes and seams, every card.
     for (let i = 0; i < frame.cards.length; i++) {
@@ -388,18 +337,15 @@ export class DeckEffects {
       }
     }
 
-    // The light and the glow sprite follow the energetic card.
+    // The glow sprite follows the energetic card.
     if (kind && energetic) {
       const pos = energetic.group.position;
-      this.light.position.set(pos.x, pos.y, pos.z + LIGHT_AHEAD);
-      this.light.intensity = pointLightIntensity(kind, energy, br, fl.light, P);
       this.sprite.position.set(pos.x, pos.y, pos.z - this.spriteBehind);
       const scale = glowSpriteScale(kind, energy, L.cardWPx, P) * fl.glow;
       this.sprite.scale.set(scale, scale, 1);
       this.spriteMat.opacity = Math.min(1, energy * this.boost);
       this.sprite.visible = energy > VISIBLE_MIN;
     } else {
-      this.light.intensity = 0;
       this.sprite.visible = false;
     }
 
@@ -425,22 +371,6 @@ export class DeckEffects {
       u.uStrength.value = 0;
       this.fog.visible = false;
     }
-
-    // Contact shadows under the two largest pulls.
-    let first = -1;
-    let second = -1;
-    for (let i = 0; i < frame.cards.length; i++) {
-      const pull = frame.cards[i]?.pull ?? 0;
-      if (pull <= 0) continue;
-      if (first < 0 || pull > (frame.cards[first]?.pull ?? 0)) {
-        second = first;
-        first = i;
-      } else if (second < 0 || pull > (frame.cards[second]?.pull ?? 0)) second = i;
-    }
-    const cardFirst = first >= 0 ? (frame.cards[first] ?? null) : null;
-    const cardSecond = second >= 0 ? (frame.cards[second] ?? null) : null;
-    this.placeShadow(0, cardFirst, L.cardWPx, L.floorY);
-    this.placeShadow(1, cardSecond, L.cardWPx, L.floorY);
   }
 
   estimateBytes(): number {
@@ -458,7 +388,7 @@ export class DeckEffects {
 
   dispose(): void {
     this.smoke.dispose();
-    this.scene.remove(this.light, this.sprite, this.fog, ...this.shadows);
+    this.scene.remove(this.sprite, this.fog);
     for (const g of this.glows) g?.removeFromParent();
     for (const s of this.seams) {
       if (!s) continue;
@@ -473,11 +403,9 @@ export class DeckEffects {
       m.dispose();
     }
     this.spriteMat.dispose();
-    for (const s of this.shadows) s.material.dispose();
     this.fogMat.dispose();
     for (const t of this.textures) t.dispose();
     this.unit.dispose();
-    this.light.dispose();
     // Drop every reference so nothing stays reachable and a post-dispose estimateBytes() reads zero.
     this.textures.length = 0;
     this.glows.fill(null);

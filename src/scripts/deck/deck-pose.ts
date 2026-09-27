@@ -97,8 +97,6 @@ export interface IntroState {
 
 export interface IntroPose {
   done: boolean;
-  /** How much of the floor line has drawn in, 0–1. */
-  floor: number;
   /** How far the rail chips have faded in, 0–1. */
   rail: number;
 }
@@ -356,7 +354,6 @@ function introPose(input: PoseInput, params: DeckParams): StagePose {
     energyIndex: null,
     intro: {
       done: t >= end,
-      floor: clamp01(t / I.floorMs),
       rail: clamp01(t / dealEnd),
     },
   };
