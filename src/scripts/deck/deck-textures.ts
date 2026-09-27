@@ -16,9 +16,14 @@ import {
 } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 
+/** "text" is the two print-in slots (deck-canvas.ts skips their mipmaps, since a repaint every
+ * ~90ms raced a mip regen against the frame reading it — task 5's tear). "art" is everything
+ * else: bodies, frame, back, chips, the blank, all mipmapped and anisotropic as before. */
+export type TextureKind = "text" | "art";
+
 export interface TextureFactory {
-  canvas(width: number, height: number): HTMLCanvasElement;
-  texture(canvas: HTMLCanvasElement): Texture;
+  canvas(width: number, height: number, kind: TextureKind): HTMLCanvasElement;
+  texture(canvas: HTMLCanvasElement, kind: TextureKind): Texture;
 }
 
 export const MAX_TEXTURE_W = 1040;
@@ -64,11 +69,14 @@ export class DeckTextures {
     private readonly params: DeckParams = DECK_PARAMS,
   ) {}
 
-  private make(w: number, h: number, mipmapped = true): Layer {
-    const canvas = this.factory.canvas(w, h);
-    const ctx = canvas.getContext("2d");
+  private make(w: number, h: number, kind: TextureKind = "art", mipmapped = true): Layer {
+    const canvas = this.factory.canvas(w, h, kind);
+    // A text slot repaints every ~90ms during a print-in: willReadFrequently keeps its backing
+    // store on the CPU, so that repaint is fully resolved (no async GPU readback) before the
+    // texture below re-uploads it, however soon after this returns that happens.
+    const ctx = canvas.getContext("2d", kind === "text" ? { willReadFrequently: true } : undefined);
     if (!ctx) throw new Error("2D canvas unavailable");
-    return { canvas, ctx, texture: this.factory.texture(canvas), mipmapped };
+    return { canvas, ctx, texture: this.factory.texture(canvas, kind), mipmapped };
   }
 
   private dirty(layer: Layer): void {
@@ -189,7 +197,7 @@ export class DeckTextures {
     let layer = this.chips.get(index);
     if (!layer) {
       const { w, h } = this.chipSize();
-      layer = this.make(w, h, false);
+      layer = this.make(w, h, "art", false);
       this.chips.set(index, layer);
       paintChip(layer.ctx, w, h, this.cards[index]!.stage.rankLabel);
       this.dirty(layer);
@@ -206,7 +214,7 @@ export class DeckTextures {
     let slot = this.slots.find((s) => s.owner === null);
     if (!slot && this.slots.length < 2) {
       slot = {
-        layer: this.make(this.size.w, this.size.h),
+        layer: this.make(this.size.w, this.size.h, "text"),
         owner: null,
         lines: 0,
         cursor: false,
@@ -227,7 +235,7 @@ export class DeckTextures {
   /** A 1 × 1 transparent texture: a text plane shows it whenever its card owns no slot. */
   blank(): Texture {
     if (!this.blankLayer) {
-      this.blankLayer = this.make(1, 1, false);
+      this.blankLayer = this.make(1, 1, "art", false);
       this.blankLayer.ctx.clearRect(0, 0, 1, 1);
       this.dirty(this.blankLayer);
     }

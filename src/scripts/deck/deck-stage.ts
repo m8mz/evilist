@@ -6,7 +6,6 @@ import {
   CanvasTexture,
   DirectionalLight,
   EquirectangularReflectionMapping,
-  LinearMipmapLinearFilter,
   MeshBasicMaterial,
   NoToneMapping,
   PerspectiveCamera,
@@ -21,6 +20,7 @@ import {
 import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
 import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
+import { glFactory } from "./deck-canvas";
 import { freezeDrive, initialDrive, pullsForDrive, stepDrive, type DriveState } from "./deck-drive";
 import type { Pulls } from "./deck-drive";
 import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
@@ -143,21 +143,7 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
 
   /* ---------- Textures ---------- */
   const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  const textures = new DeckTextures(
-    cards,
-    {
-      canvas: (w, h) => Object.assign(document.createElement("canvas"), { width: w, height: h }),
-      texture: (c) => {
-        const t = new CanvasTexture(c);
-        t.colorSpace = SRGBColorSpace;
-        t.anisotropy = maxAniso;
-        t.generateMipmaps = true;
-        t.minFilter = LinearMipmapLinearFilter;
-        return t;
-      },
-    },
-    params,
-  );
+  const textures = new DeckTextures(cards, glFactory(maxAniso), params);
 
   /* ---------- Cards ---------- */
   const unit = new PlaneGeometry(1, 1);

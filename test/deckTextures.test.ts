@@ -17,13 +17,28 @@ interface FakeTexture {
 
 function factory() {
   const made: FakeTexture[] = [];
+  // What each call asked for, in order: which recorder tests (below) pin the "text" vs. "art"
+  // split against the real factory's own contract (deck-canvas.ts's glFactory).
+  const canvasKinds: string[] = [];
+  const textureKinds: string[] = [];
+  const contextOptions: (CanvasRenderingContext2DSettings | undefined)[] = [];
   const f: TextureFactory = {
-    canvas(width, height) {
+    canvas(width, height, kind) {
+      canvasKinds.push(kind);
       const ctx = new FakeContext();
-      const canvas = { width, height, ctx, getContext: () => ctx };
+      const canvas = {
+        width,
+        height,
+        ctx,
+        getContext: (_type: string, options?: CanvasRenderingContext2DSettings) => {
+          contextOptions.push(options);
+          return ctx;
+        },
+      };
       return canvas as unknown as HTMLCanvasElement;
     },
-    texture(canvas) {
+    texture(canvas, kind) {
+      textureKinds.push(kind);
       const t: FakeTexture = {
         needsUpdate: false,
         disposed: false,
@@ -38,7 +53,7 @@ function factory() {
       return Object.assign(t, { dispose }) as unknown as Texture;
     },
   };
-  return { f, made };
+  return { f, made, canvasKinds, textureKinds, contextOptions };
 }
 
 describe("textureSize", () => {
@@ -170,6 +185,28 @@ describe("DeckTextures", () => {
     expect(made).toHaveLength(1);
     expect(made[0]!.canvas.width).toBe(1);
     expect(made[0]!.canvas.height).toBe(1);
+  });
+
+  it('asks the factory for a read-frequently "text" canvas for text slots, and "art" for everything else', () => {
+    const { f, canvasKinds, textureKinds, contextOptions } = factory();
+    const t = new DeckTextures(cards, f);
+    t.setSize(370, 1);
+    t.body(0); // a portrait: "art"
+    t.frame();
+    t.back();
+    t.chip(0);
+    t.blank();
+    t.text(3); // a print-in slot: "text", created lazily on first use
+    expect(canvasKinds).toEqual(["art", "art", "art", "art", "art", "text"]);
+    expect(textureKinds).toEqual(["art", "art", "art", "art", "art", "text"]);
+    expect(contextOptions.slice(0, 5)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(contextOptions[5]).toEqual({ willReadFrequently: true });
   });
 
   it("estimates the texture memory with mipmaps, and disposes everything", () => {
