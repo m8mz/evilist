@@ -219,9 +219,12 @@ describe("DeckTextures", () => {
     t.text(0);
     t.text(1);
     for (let i = 0; i < 7; i++) t.chip(i);
+    // 9 mipmapped "art" layers (7 bodies, frame, back) at ×1.33; the 2 text slots are "text", so
+    // their kind alone (not the estimate's own default) says they carry no mipmaps, at ×1.
     const layer = 740 * 1036 * 4 * 1.33;
+    const textLayer = 740 * 1036 * 4;
     const chip = Math.round(80 * 2 * (370 / 520)) * Math.round(28 * 2 * (370 / 520)) * 4;
-    expect(t.estimateBytes()).toBeCloseTo(11 * layer + 7 * chip, -3);
+    expect(t.estimateBytes()).toBeCloseTo(9 * layer + 2 * textLayer + 7 * chip, -3);
     t.dispose();
     expect(made.every((m) => m.disposed)).toBe(true);
   });

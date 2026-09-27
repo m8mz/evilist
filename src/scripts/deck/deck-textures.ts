@@ -16,9 +16,10 @@ import {
 } from "./deck-paint";
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
 
-/** "text" is the two print-in slots (deck-canvas.ts skips their mipmaps, since a repaint every
- * ~90ms raced a mip regen against the frame reading it — task 5's tear). "art" is everything
- * else: bodies, frame, back, chips, the blank, all mipmapped and anisotropic as before. */
+/** "text" is the two print-in slots: drawn at their on-screen size and repainted often, so
+ * deck-canvas.ts's glFactory skips their mipmaps (deck spec §9, ADR 0004) — the recording that
+ * prompted this predates this drive build and didn't reproduce on it (CLAUDE.md). "art" is
+ * everything else: bodies, frame, back, chips, the blank, all mipmapped and anisotropic. */
 export type TextureKind = "text" | "art";
 
 export interface TextureFactory {
@@ -69,7 +70,12 @@ export class DeckTextures {
     private readonly params: DeckParams = DECK_PARAMS,
   ) {}
 
-  private make(w: number, h: number, kind: TextureKind = "art", mipmapped = true): Layer {
+  private make(
+    w: number,
+    h: number,
+    kind: TextureKind = "art",
+    mipmapped = kind !== "text",
+  ): Layer {
     const canvas = this.factory.canvas(w, h, kind);
     // A text slot repaints every ~90ms during a print-in: willReadFrequently keeps its backing
     // store on the CPU, so that repaint is fully resolved (no async GPU readback) before the

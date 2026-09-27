@@ -12,9 +12,10 @@ export function glFactory(maxAniso: number): TextureFactory {
       const t = new CanvasTexture(canvas);
       t.colorSpace = SRGBColorSpace;
       if (kind === "text") {
-        // A print-in repaints this canvas every ~90ms; regenerating mipmaps on every upload raced
-        // the WebGL read of whichever card was presented and tore its portrait for a frame (task
-        // 5's report). The slot is only ever drawn at its on-screen size, so it never needs one.
+        // Marcus's tear recording predates this drive build and didn't reproduce on it
+        // (CLAUDE.md); the change stands on its own regardless: a print-in draws this canvas at
+        // its on-screen size, never minified, so it needs no mipmaps, and skipping them removes
+        // the print-in path's one GPU-canvas copy (deck spec §9, ADR 0004).
         t.generateMipmaps = false;
         t.minFilter = LinearFilter;
         t.magFilter = LinearFilter;
