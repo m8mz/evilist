@@ -31,13 +31,26 @@ describe("parseFreeze", () => {
   it("reads an ISO date into a fixed clock, and ignores anything else", () => {
     expect(parseFreeze("?deck-freeze=2026-09-25")).toEqual({
       time: new Date(2026, 8, 25).getTime(),
+      k: null,
     });
     expect(parseFreeze("?tune&deck-freeze=2026-01-02")).toEqual({
       time: new Date(2026, 0, 2).getTime(),
+      k: null,
     });
     expect(parseFreeze("")).toBeNull();
     expect(parseFreeze("?deck-freeze=yesterday")).toBeNull();
     expect(parseFreeze("?deck-freeze=")).toBeNull();
+  });
+
+  it("reads deck-k as a mid-transition fraction in [0, 1], and null outside it or when missing", () => {
+    const time = new Date(2026, 8, 25).getTime();
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=0.5")).toEqual({ time, k: 0.5 });
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=0")).toEqual({ time, k: 0 });
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=1")).toEqual({ time, k: 1 });
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=1.5")).toEqual({ time, k: null });
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=-0.1")).toEqual({ time, k: null });
+    expect(parseFreeze("?deck-freeze=2026-09-25&deck-k=nope")).toEqual({ time, k: null });
+    expect(parseFreeze("?deck-freeze=2026-09-25")).toEqual({ time, k: null });
   });
 });
 

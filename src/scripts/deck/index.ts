@@ -72,7 +72,6 @@ export function initDeck(): void {
   // blank forever.
   try {
     const count = career.length;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const freeze = parseFreeze(location.search);
     const now = freeze ? new Date(freeze.time) : nowFrom(track.dataset.now);
     const cards = career.map((s) => cardModel(s, now));
@@ -95,7 +94,10 @@ export function initDeck(): void {
 
     const jump = (index: number) => {
       rail.hideHint();
-      scrollToRank(track, index, count, reduced);
+      // Starts the transition this frame, whatever the scroll says; the page scroll below (instant,
+      // never smooth — the drive animates) just keeps `--progress` and future scrolls in sync.
+      handle?.jumpTo(index);
+      scrollToRank(track, index, count);
     };
     const rail = initRail(track, career, jump);
     // The rail's dataset keys keep their literal hyphens: a "-" followed by a digit is never

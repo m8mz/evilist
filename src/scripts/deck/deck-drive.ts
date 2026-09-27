@@ -3,7 +3,7 @@
 // jump (rail, click, swipe) is a transition straight from the current card to the target. Pure, so
 // the tests pin the queue and the pulls without a clock or a DOM.
 import { DECK_PARAMS, type DeckParams } from "./deck-params";
-import { clamp01, easeInOutCubic } from "./deck-util";
+import { clamp01, easeInOutCubic, type Freeze } from "./deck-util";
 
 export interface Transition {
   from: number;
@@ -55,6 +55,26 @@ export function initialDrive(
 ): DriveState {
   const rank = rankFromScroll(p, 0, count, params.drive.hysteresis);
   return { current: rank, wanted: rank, transition: null };
+}
+
+/** `?deck-freeze`'s settled drive: `?deck-k` additionally backdates a one-rank transition's start
+ * so its eased fraction lands on exactly `k`, for a deterministic mid-transition frame. */
+export function freezeDrive(
+  p: number,
+  count: number,
+  freeze: Freeze,
+  params: DeckParams = DECK_PARAMS,
+): DriveState {
+  const state = initialDrive(p, count, params);
+  if (freeze.k === null || state.current <= 0) return state;
+  return {
+    ...state,
+    transition: {
+      from: state.current - 1,
+      to: state.current,
+      startMs: freeze.time - freeze.k * params.drive.durationMs,
+    },
+  };
 }
 
 export function transitionK(

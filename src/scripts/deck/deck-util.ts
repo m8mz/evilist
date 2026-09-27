@@ -18,16 +18,24 @@ export function smooth(current: number, target: number, dtMs: number, tauMs: num
 export interface Freeze {
   /** The fixed clock, ms since the epoch. */
   time: number;
+  /** `?deck-k=0..1`: a deterministic mid-transition frame, eased fraction; null for a settled one. */
+  k: number | null;
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** `?deck-freeze=YYYY-MM-DD` fixes the clock, the RNG and the frame (deck spec §9). */
+/** `?deck-freeze=YYYY-MM-DD` fixes the clock, the RNG and the frame (deck spec §9); `?deck-k`
+ * additionally pins the frame mid-transition. */
 export function parseFreeze(search: string): Freeze | null {
-  const value = new URLSearchParams(search).get("deck-freeze");
+  const params = new URLSearchParams(search);
+  const value = params.get("deck-freeze");
   const m = value ? ISO_DATE.exec(value) : null;
   if (!m) return null;
-  return { time: new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() };
+  const time = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  const kRaw = params.get("deck-k");
+  const kValue = kRaw === null ? Number.NaN : Number(kRaw);
+  const k = Number.isFinite(kValue) && kValue >= 0 && kValue <= 1 ? kValue : null;
+  return { time, k };
 }
 
 /** The 2× rendition from 1.5× up, the 1× below, whichever exists. */

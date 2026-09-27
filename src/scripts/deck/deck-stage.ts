@@ -23,6 +23,7 @@ import {
 import type { RankLabel } from "../../data/career";
 import type { BloomHandle } from "./deck-bloom";
 import { buildCards, layoutCards, loadImage, type CardMeshes } from "./deck-cards";
+import { freezeDrive, initialDrive, pullsForDrive, stepDrive, type DriveState } from "./deck-drive";
 import { BLOOM_LAYER, DeckEffects, type EffectCard, type EffectsFrame } from "./deck-effects";
 import type { EnergyKind } from "./deck-energy";
 import { ENV_H, ENV_W, paintEnvironment } from "./deck-env";
@@ -33,7 +34,7 @@ import { DECK_PARAMS, type DeckParams } from "./deck-params";
 import { deckPose, type CardPhase, type IntroState, type StagePose } from "./deck-pose";
 import { DeckTextures } from "./deck-textures";
 import { pixelRatioCap } from "./deck-tier";
-import { mulberry32, pickRendition, smooth, type Freeze } from "./deck-util";
+import { mulberry32, pickRendition, type Freeze } from "./deck-util";
 
 export interface StagePortrait {
   x1: string | null;
@@ -70,6 +71,8 @@ export interface StageOptions {
 export interface StageHandle {
   ready: Promise<void>;
   setProgress(p: number): void;
+  /** A rail click, canvas click or swipe: queues (or restarts) a transition straight to `rank`. */
+  jumpTo(rank: number): void;
   pointer(clientX: number | null, clientY: number | null): void;
   /** The phone's orientation tilt target in degrees; null releases it (spec §7). */
   tilt(x: number | null, y: number | null): void;
@@ -294,10 +297,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
   /* ---------- Frame state ---------- */
   const N = count;
   let targetP = 0;
-  let p = 0;
-  // The first frame after a mount (or re-mount) must render the scroll target directly, never
-  // smooth up from `p = 0`, or a deep-scrolled visitor sees the deck riffle through every rank
-  // (and the rail's aria-live region announce each one) before it catches up.
+  // A mount (or re-mount) must settle on the scroll target directly, never queue a transition from
+  // rank 0, or a deep-scrolled visitor watches the deck riffle through every rank first.
+  let drive: DriveState = initialDrive(targetP, N, params);
+  let pendingJump: number | null = null;
   let firstFrameDone = false;
   const input = new StageInput(count, params);
   const landedAt: (number | null)[] = new Array(count).fill(null);
@@ -424,14 +427,16 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     }
 
     if (freeze) {
-      p = targetP;
+      drive = freezeDrive(targetP, N, freeze, params);
     } else {
-      p = smooth(p, targetP, dt, params.scroll.tau);
+      drive = stepDrive(drive, targetP, pendingJump, time, N, params);
+      pendingJump = null;
       input.step(dt);
     }
+    const pulls = pullsForDrive(drive, targetP, time, N, params);
 
     const poseInput = {
-      p,
+      pulls,
       labels,
       layout,
       tilt: input.tilt,
@@ -577,7 +582,12 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
     ready,
     setProgress(value) {
       targetP = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
-      if (freeze || !firstFrameDone) p = targetP;
+      // Nothing on screen yet to transition from: settle on the real target instead of queuing one.
+      if (freeze || !firstFrameDone) drive = initialDrive(targetP, N, params);
+      requestRender();
+    },
+    jumpTo(rank) {
+      pendingJump = rank;
       requestRender();
     },
     pointer(clientX, clientY) {

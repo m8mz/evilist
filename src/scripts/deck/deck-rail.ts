@@ -54,12 +54,7 @@ function headerPx(): number {
   return Number.isFinite(px) ? px : 64;
 }
 
-export function scrollToRank(
-  track: HTMLElement,
-  index: number,
-  count: number,
-  reduced: boolean,
-): void {
+export function scrollToRank(track: HTMLElement, index: number, count: number): void {
   const top = scrollTargetFor(
     track.getBoundingClientRect().top + scrollY,
     track.offsetHeight,
@@ -68,7 +63,9 @@ export function scrollToRank(
     index,
     count,
   );
-  scrollTo({ top, behavior: reduced ? "instant" : "smooth" });
+  // Always instant: the drive plays the transition, so a smooth page scroll would step the wanted
+  // rank through every rank in between on its way to the target.
+  scrollTo({ top, behavior: "instant" });
 }
 
 export function initRail(
