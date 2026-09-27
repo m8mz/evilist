@@ -486,7 +486,10 @@ export async function mountStage(opts: StageOptions): Promise<StageHandle> {
       // Spec §9: a body paints the first frame its card is wanted, before that frame renders.
       // Three's program key reads the emissive map's presence, uv channel and video decode, never
       // the texture itself (WebGLPrograms.js, r186): the swap recompiles nothing, no needsUpdate.
-      if (!textures.hasBody(i) && bodyWanted(i, pose.active, c.pull, pulls.to))
+      // On desktop the deal-in turns every front toward the camera for a few frames, so the intro
+      // wants all seven; phones deal only E and D face on and keep the lazy rule.
+      const dealingIn = intro !== null && layout.mode === "desktop";
+      if (!textures.hasBody(i) && (dealingIn || bodyWanted(i, pose.active, c.pull, pulls.to)))
         m.bodyMat.emissiveMap = textures.body(i);
       applyText(i, c.phase, time);
       applyDrawPolicy(m.draw, drawPolicy(c.phase), c.opacity); // band, depth test, opacity
